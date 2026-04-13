@@ -1,0 +1,10 @@
+.nocommit/
+**/__pycache__
+*.pyc
+*.whl
+*.pyd
+
+.idea
+*.iml
+
+*.env
