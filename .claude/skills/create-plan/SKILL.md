@@ -1,37 +1,52 @@
 ---
 name: create-plan
-description: Create a technical plan document in plans/. Use this skill whenever the user wants to plan a new feature, design a system, write an implementation plan, or think through an approach before coding. Also use when the user says things like "let's plan", "how should we implement", "write up a plan for", or "I want to think through X before building it".
+description: Create a technical plan document in plans/. Use this skill whenever the user wants to plan a new feature, design a system, write an implementation plan, or think through an approach before coding. Also use when the user says things like "let's plan", "how should we implement", "write up a plan for", or "I want to think through X before building it". Also use to turn an existing brainstorm or notes in a plan directory into a full plan — when the user cites a plan dir or a file like brainstorm.md, reuse that directory instead of creating a new one.
 argument-hint: <topic or feature description>
 allowed-tools: Read, Grep, Glob, Agent, AskUserQuestion, Write, Skill
 ---
 
 # Create Plan
 
-Generate a technical plan document in `plans/<topic-directory>/` by researching the codebase and interviewing the user.
+Generate a technical plan document — `plan.md` inside a directory under `plans/` (a fresh date-stamped folder, or an existing plan directory the user points you at) — by researching the codebase and interviewing the user.
 
 ## Step 1: Understand the request
 
 Parse the user's input to extract:
-- **What** they want to build or change
-- **Why** — the motivation or problem being solved (if stated)
-- **Where** it fits in the codebase (if obvious from context)
+- **What:** they want to build or change
+- **Why:**: the motivation or problem being solved (if stated)
+- **Where:** it fits in the codebase (if obvious from context)
+- **Existing plan directory:** whether the user is pointing you at a plan directory that already exists, so the plan builds on it instead of starting a fresh folder (resolve this below).
 
-If the request is vague or missing critical details, interview the user before proceeding. Use the AskUserQuestion tool to ask focused questions — don't ask everything at once, prioritize what you actually need to start planning. Common gaps to probe:
+### Check for a cited plan directory
 
-- What problem does this solve? What's the trigger for doing it now?
-- Which existing subsystem does this touch?
-- Are there constraints (performance, compatibility, dependencies on other work)?
-- What's the scope — is this a standalone feature or part of a larger initiative?
+Plans often begin life as a brainstorm. When the user points you at an existing plan directory — directly (`plans/20260620-token-refresh/`) or through a file inside one (`plans/20260620-token-refresh/brainstorm.md`, "flesh out the brainstorm I started there") — reuse that directory instead of minting a new one, so the plan lands next to the thinking that spawned it.
 
-You don't need to ask about things you can figure out by reading the code. If the codebase already has clear conventions for the area being planned, just follow them.
+To resolve it:
+1. Scan the request for a path that references `plans/` (or any directory the user explicitly hands you). If they cite a file, take its parent directory.
+2. Confirm the directory exists (list it with Glob or Bash). If it doesn't, there's nothing to reuse — fall through to creating a new directory in Step 2, and mention that to the user.
+3. Read every readable doc in the directory — `brainstorm.md`, notes, and any other markdown or text. This is the upfront thinking the user wants the plan to build on, so fold it into your understanding above.
+4. If the directory already contains a `plan.md`, note that: you'll revise that plan in place rather than generate one from scratch (Steps 2–3 explain how).
+
+Carry the resolved directory (or "none") forward to Step 2.
+
+Use the /grill skill to answer the questions above and gather additional context about the proposed change. When you've read a brainstorm or prior notes, let them steer the interview — build on what's already settled instead of re-asking it.
 
 ## Step 2: Research and plan via sub-agent
 
 Spawn a **Plan-mode sub-agent** (`subagent_type: "Plan"`) to do the heavy lifting. Brief it with everything you've gathered from the user, including any interview answers. The sub-agent's job is to produce the final plan markdown — ready to write to disk without reformatting.
 
-Before writing the prompt, determine the target file path:
-- **Directory:** Pick an existing topic directory under `plans/` if this work fits naturally into one (e.g., auth work goes in `plans/auth/`). Create a new directory only if the topic is genuinely new.
-- **Filename:** Short, descriptive, kebab-case. Look at sibling files in the same directory for naming conventions.
+Before writing the prompt, settle the target directory:
+
+- **If Step 1 resolved an existing plan directory, reuse it** — that folder is the target. Don't call create-plan-dir; its only job is to mint new date-stamped folders.
+- **Otherwise, create a fresh one** by invoking the **create-plan-dir** skill, which stamps today's date and returns the path:
+
+      Skill(skill: "create-plan-dir", args: "<short topic description>")
+
+Either way:
+- **Directory:** the resolved path — reused (e.g. `plans/20260620-token-refresh/`) or freshly created (e.g. `plans/20260624-oauth-token-refresh/`).
+- **Filename:** Always `plan.md` inside that directory.
+
+Brief the sub-agent with the context you gathered. When you reused a directory, pass along the brainstorm and any prior notes you read — paste or summarize them so the sub-agent builds on that thinking instead of starting cold. If the reused directory already holds a `plan.md`, hand it over as the current draft and ask the sub-agent to revise and extend it rather than write a new one: preserve the decisions already captured, fill the gaps, and correct anything the new context changes.
 
 The prompt to the sub-agent should look roughly like:
 
@@ -40,7 +55,7 @@ Research the codebase and produce a detailed implementation plan for: <what the 
 
 Context: <why, constraints, scope, any interview answers>
 
-The plan will be saved to: plans/<directory>/<name>.md
+The plan will be saved to: <the target directory>/plan.md
 
 ## Research steps
 
@@ -100,15 +115,15 @@ Writing the draft to disk now serves two purposes:
 1. It creates a git working tree diff that Codex can review in the next step.
 2. It provides a save point — if the session is interrupted, the draft is not lost.
 
-Use the Write tool to create the file. If the target directory does not exist, create it.
+Use the Write tool to create the file. The directory already exists — either create-plan-dir made it in Step 2, or it's the existing directory you reused. When you're revising an existing `plan.md`, this write overwrites it with the revised draft.
 
 ## Step 4: Codex adversarial review
 
-Invoke the Codex adversarial review skill to get a cross-model challenge of the draft plan from GPT-5.4:
+Invoke the Codex adversarial review skill to get a cross-model challenge of the draft plan from Codex (using whichever GPT model the user has configured):
 
     Skill(skill: "codex:adversarial-review", args: "--wait --scope auto focus on feasibility, completeness, missing risks, and questionable assumptions in the plan at <target file path>")
 
-Where `<target file path>` is the path written in Step 3 (e.g., `plans/auth/token-refresh.md`). The focus text steers Codex toward plan-quality concerns rather than code-quality concerns. The `--wait` flag ensures results return before the next step.
+Where `<target file path>` is the path written in Step 3 (e.g., `plans/20260615-token-refresh/plan.md`). The focus text steers Codex toward plan-quality concerns rather than code-quality concerns. The `--wait` flag ensures results return before the next step.
 
 The output is structured JSON with:
 - `verdict` — overall assessment
@@ -166,7 +181,7 @@ Re-read the final plan end-to-end and verify there are no internal contradiction
 
 - Statements from the original draft that were invalidated by Codex feedback or user decisions but not updated (e.g., "in-memory only" surviving after a decision to persist to DB).
 - Code sketches that use APIs, types, or function signatures inconsistent with the Design section (e.g., `time.monotonic()` in code when the design says `time.time()`).
-- Throughput estimates or performance claims that don't match the final parameters.
+- Throughput estimates or performance claims that don't match the final parameters.or 
 
 Fix any issues found. This step exists because plans undergo multiple rounds of revision (draft → Codex incorporation → user decisions) and each round can leave stale text behind.
 
