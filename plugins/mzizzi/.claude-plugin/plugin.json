@@ -1,0 +1,7 @@
+{
+  "name": "mzizzi",
+  "description": "Planning and review workflow skills: grill, brainstorm, create-plan, create-plan-dir, and retro.",
+  "dependencies": [
+    { "name": "codex", "marketplace": "openai-codex" }
+  ]
+}

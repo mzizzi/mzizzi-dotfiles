@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Create a date-stamped plan directory following the project convention:
-#   plans/<yyyymmdd>-<slug>/
+#   plans/<yyyymmdd>-<slug>/          (projects that commit plans to source control)
+#   .nocommit/plans/<yyyymmdd>-<slug>/ (projects that don't have a plans/ dir)
 #
 # Usage: create_plan_dir.sh "<short topic description>"
 #
@@ -30,6 +31,16 @@ if [ -z "$slug" ]; then
 fi
 
 date_stamp=$(date +%Y%m%d)
-dir="plans/${date_stamp}-${slug}"
+
+# Projects that commit their plans to source control already have a plans/
+# directory; reuse it. Otherwise, keep plans out of source control under
+# .nocommit/plans/ (gitignored — see .gitignore).
+if [ -d "plans" ]; then
+  base="plans"
+else
+  base=".nocommit/plans"
+fi
+
+dir="${base}/${date_stamp}-${slug}"
 mkdir -p "$dir"
 printf '%s\n' "$dir"
