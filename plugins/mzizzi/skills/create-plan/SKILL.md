@@ -1,7 +1,7 @@
 ---
 name: create-plan
 description: Create a technical plan document in plans/. Use this skill whenever the user wants to plan a new feature, design a system, write an implementation plan, or think through an approach before coding. Also use when the user says things like "let's plan", "how should we implement", "write up a plan for", or "I want to think through X before building it". Also use to turn an existing brainstorm or notes in a plan directory into a full plan — when the user cites a plan dir or a file like brainstorm.md, reuse that directory instead of creating a new one.
-argument-hint: <plan directory or target .md file> <topic or feature description>
+argument-hint: <plan directory or target .md file> <topic or feature description> [--model opus|sonnet|haiku]
 allowed-tools: Read, Grep, Glob, Agent, AskUserQuestion, Write, Skill
 disable-model-invocation: false  # explicitly model-invokable (the default; stated so it can't silently drift)
 user-invocable: true             # explicitly available as a /create-plan slash command
@@ -21,6 +21,7 @@ Parse the user's input to extract:
 * **What:** they want to build or change
 * **Why:**: the motivation or problem being solved (if stated)
 * **Where:** it fits in the codebase (if obvious from context)
+* **Planning model:** which model the Step 4 planning sub-agent should run on. If the user named one (e.g. `--model sonnet`, or "plan this on haiku"), use it; otherwise default to `opus`. Accept the aliases `opus`, `sonnet`, and `haiku`.
 
 ### Step 2: Resolve the plan directory and target file
 
@@ -44,7 +45,7 @@ Refer to the resolved destination as `<target file path>` in the steps below (e.
 
 ### Step 4: Create a draft plan
 
-* Spawn a **Plan-mode sub-agent** (`subagent_type: "Plan"`). The sub-agent should be prompted with the following:
+* Spawn a **Plan-mode sub-agent** (`subagent_type: "Plan"`), passing `model` set to the planning model resolved in Step 1 (default `opus`). Pinning `model` matters because a Plan sub-agent otherwise inherits the session model — so the plan would silently run on whatever the main session happens to be on. Planning leans on deep reasoning, which is why it defaults to Opus; `sonnet` or `haiku` are there for a faster, cheaper draft on simpler work. The sub-agent should be prompted with the following:
   * The output format template from the "Plan Output Template" section at the bottom of this document
   * Be sure the sub-agent is briefed with the context gathered, any existing target-file or brainstorm.md documents, and any other information that would help the sub-agent
   * The sub-agent should split implementation into logical chunks where it makes sense to do so
