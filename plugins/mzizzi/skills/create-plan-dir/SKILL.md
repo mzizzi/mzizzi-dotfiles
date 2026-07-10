@@ -19,7 +19,7 @@ Plan documents live at:
 - `short-description` — a short, kebab-case summary of the topic (lowercase, words joined by hyphens). Keep it to a few words that capture the essence.
 - `<plans-base>` — `plans/` if the project already commits its plans to source control, otherwise `.nocommit/plans/` (gitignored) so plans don't get committed to a project that doesn't want them tracked. The script decides which to use; see its logic for the exact check.
 
-Example: a plan about refreshing OAuth tokens → `plans/20260615-token-refresh/` (or `.nocommit/plans/20260615-token-refresh/` in a project without a tracked `plans/` dir). The plan file itself is then written as `plan.md` inside that directory.
+Example: a plan about refreshing OAuth tokens → `plans/20260615-token-refresh/` (or `.nocommit/plans/20260615-token-refresh/` in a project without a tracked `plans/` dir). The plan file (`plan.md` by default, or a name the caller chooses) is then written inside that directory.
 
 ## How to create it
 

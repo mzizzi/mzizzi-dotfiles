@@ -1,13 +1,15 @@
 ---
 name: create-plan
 description: Create a technical plan document in plans/. Use this skill whenever the user wants to plan a new feature, design a system, write an implementation plan, or think through an approach before coding. Also use when the user says things like "let's plan", "how should we implement", "write up a plan for", or "I want to think through X before building it". Also use to turn an existing brainstorm or notes in a plan directory into a full plan — when the user cites a plan dir or a file like brainstorm.md, reuse that directory instead of creating a new one.
-argument-hint: <existing plan directory> <topic or feature description>
+argument-hint: <plan directory or target .md file> <topic or feature description>
 allowed-tools: Read, Grep, Glob, Agent, AskUserQuestion, Write, Skill
+disable-model-invocation: false  # explicitly model-invokable (the default; stated so it can't silently drift)
+user-invocable: true             # explicitly available as a /create-plan slash command
 ---
 
 # Create Plan
 
-Generate a technical plan document `plan.md` or update an exiting `plan.md` by extensively researching the codebase and interviewing the user.
+Generate a technical plan document (`plan.md` by default, or a filename the user names) or update an existing one by extensively researching the codebase and interviewing the user.
 
 
 ## Instructions
@@ -20,24 +22,34 @@ Parse the user's input to extract:
 * **Why:**: the motivation or problem being solved (if stated)
 * **Where:** it fits in the codebase (if obvious from context)
 
-### Step 2: Resolve the plan directory
+### Step 2: Resolve the plan directory and target file
 
-* If the user provided a plan directory then continue to step 3
-* If the user did not provide an existing plan directory then use the /create-plan-dir skill to create one
+The plan is written to `<plan directory>/<target file>`. Resolve both from the user's input.
+
+**Target file** — the filename to write, defaulting to `plan.md`:
+* If the user named a target file (any argument ending in `.md`, e.g. `design.md`, or a full path like `plans/20260615-token-refresh/design.md`), use that filename.
+* Otherwise use `plan.md`.
+
+**Plan directory:**
+* If the user gave a full path to the target file (it includes a directory component), that parent directory is the plan directory — continue to step 3.
+* Otherwise, if the user provided a plan directory, use it — continue to step 3.
+* Otherwise, use the /create-plan-dir skill to create one.
+
+Refer to the resolved destination as `<target file path>` in the steps below (e.g. `plans/20260615-token-refresh/plan.md`, or `plans/20260615-token-refresh/design.md` if the user named `design.md`).
 
 ### Step 3: Grill the user
 
 * Use the /grill skill to gather additional context and requirements for the desired change
-* If there is an existing plan.md or brainstorm.md in the plan directory then use that as a starting point instead of re-asking
+* If the target file already exists, or there is a brainstorm.md in the plan directory, use that as a starting point instead of re-asking
 
 ### Step 4: Create a draft plan
 
 * Spawn a **Plan-mode sub-agent** (`subagent_type: "Plan"`). The sub-agent should be prompted with the following:
   * The output format template from the "Plan Output Template" section at the bottom of this document
-  * Be sure the sub-agent is briefed with the context gathered, existing plan.md/brainstorm.md documents, and any other information that would help the sub-agent
+  * Be sure the sub-agent is briefed with the context gathered, any existing target-file or brainstorm.md documents, and any other information that would help the sub-agent
   * The sub-agent should split implementation into logical chunks where it makes sense to do so
   * Code sketches should show structure and signatures, with comments explaining non-obvious logic. The sub-agent is constructing a plan document, not a copy-paste implementation.
-* Update or create plan.md in the plan directory (from step 2) with the sub-agent's output
+* Update or create the target file at `<target file path>` (from step 2) with the sub-agent's output
 
 ### Step 5: Codex adversarial review
 
