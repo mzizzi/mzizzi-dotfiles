@@ -4,12 +4,12 @@
     "name": "mzizzi"
   },
   "description": "mzizzi's personal Claude Code plugin marketplace.",
-  "allowCrossMarketplaceDependenciesOn": ["openai-codex"],
+  "allowCrossMarketplaceDependenciesOn": ["openai-codex", "claude-plugins-official"],
   "plugins": [
     {
       "name": "mzizzi",
       "source": "./plugins/mzizzi",
-      "description": "Planning and review workflow skills: grill, brainstorm, create-plan, create-plan-dir, and retro."
+      "description": "Planning and review workflow skills: grill, brainstorm, create-plan, create-plan-dir, review-comments, and codex-adversarial-review."
     }
   ]
 }

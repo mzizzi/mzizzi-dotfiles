@@ -1,0 +1,14 @@
+* **Long block comments and file/module headers are the worst offenders — be ruthless with them.**
+  A multi-paragraph JSDoc block, a docstring that explains the architecture, a module header that
+  walks through the design, what's deferred to later, what moves where, and why the whole shape is
+  the way it is — that is a *design document wearing a comment's clothes.* It belongs in the PR
+  description, the README, or a design doc, not pinned to the top of a source file where it rots
+  the moment the architecture shifts. Cut these down hard: a file/function header earns **at most a
+  one-line statement of what the thing *is*** — and most earn nothing, because the name and
+  signature already say it. Concretely: if a block comment runs more than one or two lines, the
+  default is to collapse it to a single line or delete it outright, not to trim a sentence and move
+  on. Don't preserve the structure (intro paragraph + details + caveats) at reduced size; replace
+  it. Move the rationale out of the code. A second, slightly-shorter wall of prose is still a wall
+  of prose — when the user says a comment is "still" dense, the previous pass under-cut; cut to the
+  one-line core this time.
+

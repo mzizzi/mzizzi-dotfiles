@@ -2,17 +2,18 @@
 name: review-comments
 description: Review code comments you added in the current PR or uncommitted changes —
   flagging narration, diff-history notes, and redundant comments while preserving genuine
-  "why" explanations. Takes one optional mode argument: "fix" (edit the code locally,
+  "why" explanations. Takes an optional mode argument — "fix" (edit the code locally,
   the default), "flag-local" (just report what would change, no edits), or "flag-github"
-  (post inline review comments on the PR). Use this whenever you've just written or
-  modified code and are about to commit or open a PR, or when the user asks to review,
-  clean up, or check comment quality.
+  (post inline review comments on the PR) — and an optional strictness argument, "low"
+  (the default) or "high" (also flags long block comments and file/module headers). Use
+  this whenever you've just written or modified code and are about to commit or open a PR,
+  or when the user asks to review, clean up, or check comment quality.
 ---
 
 # Review comments added in this PR
 
-This skill takes a single `mode` argument that controls what happens with the comments it
-identifies:
+This skill takes two optional arguments. The **`mode`** argument controls what happens with the
+comments it identifies:
 
 | Mode | What it does |
 | --- | --- |
@@ -23,8 +24,11 @@ identifies:
 If no mode is given, use `fix`. If an unrecognized value is given, briefly say so and list the
 three valid modes rather than guessing.
 
-The work happens in two steps: first identify the comments worth flagging (identical across all
-modes), then act according to the mode.
+The second argument, **`strictness`** (`low` by default, or `high`), selects *which* set of
+guidelines is applied. It's resolved in Step 1 below.
+
+The work happens in two steps: first identify the comments worth flagging (the guidelines depend on
+strictness; the identification itself is the same across all modes), then act according to the mode.
 
 ## Step 1: Identify the comments to review
 
@@ -39,59 +43,18 @@ what you did. That instinct produces comment-dense code that a proficient engine
 written. So the default action here is to **cut**, and the burden is on each comment to justify its
 survival, not the other way around. A reviewer skimming the file should see code, not an essay.
 
-Check each comment against the guidelines below, in order, noting each viloation:
+Check each comment against the guidelines for the chosen **strictness level**. The guidelines live
+in reference files alongside this skill so the two levels can share one base set. Read the
+applicable files relative to this `SKILL.md` and treat them as the complete, ordered rule list for
+this run.
 
-* **Inline narration restates the code.** Remove comments that just say what the next line plainly
-  does (`// increment counter`, `// loop over users`). The code already says this.
-* **Change-log narration belongs in git, not the code.** Remove comments that describe your edit,
-  the diff, or the history (`// changed to fix X`, `// new logic`, `// added validation`). That
-  context lives in the commit message and PR description; in the code it goes stale the moment
-  someone else touches the line. This includes comments that explain the *current* behavior by
-  contrasting it with a former approach — "the earlier X did Y; that's now disabled",
-  "previously…", "we used to…", or a parenthetical narrating what changed and why. The reader only
-  needs what the code does now; the abandoned alternative is history. Cut the historical half and
-  keep at most the one-line statement of current behavior (if that even needs a comment).
-* **A comment that describes what the code does is not a "why" — delete it and let the code speak.**
-  This is the most common survivor and the one to be hardest on. If the comment narrates the
-  behavior, the control flow, the branches, or the conditions ("whether X should happen requires
-  both A and B", "only these pairs fire", "skipped rather than starting…"), the code already states
-  that, or should. In `fix` mode the action is to **delete the comment** — and if the code wasn't
-  actually clear on its own, rename the symbol or restructure so it is, rather than keeping the
-  comment as a crutch. A comment only survives this rule if it states a *non-obvious why* the code
-  genuinely cannot express (see the "why" rule below). "It restates obvious behavior" is a removal,
-  not a rewrite.
-* **Don't mention tests, the test status, or other incidental implementation details in code
-  comments.** Drop notes like "pure and unit-tested", "covered by tests", "see the test for
-  examples". Whether something is tested lives in the test suite, not pinned to the implementation
-  where it goes stale; and a function being "pure" is a property the signature and body already
-  show. Strip the incidental clause and keep only a real why, if any remains.
-* **Comments aren't a task tracker.** Drop references to Jira/Linear/GitHub issues unless they
-  mark a genuine future behavioral change a reader needs to know about.
-* **Long block comments and file/module headers are the worst offenders — be ruthless with them.**
-  A multi-paragraph JSDoc block, a docstring that explains the architecture, a module header that
-  walks through the design, what's deferred to later, what moves where, and why the whole shape is
-  the way it is — that is a *design document wearing a comment's clothes.* It belongs in the PR
-  description, the README, or a design doc, not pinned to the top of a source file where it rots
-  the moment the architecture shifts. Cut these down hard: a file/function header earns **at most a
-  one-line statement of what the thing *is*** — and most earn nothing, because the name and
-  signature already say it. Concretely: if a block comment runs more than one or two lines, the
-  default is to collapse it to a single line or delete it outright, not to trim a sentence and move
-  on. Don't preserve the structure (intro paragraph + details + caveats) at reduced size; replace
-  it. Move the rationale out of the code. A second, slightly-shorter wall of prose is still a wall
-  of prose — when the user says a comment is "still" dense, the previous pass under-cut; cut to the
-  one-line core this time.
-* **A surviving "why" comment is short — one line, occasionally two.** Length itself is the signal.
-  A genuine non-obvious *why* — a subtle invariant, a workaround for a known bug, a
-  deliberate-but-surprising choice — fits in a line with a concrete reason. If the comment you
-  wrote runs to several sentences or multiple paragraphs, that's not a denser "why," it's the wrong
-  artifact: cut it to the single most important sentence, or move the explanation out of the code.
-  Don't let a paragraph survive just because every sentence in it names a reason.
-* **Volume is itself a defect — judge the comments in aggregate, not just one at a time.** A dozen
-  individually-defensible comments still add up to a wall of prose that buries the code. After
-  going line by line, step back and look at the whole change: if a reader would meet more comment
-  than code, keep cutting until the balance tips back. New files have no existing comments to
-  match, so don't read "no surrounding comments" as license to add many — a brand-new file should
-  still read as mostly code.
+* **`low` *(default)*** — read `references/strictness-low.md`.
+* **`high`** — read `references/strictness-high.md` **and** `references/strictness-low.md`. The high
+  file layers extra rules (long block comments, file/module headers) on top of the low base set.
+
+Resolve the level from the skill's `strictness` argument, defaulting to `low` when none is given. If
+an unrecognized value is passed, briefly say so and fall back to `low`. Then work through every
+guideline in the file(s) you loaded, in order, noting each violation.
 
 ## Step 2: Act on what you found
 
@@ -104,8 +67,9 @@ that should change, and refactor code where that's the cleaner fix.
 common failure of this skill is cutting once, leaving a shorter-but-still-dense file, and stopping.
 The first pass softens; it rarely cuts enough. So after editing, look at each touched file again
 and ask the reviewer's question literally: *is there still more comment than code here? Does any
-surviving block comment run more than a line or two? Does any comment restate what the code does,
-mention tests, or narrate a past decision?* If yes for any of them, you are not done — cut again.
+comment still violate a guideline you loaded — restating what the code does, mentioning tests,
+narrating a past decision, or (at `high`) surviving as a multi-line block comment?* If yes for any
+of them, you are not done — cut again.
 Repeat until a skim of the file shows code, not prose. Err toward one more cut, not one fewer:
 a comment you removed that turns out to matter is one git command to restore; a wall of prose that
 survives is what the user is complaining about.
@@ -126,6 +90,11 @@ to apply the fixes (the user can re-run in `fix` mode). If nothing is worth flag
 
 Post the findings as inline comments on the PR for the current branch. Make no local edits.
 
+This mode requires the GitHub CLI, an authenticated account with access to the repository, network
+access, and permission to post a review. If any prerequisite is unavailable, or the current
+environment denies approval for the external action, stop without posting and report the exact
+reason. Do not silently fall back to local edits or a local-only report.
+
 1. Resolve the PR and repo for the current branch:
    ```bash
    gh pr view --json number,headRefOid,headRepository,headRepositoryOwner
@@ -143,8 +112,10 @@ Post the findings as inline comments on the PR for the current branch. Make no l
      -F 'comments[][side]=RIGHT' \
      -F 'comments[][body]=This narrates the code below; consider removing it.'
    ```
-   For many comments, building the JSON payload and piping it to `gh api --input -` is cleaner
-   than long flag lists. Keep each comment body short and concrete, and where helpful use a
+   The example uses Bash syntax. If the current shell differs, translate its quoting and line
+   continuations before running it. For many comments, supplying a JSON payload to `gh api --input`
+   is cleaner than long flag lists. Keep each comment body short and concrete, and where helpful
+   use a
    GitHub [suggestion block](https://docs.github.com/articles/incorporating-feedback-in-your-pull-request)
    (```` ```suggestion ````) so the author can apply the fix in one click.
 3. A flagged line must be part of the PR's diff to be commentable inline. Since you're only

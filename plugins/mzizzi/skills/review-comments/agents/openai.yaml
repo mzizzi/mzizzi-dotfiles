@@ -1,0 +1,7 @@
+interface:
+  display_name: "Review Comments"
+  short_description: "Review comment quality in current changes"
+  default_prompt: "Use $review-comments to clean up comments in my current changes."
+
+policy:
+  allow_implicit_invocation: true
