@@ -129,6 +129,12 @@ After writing the plan, give the user a brief summary of:
 
 Don't recite the whole plan back — they can read the file. Focus on decisions they should weigh in on.
 
+Then, as the **very last line** of your output — after everything else — emit a copyable command to hand the plan off to implementation. It must be the final line, alone, with nothing after it, so the user can double- or triple-click to select and copy it:
+
+    /mzizzi:implement-plan <target file path>
+
+Use the **absolute path** to the plan file written in Step 8 (e.g. `/mzizzi:implement-plan C:\Users\Matt\code\mzizzi-dotfiles\plans\20260615-token-refresh\plan.md`). Emit it as a bare line — no surrounding prose, backticks, or trailing punctuation.
+
 ## Plan Output Template
 
 ```markdown
@@ -165,4 +171,9 @@ Topics that need investigation or a user decision before or during implementatio
 
 ## Resolved Questions
 * ...
+
+## Follow-ups
+Deferred issues to revisit — populated later (e.g. during implementation, by the
+/implement-plan review pass) rather than at planning time. Leave as a placeholder.
+* _None yet._
 ```
