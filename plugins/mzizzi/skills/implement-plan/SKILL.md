@@ -13,21 +13,7 @@ Take a plan document (the output of the /create-plan skill) and turn it into wor
 
 Work through the steps below in order. Keep a running checklist so nothing gets dropped — the review-and-triage tail is easy to skip once the code is working, but it's where most of the value is.
 
-## Step 1: Checkpoint any pending work
-
-Before touching anything, check whether the working tree is already dirty:
-
-```bash
-git status --porcelain
-```
-
-If there are pending changes, they'll muddy the implementation diff — the Codex review in Step 4 works from the working-tree diff, and you want that diff to be *your* implementation, not a mix of your work and whatever was already in flight.
-
-If the tree is dirty, ask the user (via AskUserQuestion) whether to commit the current state as a checkpoint first. If they agree, make a single checkpoint commit (e.g. `git commit -am "checkpoint before implementing <plan>"`) so the implementation starts from a clean baseline. If they decline, continue — but be aware the review scope will include the pre-existing changes.
-
-If the tree is already clean, say so briefly and move on.
-
-## Step 2: Resolve the target and scope
+## Step 1: Resolve the target and scope
 
 Parse the user's input into two things:
 
@@ -35,12 +21,67 @@ Parse the user's input into two things:
 * If the user gave a path to a `.md` file, that's the plan document.
 * If the user gave a directory, look inside it for `plan.md` (the /create-plan default). If the directory has a differently named plan file, use that; if it's ambiguous, ask.
 * Read the plan document in full. Also skim any sibling docs in the plan directory (e.g. `brainstorm.md`, a `design.md`) — they carry context and decisions the plan may reference rather than restate.
+* Note the **plan directory** — Step 2 derives the feature-branch name from it, so resolving the target first is what lets the branch be named before any code is written.
 
 **The scope** — how much of the plan to implement this round:
 * If the user named a subset (e.g. `plans/foo/plan.md phase 1`, or "just the first phase"), implement only that. Plans from /create-plan split work into `### Implementation Phase <N>` sections, so "phase 1" maps to `Implementation Phase 1`. Keeping rounds small keeps the resulting PR reviewable.
 * Otherwise, implement the whole plan.
 
-Confirm your understanding of the scope back to the user in one line before you start writing code, so a misread is caught cheaply.
+Confirm your understanding of the scope back to the user in one line before moving on, so a misread is caught cheaply.
+
+## Step 2: Prepare the feature branch
+
+Isolate the implementation on its own feature branch so the diff maps cleanly back to the plan and never lands directly on the trunk. Sort out the branch — and any pending changes — *before* implementing. The Codex review in Step 4 works from the working-tree diff, so the goal throughout is a clean baseline: that diff should be *your* implementation, not a mix of your work and whatever was already in flight.
+
+First gather the git state and identify the trunk:
+
+```bash
+git rev-parse --abbrev-ref HEAD                    # current branch
+git status --porcelain                             # dirty if non-empty
+git symbolic-ref --short refs/remotes/origin/HEAD  # trunk, e.g. origin/main -> main
+```
+
+The **trunk** is what `origin/HEAD` resolves to (strip the `origin/` prefix). If there's no remote/`origin` and that command fails, fall back to whichever of `main` / `master` exists locally.
+
+### Case A — already on a non-trunk branch
+
+You're continuing existing feature work (e.g. this is phase 2 of a plan whose phase 1 already created the branch). **Don't create a new branch — stay on it.** Tell the user which branch you're working on.
+
+If the tree is dirty here, the "carry onto a new branch" framing doesn't apply. Ask via AskUserQuestion whether to:
+- **Checkpoint-commit on this branch** — commit the pending state so the review diff starts clean (`git commit -am "checkpoint before implementing <plan>"`), or
+- **Abort** — stop so the user can sort the changes out and re-run.
+
+### Case B — on the trunk (main/master)
+
+Create a feature branch. Derive its name as `<username>/<slug>`:
+- `<username>` — the local-part of `git config user.email` (e.g. `mhzizzi@gmail.com` → `mhzizzi`).
+- `<slug>` — the plan directory's basename with any leading `yyyymmdd-` date prefix stripped (e.g. `20260713-oauth-token-refresh` → `oauth-token-refresh`).
+- **Collision:** if that branch name already exists, append `-2`, then `-3`, … until you find a free name. Don't prompt — just take the first free variant (the announce step below tells the user which name won).
+
+Then branch, handling the working tree:
+
+**Clean tree** — bring the trunk up to date first, then branch off it:
+
+```bash
+git fetch <remote>
+git switch <trunk>
+git merge --ff-only <remote>/<trunk>   # fast-forward only; refuses if diverged
+git switch -c <branch-name>            # branch off the updated trunk
+```
+
+If the fast-forward can't be done cleanly — the fetch fails (offline), the trunk has diverged from the remote (local-only commits, so `--ff-only` refuses), or it would otherwise discard local work — **stop and ask** the user how to proceed via AskUserQuestion (e.g. *branch off the local trunk as-is and accept a possibly-stale base*, or *abort and let me reconcile the trunk first*). Don't silently branch off a stale or diverged base. (If there's simply no remote configured, there's nothing to sync against — note that and branch off the local trunk without asking.)
+
+**Dirty tree** — ask via AskUserQuestion which the user wants; offer exactly these two:
+- **Carry onto the branch + checkpoint-commit** — the changes are the start of this feature. Create the branch off the *current local* trunk (which carries the uncommitted changes onto it) and commit them as a checkpoint, keeping the trunk clean and giving the Step 4 review a clean baseline. **Skip the remote fast-forward on this path** — reconciling a dirty tree against a freshly-updated trunk invites conflicts — and tell the user the base may be slightly behind remote.
+  ```bash
+  git switch -c <branch-name>          # carries the uncommitted changes onto the new branch
+  git commit -am "checkpoint: pre-existing changes before implementing <plan>"
+  ```
+- **Abort** — the changes don't belong with this feature. Stop and let the user commit/stash/move them, then re-run.
+
+### Announce the branch
+
+Whichever path you took, emit a one-line message naming the branch you're now on — created, reused, or a `-N` collision variant — and flag it if the base wasn't remote-synced (dirty-carry path, or the user chose to branch off a stale trunk). You'll surface this same branch name again in the Step 9 summary.
 
 ## Step 3: Implement
 
@@ -51,7 +92,7 @@ While implementing:
 * Match the surrounding codebase's conventions, not the plan's illustrative style — the plan's code sketches optimize for explaining structure, not for fitting the repo.
 * Verify as you go. Run the relevant build, typecheck, or tests after meaningful chunks rather than saving all verification for the end — a failure caught early is cheaper to locate. If the plan named tests to write or update, write them.
 
-Leave the changes uncommitted (on top of the Step 1 checkpoint, if one was made). The Codex review in the next step reads the working-tree diff.
+Leave the changes uncommitted (on top of the feature branch and any checkpoint commit from Step 2). The Codex review in the next step reads the working-tree diff.
 
 ## Step 4: Codex adversarial review of the implementation
 
@@ -59,7 +100,7 @@ Run a cross-model review of the code you just wrote, using the Codex adversarial
 
     Skill(skill: "codex-adversarial-review", args: "--scope auto focus on correctness, edge cases, error handling, and whether the implementation faithfully follows the plan at <plan document path>")
 
-Where `<plan document path>` is the file from Step 2. `--scope auto` picks up the working-tree diff — your implementation. The focus text steers Codex toward code-quality and plan-fidelity concerns.
+Where `<plan document path>` is the file from Step 1. `--scope auto` picks up the working-tree diff — your implementation. The focus text steers Codex toward code-quality and plan-fidelity concerns.
 
 On success, the output is a plain-text review report — read it as prose, not JSON:
 - A `Verdict:` line with the overall assessment, followed by a brief narrative summary.
@@ -115,6 +156,7 @@ This edits the code locally, removing or rewriting flagged comments. Re-run the 
 ## Step 9: Summarize for the user
 
 Give the user a concise wrap-up — they can read the diff and the plan themselves, so focus on what they need to decide or know:
+- The **feature branch** the work landed on (the same name announced in Step 2) — so the summary is self-contained and the branch is easy to find for review/PR. Note it if the base wasn't remote-synced.
 - What was implemented (which plan / which scope).
 - Any deviations from the plan and why.
 - The Codex review outcome: how many findings, how many you fixed inline, how many you deferred. If the review was unavailable, say so and why.

@@ -31,11 +31,11 @@ This step repeats (see Step 2). On a second or later pass, **continue the same i
 
 When a grill pass reaches a natural stopping point — the branches currently in view are resolved — check whether there's more to explore. Use AskUserQuestion with the question **"Any more questions or ideas?"** and exactly these three choices:
 
-- **Continue brainstorming** → there's still ground to cover. Loop back to Step 1 and run another grill pass, carrying your running record forward.
+- **Continue brainstorming** → there's still ground to cover. Someone who picks this usually has a specific idea in mind, so **first ask them what to explore next**: since AskUserQuestion options can't capture free text, follow the selection with an open-ended plain-text prompt (e.g. "What would you like to dig into next?") and wait for their answer. Seed the next grill pass (Step 1) with whatever thread they give, carrying your running record forward. If they'd rather you drive — they reply with nothing specific, or say to keep going — resume walking the still-open branches of the design tree on your own.
 - **Finish and save** → go to Step 3, write `brainstorm.md`, and stop.
 - **Finish and create implementation plan** → go to Step 3, then continue to Step 4 to build the plan from the brainstorm.
 
-Which one you recommend is situational, so order the options with your recommendation first and append **"(Recommended)"** to its label: while major branches of the design tree are still open, recommend *Continue brainstorming*; once things feel covered, recommend a finish option. The user can also pick "Other" to name a specific new thread they want to dig into — treat that as *Continue brainstorming* seeded with their topic.
+Always present these three choices **in the exact order listed above** — `Continue brainstorming`, then `Finish and save`, then `Finish and create implementation plan` — every pass, regardless of how covered the design feels. The order is static so the menu is predictable across passes and usages; do **not** reorder it to float a recommendation to the top. `Continue brainstorming` is **always** the recommended option: keep it first and append **"(Recommended)"** to its label every time. Making a finish option the recommended (top) choice risks a stray selection jumping the flow into saving or planning before the user means to — the safe default is to keep exploring, and the user can always pick a finish option deliberately. Picking "Other" and typing a thread is the one-step shortcut for the same intent — treat it as *Continue brainstorming* already seeded with that topic, and skip the follow-up prompt.
 
 Loop Step 1 ↔ Step 2 until the user picks one of the two finish options.
 
