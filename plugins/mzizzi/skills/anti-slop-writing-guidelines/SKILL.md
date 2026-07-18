@@ -1,5 +1,5 @@
 ---
-name: anti-slop-writing
+name: anti-slop-writing-guidelines
 description: Write text that avoids all known AI writing patterns and passes human detection. Use when writing articles, essays, blog posts, social media copy, or any content that must read as authentically human. Triggers on requests to write naturally, avoid AI slop, avoid AI detection, humanize writing, write like a human, or make text sound authentic.
 ---
 
