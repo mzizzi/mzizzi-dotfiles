@@ -153,7 +153,10 @@ Before summarizing, clean up the comments the implementation introduced. The cod
 
 This edits the code locally, removing or rewriting flagged comments. Re-run the relevant verification afterward if any comment cleanup touched code (e.g. a comment was folded into a rename), so a cleanup that broke something is caught before you hand off.
 
-## Step 9: Summarize for the user
+## Step 9:
+
+
+## Step 10: Summarize for the user
 
 Give the user a concise wrap-up — they can read the diff and the plan themselves, so focus on what they need to decide or know:
 - The **feature branch** the work landed on (the same name announced in Step 2) — so the summary is self-contained and the branch is easy to find for review/PR. Note it if the base wasn't remote-synced.
