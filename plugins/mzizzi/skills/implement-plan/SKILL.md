@@ -2,7 +2,7 @@
 name: implement-plan
 description: Implement a technical plan produced by /create-plan — turn a plan.md (or a subset of it) into working code, then run a Codex adversarial review of the changes and triage the findings. Use this skill whenever the user wants to build out, execute, or implement an existing plan, or says things like "implement the plan in plans/…", "let's build phase 1 of this plan", "execute plan.md", or points at a plan directory and says "go". Prefer this over ad-hoc implementation whenever a plan document already exists — it keeps the diff reviewable and folds deferred review findings back into the plan.
 argument-hint: <plan directory or plan.md> [subset to implement, e.g. "phase 1"]
-allowed-tools: Read, Grep, Glob, Edit, Write, Bash, Agent, AskUserQuestion, Skill
+allowed-tools: Read, Grep, Glob, Edit, Write, Bash, Agent, AskUserQuestion, Skill, TaskCreate, TaskUpdate, TaskList
 disable-model-invocation: false  # explicitly model-invokable (the default; stated so it can't silently drift)
 user-invocable: true             # explicitly available as an /implement-plan slash command
 ---
@@ -11,7 +11,18 @@ user-invocable: true             # explicitly available as an /implement-plan sl
 
 Take a plan document (the output of the /create-plan skill) and turn it into working code, then subject the resulting changes to a Codex adversarial review and triage what it finds. The goal is a clean, reviewable implementation whose diff maps back to the plan, with review findings either fixed inline or recorded in the plan for follow-up.
 
-Work through the steps below in order. Keep a running checklist so nothing gets dropped — the review-and-triage tail is easy to skip once the code is working, but it's where most of the value is.
+Work through the steps below in order, tracking them with the task list seeded in Step 0 — the review-and-triage tail is easy to skip once the code is working, but it's where most of the value is.
+
+## Step 0: Create the task list
+
+Before doing anything else — before even opening the plan document — seed a tracked task list with the harness task tools (TaskCreate/TaskUpdate/TaskList). Create one item per numbered step of this skill: resolve target and scope, prepare the feature branch, implement (a placeholder — expanded below), Codex review, triage, apply trivial fixes, record follow-ups, review comments, summarize. Seeding the full skeleton first is what protects the tail: those steps exist as pending items from minute one, so finishing the code doesn't end the run — the list still shows open work. Creating the list must not wait on Step 1; an unconditional first action can't be preempted by scope questions going sideways.
+
+**Expansion:** once Step 1 resolves the scope, replace the implement placeholder with the real work items — one per file entry the in-scope `### Implementation Phase <N>` sections list, in plan order, grouping only where the plan itself groups tightly-coupled files, with each entry's testing notes folded into its item. The plan's own enumeration is the source of granularity; don't re-judge it per run.
+
+**Status discipline:**
+* Exactly one of *this run's* items in progress at a time: mark an item in progress when you start the step and completed immediately when it's done — never batch-complete at the end. The invariant covers only items this invocation created; if the session already has unrelated tasks, add this skill's items alongside and never change the unrelated tasks' statuses.
+* Never end the turn with this run's items pending unless the run genuinely stopped short — the user redirected or aborted, or execution is blocked (failing verification, an unavailable dependency, a tool error you can't resolve). In those cases annotate the current item with the blocker and leave it and everything downstream pending; pending is the honest state for unfinished work.
+* If a step becomes moot mid-run (e.g. the Codex review is unavailable, so triage has nothing to do), don't delete its item and don't leave it pending — append a short reason to the item ("skipped — review unavailable") and mark it completed, so the list ends resolved and the skip stays visible. Reserve this for steps with genuinely nothing to do; a blocked step is pending, not skipped.
 
 ## Step 1: Resolve the target and scope
 
@@ -88,7 +99,7 @@ Whichever path you took, emit a one-line message naming the branch you're now on
 Work through the in-scope portion of the plan. Build a checklist from the plan's implementation steps and execute them in the order the plan lays out — plans are ordered so that later files can import earlier ones.
 
 While implementing:
-* Follow the plan's design and code sketches, but treat them as intent, not gospel. Plans are written before the code exists; if reality diverges (an API signature is different, a sketch won't compile, a better approach is obvious), do the right thing and note the deviation for the summary in Step 8. Don't blindly transcribe a sketch that doesn't fit.
+* Follow the plan's design and code sketches, but treat them as intent, not gospel. Plans are written before the code exists; if reality diverges (an API signature is different, a sketch won't compile, a better approach is obvious), do the right thing and note the deviation for the summary in Step 9. Don't blindly transcribe a sketch that doesn't fit.
 * Match the surrounding codebase's conventions, not the plan's illustrative style — the plan's code sketches optimize for explaining structure, not for fitting the repo.
 * Verify as you go. Run the relevant build, typecheck, or tests after meaningful chunks rather than saving all verification for the end — a failure caught early is cheaper to locate. If the plan named tests to write or update, write them.
 
@@ -153,10 +164,7 @@ Before summarizing, clean up the comments the implementation introduced. The cod
 
 This edits the code locally, removing or rewriting flagged comments. Re-run the relevant verification afterward if any comment cleanup touched code (e.g. a comment was folded into a rename), so a cleanup that broke something is caught before you hand off.
 
-## Step 9:
-
-
-## Step 10: Summarize for the user
+## Step 9: Summarize for the user
 
 Give the user a concise wrap-up — they can read the diff and the plan themselves, so focus on what they need to decide or know:
 - The **feature branch** the work landed on (the same name announced in Step 2) — so the summary is self-contained and the branch is easy to find for review/PR. Note it if the base wasn't remote-synced.
