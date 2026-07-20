@@ -401,14 +401,3 @@ After drafting, run this checklist:
 34. Check the ending: if it resolves neatly ("one thing is clear," "the key takeaway," a wrap-up that restates), cut it and end on a position or a concrete fact
 35. Check the argument arc: if every section runs Opening → Expansion → Contrast → Resolution, break the cadence in at least two sections
 36. Check for hedge-and-reassure stacking ("While X, generally speaking, in most cases..."); one hedge max per claim, or none
-
----
-
-# Language Support
-
-The structural rules apply to all languages. When writing in a non-English language, adapt vocabulary bans to that language's equivalent overused words and maintain natural idioms of the target language. For Bahasa Indonesia, use `SKILL-id.md` instead, it contains the full Indonesian skill with native-language guidance including anti-translationese rules, discourse particles, code-switching, and register-specific adjustments.
-
----
-
-**Last Updated:** July 6, 2026 (v3.0)
-**Changelog v3.0:** Version bump from v2.0. All content updated to latest rules.
