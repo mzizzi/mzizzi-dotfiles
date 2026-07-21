@@ -138,7 +138,7 @@ Findings from the implementation review that were not fixed in this round.
 
 Before summarizing, clean up the comments the implementation introduced. The code you just wrote — plus the trivial fixes from Step 6 — tends to accumulate narration and decision-trail comments a reviewer doesn't need. Run the comment review over the working-tree diff, in fix mode at low strictness:
 
-    Skill(skill: "review-comments", args: "fix low")
+    Skill(skill: "review-comments", args: "--fix --strictness=low")
 
 This edits the code locally, removing or rewriting flagged comments. Re-run the relevant verification afterward if any comment cleanup touched code (e.g. a comment was folded into a rename), so a cleanup that broke something is caught before you hand off.
 

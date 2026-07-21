@@ -5,8 +5,8 @@
     individually-defensible comments still add up to a wall of prose that buries the code. After
     going line by line, step back and look at the whole change: if a reader would meet more comment
     than code, keep cutting until the balance tips back. New files have no existing comments to
-    match, so don't read "no surrounding comments" as license to add many — a brand-new file should
-    still read as mostly code.
+    match, so "no surrounding comments" is not license for a comment on every block — a brand-new file
+    should still read as mostly code.
 * **Don't mention tests, the test status, or other incidental implementation details in code
     comments.** Drop notes like "pure and unit-tested", "covered by tests", "see the test for
     examples". Whether something is tested lives in the test suite, not pinned to the implementation
@@ -23,7 +23,7 @@
     comment as a crutch. A comment only survives this rule if it states a *non-obvious why* the code
     genuinely cannot express (see the "why" rule below). "It restates obvious behavior" is a removal,
     not a rewrite.
-* **Change-log narration belongs in git, not the code.** Remove comments that describe your edit,
+* **Change-log narration belongs in git, not the code.** Remove comments that describe the edit,
     the diff, or the history (`// changed to fix X`, `// new logic`, `// added validation`). That
     context lives in the commit message and PR description; in the code it goes stale the moment
     someone else touches the line. This includes comments that explain the *current* behavior by
