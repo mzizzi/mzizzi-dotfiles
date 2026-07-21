@@ -14,7 +14,7 @@ Two things make this more delicate than a normal "add Prettier" change, and they
 
 **The files are load-bearing prompts.** `plugins/mzizzi/skills/*/SKILL.md` and `plugins/mzizzi/agents/*.md` are read by Claude Code as instructions. Their YAML frontmatter drives skill discovery and model selection; their body structure is what the model follows at runtime. Prettier rewrites more than paragraph wrapping — it normalizes emphasis markers, renumbers ordered lists, reindents nested list content, pads table cells, reformats frontmatter YAML, and recursively formats fenced code blocks whose language it recognizes. Several files in this repo trip every one of those. Because a frontmatter or template regression is silent — nothing errors, the skill just stops triggering or emits a subtly different template — verification here is mechanical rather than by eye.
 
-**Line endings are already inconsistent.** `core.autocrlf` is `true` on this machine and there is no `.gitattributes`. Twelve of the 26 tracked markdown files are CRLF in the working tree; the other fourteen are LF. Prettier's default `endOfLine` is `lf`. Without a decision here, the hook and the checkout process will fight each other indefinitely.
+**Line endings were inconsistent, now settled repo-wide.** `core.autocrlf` is `true` in the global git config and the repo had no `.gitattributes`. The committed blobs are all LF — `git ls-files --eol` reports every tracked file as `i/lf` — but `autocrlf` smudges some to CRLF in the working tree on checkout, so the tree is mixed and any formatter with a fixed `endOfLine` would fight git's own normalization. This is now fixed by a committed `.gitattributes` (`* text=auto eol=lf`) that pins every text file to LF in the repo and in the working tree on all platforms, replacing the per-machine `autocrlf`. See the `.gitattributes` section below.
 
 ## Design
 
@@ -61,24 +61,25 @@ The `repo: local` + `language: node` pattern is what lets this work without a No
 
 The hook itself only ever sees staged files, so `.nocommit/` (already gitignored) can never reach it. But `prettier --write .` run by hand would walk into it. One line now beats a confusing incident later. Nothing else in the repo warrants exclusion at file granularity — the remaining risky spots are handled with inline `<!-- prettier-ignore -->` comments instead, which are surgical and self-documenting.
 
-`.gitattributes` is new, and it is the line-ending decision.
+`.gitattributes` is the line-ending decision, and it is already committed — ahead of the rest of this plan, as its own change — because it is a prerequisite the reformat depends on and it stands on its own.
 
 ```
-*.md text eol=lf
+* text=auto eol=lf
 ```
 
 ### Why `.gitattributes` and not `endOfLine`
 
-With `core.autocrlf=true` and no `.gitattributes`, git converts text files to CRLF on checkout. Prettier's default `endOfLine: lf` then considers those files unformatted and rewrites them to LF, pre-commit detects the modification, and the commit aborts. That would happen on the first commit after every fresh clone or every checkout that touches a markdown file — the hook would be permanently at war with git's own working-tree normalization.
+With `core.autocrlf=true` and no `.gitattributes`, git smudges LF blobs to CRLF on checkout. Prettier's default `endOfLine: lf` then considers those working-tree files unformatted and rewrites them to LF, pre-commit detects the modification, and the commit aborts — on the first commit after every fresh clone or every checkout that touches a markdown file. The hook would be permanently at war with git's own working-tree normalization.
 
 Two ways out:
 
-1. Set `"endOfLine": "auto"` in `.prettierrc` so Prettier preserves whatever the file already has. This makes the symptom disappear but leaves the repo permanently mixed, and it makes committed content depend on which machine formatted it.
-2. Declare `*.md text eol=lf` in `.gitattributes`. A path attribute overrides `core.autocrlf` for the matched files, so markdown is LF in the index _and_ LF in the working tree on every platform. Prettier's default is then correct with no config, and the question stops being machine-dependent.
+1. Set `"endOfLine": "auto"` in `.prettierrc` so Prettier preserves whatever the file already has. This makes the symptom disappear but leaves the working tree machine-dependent and re-opens the question on every platform.
+2. Declare the eol in `.gitattributes`. A path attribute overrides `core.autocrlf`, so text files are LF in the index _and_ LF in the working tree on every platform. Prettier's default is then correct with no config, and the question stops being machine-dependent.
 
-Option 2 is the choice. It fixes the cause rather than the symptom, and it moves a per-machine git setting into a tracked, reviewable repo file. The cost is a one-time renormalization (`git add --renormalize`), which folds into the reformat commit that is happening anyway.
+Option 2 is the choice, applied repo-wide as `* text=auto eol=lf` rather than scoped to `*.md`. Two facts made the wider scope both correct and cheaper than the plan first assumed:
 
-The attribute is scoped to `*.md` to match the markdown-only scope of the whole effort, and to keep the renormalize diff confined to files that are being rewritten regardless. The repo's `.ps1`, `.json`, and `.yaml` files are equally subject to `autocrlf`, but pulling them in would add unrelated churn to the reformat commit — notably the PowerShell scripts, where CRLF is the platform-native convention. Widening to `* text=auto eol=lf` is a natural follow-up once the markdown case has settled.
+- **The index is already all-LF.** `git ls-files --eol` shows every tracked blob as `i/lf`; the CRLF is purely a working-tree artifact of `autocrlf` smudging. There is no stored content to rewrite — a `git add --renormalize` changes nothing in the index — so no renormalize commit is needed. The fix is the attribute file itself: it stops the smudge going forward and makes LF the durable, cross-platform default, moving a per-machine git setting into a tracked, reviewable repo file.
+- **Repo-wide costs nothing here.** Because no blob is CRLF, `* text=auto` cannot introduce churn; it only prevents future drift for the `.ps1`, `.json`, and `.yaml` files that are equally subject to `autocrlf`. `.ps1` runs fine as LF under modern PowerShell, so there is no reason to special-case it, and `text=auto` auto-detects any binary and leaves it alone (the repo currently has none).
 
 ### Bootstrap: how pre-commit gets onto the machine
 
@@ -102,17 +103,17 @@ So `install.ps1` gains an `Ensure-PreCommitHook` function following the existing
 
 This is the part that needs verification, so it is worth naming exactly what is at risk. Ranked:
 
-**`plugins/mzizzi/skills/review-comments/SKILL.md` — highest risk, hits every hazard at once.**
+**`plugins/mzizzi/skills/review-comments/SKILL.md` — highest risk, though two of its hazards were defused up front (see "Pre-normalization" in Phase 3).**
 
-- Its `description:` frontmatter value is a multi-line YAML plain scalar spanning lines 3–10 with two-space continuation indent. Prettier will reformat the frontmatter and, with `proseWrap: "never"`, collapse it to one very long line. YAML plain-scalar folding joins continuation lines with a single space, so the _parsed_ value should be byte-identical — but this is the field Claude Code matches against for skill triggering, so "should be" has to become "verified" (Phase 3 does this mechanically).
-- Line 120 contains a four-backtick inline code span whose content is three backticks, with the surrounding spaces that CommonMark requires to disambiguate. If Prettier renormalizes the delimiter run or strips the padding spaces, the rendered content changes. This is the single most fragile line in the repo, and it is inline content, so `embeddedLanguageFormatting` does not protect it.
-- Lines 18–22 are a GFM table whose widest cell is ~130 characters. Prettier pads all cells to the widest column, so the two short rows balloon. A candidate for `<!-- prettier-ignore -->` if the result is worse than the original.
+- Its `description:` frontmatter — the field Claude Code matches against for skill triggering — was a multi-line YAML plain scalar. Prettier reformats frontmatter with its own YAML printer, which neither `proseWrap` nor `embeddedLanguageFormatting` governs (both are Markdown-scoped, and frontmatter is not a fenced code block), and it would fold that scalar to one line. Rather than trust YAML folding to yield a byte-identical parsed value and verify it only after the fact, the scalar has been collapsed to a single line by hand ahead of the reformat, so the reformat is a no-op on it by construction.
+- The four-backtick inline code span (near the end of the file) has content of three backticks, with the surrounding spaces that CommonMark requires to disambiguate. If Prettier renormalizes the delimiter run or strips the padding spaces, the rendered content changes. This is the single most fragile line in the repo, and it is inline content, so `embeddedLanguageFormatting` does not protect it.
+- The former GFM table (mode → description) has been rewritten as a `mode: description` bullet list, so the cell-padding hazard is gone — bullet prose is left alone under `proseWrap: "never"`, and no `<!-- prettier-ignore -->` is needed.
 - Lines 51–52 nest emphasis inside strong. Prettier prefers `_` for emphasis and `**` for strong, so this becomes a mixed-delimiter construction. Adjacent-delimiter edge cases are where markdown formatters historically get things subtly wrong.
 - Lines 99–101 and 106–114 are fenced code blocks nested inside an ordered list at three-space indent, one of them containing backslash line continuations. The list indentation may shift even though the fence contents will not.
 
 **Nested markdown fences — mitigated by config, not left to review.** `implement-plan/SKILL.md` (line 147), `create-plan/SKILL.md` (line 140), and `brainstorm/SKILL.md` (line 54) each contain a ` ```markdown ` block holding a template the skill emits verbatim. `embeddedLanguageFormatting: "off"` is what protects these; Phase 3 verifies the protection held rather than trusting it.
 
-**`implement-plan/SKILL.md` — frontmatter comment alignment.** It has hand-aligned trailing comments, where several `key: value  # comment` lines are padded so the comments line up. Prettier's YAML printer collapses that padding to a single space. Cosmetic, intentional, and lost. Worth accepting rather than fighting.
+**Frontmatter comment alignment — removed up front.** `implement-plan/SKILL.md`, `create-plan/SKILL.md`, and `codex-adversarial-review/SKILL.md` each had hand-aligned trailing comments (`key: value  # comment`) on their `disable-model-invocation`/`user-invocable` lines, which Prettier's YAML printer would collapse to a single space. Those comments have been dropped: the field names are self-describing, so the comments carried nothing the frontmatter doesn't already say. This removes both the cosmetic churn and a blind spot in the scripted check — YAML comments don't survive `safe_load`, so a change to one couldn't be compared before/after anyway.
 
 **`create-plan/SKILL.md` and `implement-plan/SKILL.md` — mixed bullet markers.** These are the only two files using both `*` and `-` at top level (24/27 and 12/20 respectively). Prettier normalizes to `-`, which is a large but entirely mechanical diff.
 
@@ -159,11 +160,12 @@ Then discard the changes (`git checkout -- .`) — Phase 3 does the reformat del
 
 Two mechanical changes land together here, because separating them would mean reformatting twice.
 
+**Pre-normalization — lands as its own commit before the reformat.** A few hand-maintained constructs were normalized by hand first, so the mechanical reformat commit stays purely mechanical and the silent-failure surface shrinks before Prettier ever runs: `review-comments/SKILL.md`'s multi-line `description:` scalar was collapsed to a single line (removing the trigger-string folding risk by construction), the hand-aligned frontmatter comments in `implement-plan`, `create-plan`, and `codex-adversarial-review` were deleted (the fields are self-describing), and the GFM table in `review-comments` was rewritten as a bullet list. These are deliberate content edits, not mechanical churn, so they belong in their own commit ahead of the reformat rather than buried in it.
+
 **Stage everything first.** `pre-commit run --all-files` operates on git-tracked files, and this plan directory is currently untracked — `plans/20260720-markdown-formatting-hooks/plan.md` and `seed.md` are both new. Running the formatter and then `git add -A` would stage those two files without ever formatting them, landing unformatted markdown in the very commit that is supposed to establish the baseline. The hook is not installed yet (Phase 4), so nothing would catch it. Stage first, then format:
 
 ```bash
 git add -A                       # make every intended file known to git, including new ones
-git add --renormalize .          # apply the new .gitattributes eol=lf to the index
 python -m pre_commit run --all-files
 git add -A                       # restage the formatter's rewrites
 python -m pre_commit run --all-files    # must now pass clean
@@ -171,7 +173,7 @@ python -m pre_commit run --all-files    # must now pass clean
 
 The second run is the real check: it must exit zero with nothing modified. If it still reports changes, the formatter is not idempotent on some file, which is a finding worth understanding before committing rather than a step to repeat until it settles.
 
-`--renormalize` rewrites the index for the twelve CRLF markdown files so they are stored as LF; without it the eol attribute only takes effect the next time each file is touched, and the diff would carry line-ending noise for some files and not others.
+No `git add --renormalize` is needed here: `.gitattributes` (`* text=auto eol=lf`) is already committed and the index was already all-LF, so line endings are a settled precondition rather than part of this commit. Prettier writes LF, `.gitattributes` keeps the working tree LF, and the two no longer fight.
 
 **Capture the before-state for verification before running any of the above.** From a clean tree:
 
@@ -204,10 +206,10 @@ After the reformat, run `--snapshot after.json` and compare. Both categories sho
 **How to verify:**
 
 - The two snapshot comparisons come back clean. A frontmatter difference is a hard stop; investigate before committing. A fence difference means `embeddedLanguageFormatting: "off"` is not doing what it should — also a hard stop.
-- Confirm the four-backtick span at `review-comments/SKILL.md:120` is unchanged, including its interior spaces. This is inline code, so it is outside the fence check.
+- Confirm the four-backtick span in `review-comments/SKILL.md` (near the end of the file) is unchanged, including its interior spaces. This is inline code, so it is outside the fence check.
 - Check the ordered list in `anti-slop-writing-guidelines/SKILL.md` still numbers 1–26 across the heading breaks.
 - Scan the diff for stray escape backslashes — Prettier adds these where it reads prose punctuation as markdown syntax, and they render as literal backslashes in some viewers.
-- Read the GFM tables in `review-comments/SKILL.md` and `plans/20260719-workflow-implement-plan/workflow-script-api.md`. If cell padding made them materially worse, add `<!-- prettier-ignore -->` above the table and re-run.
+- Read the GFM table in `plans/20260719-workflow-implement-plan/workflow-script-api.md` (the `review-comments` table was converted to a bullet list in pre-normalization). If cell padding made it materially worse, add `<!-- prettier-ignore -->` above the table and re-run.
 - Behavioral check, not just textual: after committing, start a fresh Claude Code session and confirm the `mzizzi` skills still load and trigger. This is the backstop for anything the snapshots missed.
 
 The escape hatch if the diff is unacceptable in some corner: `<!-- prettier-ignore -->` immediately above the offending block, which exempts the next node only. Prefer that over a `.prettierignore` entry, which would exempt the whole file forever.
@@ -270,17 +272,17 @@ Editor side, so the unwrapped files stay readable. For VS Code, `"[markdown]": {
 - **Markdown-only scope to start.** Widening to YAML and JSON is a one-line change to `types_or`, deferred to keep the initial diff contained.
 - **Rollout order: configs → reformat → install → editor.** The hook is installed only after the tree is already clean, so it never fights pre-existing formatting.
 - **`python -m pip install --user pre-commit` for bootstrap.** No pipx dependency chain, no elevated shell needed for the `Program Files` Python. The `--user` scripts directory may not be on PATH, but the generated git hook embeds an absolute Python path, so the hook works regardless; documented manual commands use `python -m pre_commit` for the same reason.
-- **`.gitattributes` with `eol=lf` rather than `endOfLine: "auto"`.** `core.autocrlf=true` currently checks out 12 of 26 markdown files as CRLF, which would make Prettier rewrite them after every checkout. A path attribute overrides `autocrlf` and fixes the cause; `endOfLine: "auto"` only suppresses the symptom and leaves committed content dependent on the formatting machine.
-- **`.gitattributes` scoped to `*.md`, not the whole repo.** Matches the effort's scope and keeps the renormalize diff confined to files already being rewritten. Widening to `* text=auto eol=lf` later costs one line plus a second renormalize commit; doing it now would pull the PowerShell scripts (where CRLF is platform-native) into the reformat commit.
+- **`.gitattributes` with `eol=lf` rather than `endOfLine: "auto"`.** `core.autocrlf=true` (global config) smudges LF blobs to CRLF on checkout, which would make Prettier rewrite them after every checkout. A path attribute overrides `autocrlf` and fixes the cause; `endOfLine: "auto"` only suppresses the symptom and leaves the working tree machine-dependent.
+- **`.gitattributes` applied repo-wide (`* text=auto eol=lf`), not scoped to `*.md`, and committed up front.** The index is already all-LF (`git ls-files --eol`), so there is no stored content to renormalize and the wide scope introduces zero churn — it only stops future `autocrlf` drift for `.ps1`/`.json`/`.yaml` too. `.ps1` runs fine as LF under modern PowerShell, and `text=auto` leaves any binary alone (none exist today). Landed as its own change, since it is a standalone prerequisite the reformat depends on.
 - **`embeddedLanguageFormatting: "off"`, set preemptively.** Prettier formats markdown, so by default it recurses into the ` ```markdown ` template blocks in three SKILL.md files — blocks whose bytes are an invariant because the model emits them verbatim. Disabling recursion globally costs nothing, since no fenced block in this repo benefits from auto-formatting, and it removes an entire category of change from the reformat diff. Reacting after the fact would have relied on catching every regression by eye. The GFM tables and the four-backtick inline span are still handled reactively, since `embeddedLanguageFormatting` does not cover them.
 - **Enforcement is local and best-effort; no CI check.** A client-side hook is bypassable by `--no-verify`, absent on a clone that never ran the installer, and skipped on a machine without Python. For a single-committer dotfiles repo, a GitHub Actions workflow is ongoing surface — a second home for the Prettier version pin, runner config to maintain — guarding a gap only the repo owner can open. The plan's wording was narrowed to match reality instead. Recorded in Follow-ups if that changes.
 - **`install.ps1` owns the per-clone `pre-commit install`, and warns rather than failing when prerequisites are missing.** It is already the idempotent, self-healing, per-machine setup script with precedent for satisfying external dependencies. Hard-failing would block the plugin shim (its actual purpose) over a formatter, and would misrepresent an enforcement model that is best-effort by design.
 - **Verification is scripted, not visual, for the two silent-failure categories.** Parsed-frontmatter comparison and fenced-block byte comparison run before and after the reformat. A changed skill trigger string or a mangled output template produces no error — the skill just stops matching or emits something subtly different — so eyeballing a 26-file mechanical diff cannot establish their preservation.
 - **Stage before formatting in Phase 3.** `pre-commit run --all-files` covers tracked files only, and this plan directory is untracked; formatting first and then `git add -A` would land `plan.md` and `seed.md` unformatted in the baseline commit, with no hook installed yet to catch it.
+- **Pre-normalize hand-maintained frontmatter and the one table before reformatting.** `review-comments`'s multi-line `description:` scalar was collapsed to a single line, the aligned frontmatter comments in `implement-plan`, `create-plan`, and `codex-adversarial-review` were dropped as redundant with the self-describing field names, and the `review-comments` mode table became a bullet list — all as a separate content commit ahead of the mechanical reformat. This removes the trigger-string folding risk and the table-padding hazard by construction rather than leaning on post-hoc verification to catch them, and keeps the reformat commit purely mechanical. Frontmatter is reformatted by Prettier's YAML printer, which is governed by neither `proseWrap` nor `embeddedLanguageFormatting` (both Markdown-scoped) — so those settings were never a guard for it, and the scripted parsed-frontmatter check remains as a backstop rather than the primary defense.
 
 ## Follow-ups
 
 - **Repo-level format check.** If this repo ever gains a second committer or CI for another reason, add `pre-commit run --all-files` as a required check. The local hook is best-effort by construction.
-- **Widen `.gitattributes` to `* text=auto eol=lf`.** Covers `.ps1`, `.json`, and `.yaml`, which are equally subject to `core.autocrlf`. Deferred to keep the reformat commit focused on markdown.
 - **Widen the hook to YAML and JSON** via `types_or` in `.pre-commit-config.yaml`, once the markdown case has proven stable.
 - **markdownlint-cli2 as a second layer.** Catches structural issues formatting cannot (heading hierarchy, bare URLs). Would need MD013 (line length) disabled, since one-line-per-paragraph deliberately violates it. Deferred until formatting alone proves insufficient.

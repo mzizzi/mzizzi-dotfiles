@@ -1,0 +1,6 @@
+# Line endings: normalize every text file to LF in the repository and in the
+# working tree on all platforms (macOS and Windows alike). This overrides each
+# machine's core.autocrlf, so line endings are a property of the repo rather
+# than of whoever happened to clone it. Add explicit `*.ext binary` rules for
+# any binary formats introduced later.
+* text=auto eol=lf
