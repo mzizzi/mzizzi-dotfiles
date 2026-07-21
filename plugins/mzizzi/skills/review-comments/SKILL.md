@@ -24,8 +24,11 @@ say there's nothing to review and stop — don't load references or invent work.
 
 ## 2. Load references (strictness)
 
-The `--strictness` argument (default `high`; unrecognized → `high`) selects the guideline set. Read
-these files relative to this `SKILL.md` and treat them as the complete, ordered rule list:
+Always read `references/acceptable-comments.md` — it lists comment categories that are OK to keep
+and takes precedence over the strictness rules below.
+
+Then the `--strictness` argument (default `high`; unrecognized → `high`) selects the guideline set.
+Read these files relative to this `SKILL.md` and treat them as the complete, ordered rule list:
 
 - `high` *(default)* — `references/strictness-low.md` **and** `references/strictness-high.md` (high
   layers extra rules for long block comments and file/module headers on top of the base set).
