@@ -1,10 +1,10 @@
 ---
 name: implement-plan
 description: Implement a technical plan produced by /create-plan — turn a plan.md (or a subset of it) into working code, then run a Codex adversarial review of the changes and triage the findings. Use this skill whenever the user wants to build out, execute, or implement an existing plan, or says things like "implement the plan in plans/…", "let's build phase 1 of this plan", "execute plan.md", or points at a plan directory and says "go". Prefer this over ad-hoc implementation whenever a plan document already exists — it keeps the diff reviewable and folds deferred review findings back into the plan.
-argument-hint: <plan directory or plan.md> [subset to implement, e.g. "phase 1"]
+argument-hint: <plan directory or plan.md> [subset to implement, e.g. "phase 1"] [--worktree]
 allowed-tools: Read, Grep, Glob, Edit, Write, Bash, Agent, AskUserQuestion, Skill, EnterWorktree, TaskCreate, TaskUpdate, TaskList
-disable-model-invocation: false  # explicitly model-invokable (the default; stated so it can't silently drift)
-user-invocable: true             # explicitly available as an /implement-plan slash command
+disable-model-invocation: false
+user-invocable: true
 ---
 
 # Implement Plan
@@ -26,7 +26,7 @@ Before doing anything else — before even opening the plan document — seed a 
 
 ## Step 1: Resolve the target and scope
 
-Parse the user's input into two things:
+Parse the user's input into these parts:
 
 **The plan document** — the file to implement from:
 * If the user gave a path to a `.md` file, that's the plan document.
@@ -38,77 +38,39 @@ Parse the user's input into two things:
 * If the user named a subset (e.g. `plans/foo/plan.md phase 1`, or "just the first phase"), implement only that. Plans from /create-plan split work into `### Implementation Phase <N>` sections, so "phase 1" maps to `Implementation Phase 1`. Keeping rounds small keeps the resulting PR reviewable.
 * Otherwise, implement the whole plan.
 
+**The `--worktree` flag** — an optional `--worktree` token anywhere in the arguments. If present, brand-new feature work gets an isolated git worktree instead of a plain branch (Step 2). It has no effect when the plan already has feature work to reuse.
+
 Confirm your understanding of the scope back to the user in one line before moving on, so a misread is caught cheaply.
 
-## Step 2: Prepare the feature branch (in a worktree)
+## Step 2: Prepare the feature branch
 
-Isolate the implementation so its diff maps cleanly back to the plan and never lands directly on the trunk. A **new** feature gets its own git worktree — a separate checkout on a fresh branch — created with the harness `EnterWorktree` tool, which also moves the session into it. Feature work that already has a branch or worktree (e.g. this is phase 2 of a plan whose phase 1 created it) reuses what's there instead of spawning a second one. Either way, sort the branch — and any pending changes — out *before* implementing: the Codex review in Step 4 reads the working-tree diff, so the baseline must be clean, showing *your* implementation and nothing that was already in flight.
+Put the implementation on its own branch so its diff maps back to the plan and never lands on the trunk. Step 4's Codex review reads the working-tree diff, so the baseline must be clean. Work through the following in order.
 
-First derive the feature branch name and gather git state.
+1. **Derive the feature branch name** — `<username>/<slug>`, also used as the worktree name:
+   - `<username>` — local-part of `git config user.email` (`mhzizzi@gmail.com` → `mhzizzi`).
+   - `<slug>` — plan directory basename, leading `yyyymmdd-` stripped (`20260713-oauth-token-refresh` → `oauth-token-refresh`).
 
-**Branch name** — `<username>/<slug>`:
-- `<username>` — the local-part of `git config user.email` (e.g. `mhzizzi@gmail.com` → `mhzizzi`).
-- `<slug>` — the plan directory's basename with any leading `yyyymmdd-` date prefix stripped (e.g. `20260713-oauth-token-refresh` → `oauth-token-refresh`).
+2. **Gather git state:**
+   ```bash
+   git status --porcelain                             # dirty if non-empty
+   git symbolic-ref --short refs/remotes/origin/HEAD  # trunk (origin/main -> main); no remote -> local main/master
+   git rev-parse --abbrev-ref HEAD                    # current branch
+   git worktree list                                  # existing worktrees + branches
+   git branch --list "<username>/<slug>"              # does the branch exist?
+   ```
 
-This is also the worktree name, so it identifies "the plan's feature branch/worktree" for the reuse check below.
+3. **Dirty tree?** → abort. Tell the user to commit/stash/move changes and re-run clean.
 
-**Git state:**
+4. **Feature work for this plan exists?** → reuse it (ignore `--worktree`). It exists if the `<username>/<slug>` branch or worktree is present, or you're already on a branch clearly meant for this plan (fuzzy match — an unrelated non-trunk branch doesn't count).
+   - Already on its branch/worktree → stay.
+   - Worktree exists, not in it → `EnterWorktree(path: <path from git worktree list>)`.
+   - Only the branch exists → `git switch <username>/<slug>`.
 
-```bash
-git rev-parse --abbrev-ref HEAD                    # current branch
-git status --porcelain                             # dirty if non-empty
-git symbolic-ref --short refs/remotes/origin/HEAD  # trunk, e.g. origin/main -> main
-git worktree list                                  # existing worktrees + their branches
-git branch --list "<username>/<slug>"              # does the feature branch already exist?
-```
+5. **Otherwise create it** off the trunk. `git fetch <remote>` first so the base is current (skip if no remote), then:
+   - `--worktree` given → `EnterWorktree(name: "<username>/<slug>")` (new branch + worktree off `origin/<trunk>`; read the real branch name with `git rev-parse --abbrev-ref HEAD` after).
+   - default → `git switch -c <username>/<slug> origin/<trunk>` (plain branch, no worktree; use local `<trunk>` if no remote).
 
-The **trunk** is what `origin/HEAD` resolves to (strip the `origin/` prefix). If there's no remote/`origin` and that command fails, fall back to whichever of `main` / `master` exists locally.
-
-Then decide whether feature work for this plan **already exists**. Route to Case A if **any** of these hold — otherwise Case B:
-- you're already on a non-trunk branch (the classic continuation signal), or
-- a branch named `<username>/<slug>` already exists, or
-- a worktree for that branch already exists.
-
-### Case A — the feature already has a branch/worktree → reuse it, no new worktree
-
-Don't create a second worktree; skip it when one already exists for the plan.
-- **Already on the branch / in its worktree:** stay put.
-- **A worktree for the branch exists but you're not in it:** switch the session into it with `EnterWorktree(path: <the worktree path from git worktree list>)`.
-- **Only the branch exists (no worktree) and you're on the trunk:** `git switch <username>/<slug>` in place — don't retrofit a worktree onto branch-only work.
-
-Then handle a dirty tree the same way across all three sub-cases: the "carry onto a new branch" framing doesn't apply once you're on existing feature work, so if the tree is dirty, ask via AskUserQuestion whether to:
-- **Checkpoint-commit** — commit the pending state so the review diff starts clean (`git commit -am "checkpoint before implementing <plan>"`), or
-- **Abort** — stop so the user can sort the changes out and re-run.
-
-Tell the user which branch — and worktree, if any — you're working on.
-
-### Case B — no feature work yet → create a new worktree
-
-**Clean tree** — the common path. Freshen the trunk's remote-tracking ref, then let the harness create the worktree and switch the session into it:
-
-```bash
-git fetch <remote>   # so the worktree's base is current; skip if no remote configured
-```
-
-    EnterWorktree(name: "<username>/<slug>")
-
-`EnterWorktree` creates a worktree under `.claude/worktrees/<username>/<slug>` on a new branch of the same name and moves the session into it. Its base is governed by the `worktree.baseRef` setting — the default `fresh` branches from `origin/<trunk>` (hence the fetch above keeps it current); `head` would branch from the current local HEAD instead. So `fresh` is remote-synced by construction, replacing the old manual fetch-and-fast-forward dance. Caveat: if the trunk has local-only commits the feature depends on and `baseRef` is `fresh`, they'll be absent from the base — push them first, or expect to rebase later.
-
-After entering, read the actual branch name (`git rev-parse --abbrev-ref HEAD`) rather than assuming it, and use that in the announce step.
-
-**Dirty tree** — a fresh worktree starts clean, so it *can't* carry the uncommitted changes; `EnterWorktree` won't bring them along. Ask via AskUserQuestion which the user wants; offer exactly these two:
-- **Carry in place (no worktree this round)** — the changes are the start of this feature. Branch off the *current local* trunk in place so the changes carry onto the branch, then checkpoint-commit. This deliberately skips the worktree, since there's no clean way to move uncommitted work into a fresh one; tell the user the base may be behind remote and that no worktree was created.
-  ```bash
-  git switch -c <username>/<slug>   # carries the uncommitted changes onto the new branch
-  git commit -am "checkpoint: pre-existing changes before implementing <plan>"
-  ```
-- **Abort** — the changes don't belong with this feature. Stop and let the user commit/stash/move them, then re-run with a clean tree to get the worktree.
-
-### After the branch is set up
-
-Keep referencing the plan document by the absolute path you resolved in Step 1. Entering a worktree changes the session's working directory, but that path still points at your original checkout — so re-reads and the Step 7 follow-up write-back operate on the one canonical plan file, not a base-snapshot copy that may also sit inside the worktree.
-
-Then emit a one-line message naming the branch you're now on — created, reused, or the in-place carry variant — and, when you're in a worktree, its path (so the user knows where the code lives and that it persists after the session). Flag it if the base wasn't remote-synced (the dirty-carry-in-place path). You'll surface this same branch and worktree again in the Step 9 summary.
+6. **Announce** the branch (reused or created) and, if in a worktree, its path. Keep referencing the plan by its Step 1 absolute path — entering a worktree changes the session cwd, but that path still points at the canonical plan file.
 
 ## Step 3: Implement
 
@@ -119,7 +81,7 @@ While implementing:
 * Match the surrounding codebase's conventions, not the plan's illustrative style — the plan's code sketches optimize for explaining structure, not for fitting the repo.
 * Verify as you go. Run the relevant build, typecheck, or tests after meaningful chunks rather than saving all verification for the end — a failure caught early is cheaper to locate. If the plan named tests to write or update, write them.
 
-Leave the changes uncommitted (on top of the feature branch and any checkpoint commit from Step 2). The Codex review in the next step reads the working-tree diff.
+Leave the changes uncommitted (on top of the feature branch from Step 2). The Codex review in the next step reads the working-tree diff.
 
 ## Step 4: Codex adversarial review of the implementation
 
@@ -183,7 +145,7 @@ This edits the code locally, removing or rewriting flagged comments. Re-run the 
 ## Step 9: Summarize for the user
 
 Give the user a concise wrap-up — they can read the diff and the plan themselves, so focus on what they need to decide or know:
-- The **feature branch** the work landed on and, when applicable, the **worktree path** it lives in (the same ones announced in Step 2) — so the summary is self-contained and the work is easy to find for review/PR. Note if the base wasn't remote-synced (the dirty-carry-in-place path). If the work is in a worktree, mention that it persists after the session — on session exit the harness offers to keep or remove it; keep it to preserve the work for review/PR.
+- The **feature branch** the work landed on and, when applicable, the **worktree path** it lives in (the same ones announced in Step 2) — so the summary is self-contained and the work is easy to find for review/PR. If the work is in a worktree, mention that it persists after the session — on session exit the harness offers to keep or remove it; keep it to preserve the work for review/PR.
 - What was implemented (which plan / which scope).
 - Any deviations from the plan and why.
 - The Codex review outcome: how many findings, how many you fixed inline, how many you deferred. If the review was unavailable, say so and why.
