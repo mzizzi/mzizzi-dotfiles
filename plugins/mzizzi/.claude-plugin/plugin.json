@@ -3,6 +3,8 @@
   "description": "Planning and review workflow skills: grill, brainstorm, create-plan, create-plan-dir, review-comments, and codex-adversarial-review.",
   "dependencies": [
     { "name": "codex", "marketplace": "openai-codex" },
-    { "name": "skill-creator", "marketplace": "claude-plugins-official" }
+    { "name": "skill-creator", "marketplace": "claude-plugins-official" },
+    { "name": "pyright-lsp", "marketplace": "claude-plugins-official" },
+    { "name": "typescript-lsp", "marketplace": "claude-plugins-official" }
   ]
 }

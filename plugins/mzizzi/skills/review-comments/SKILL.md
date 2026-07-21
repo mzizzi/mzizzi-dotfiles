@@ -1,13 +1,6 @@
 ---
 name: review-comments
-description: Review code comments you added in the current PR or uncommitted changes —
-  flagging narration, diff-history notes, and redundant comments while preserving genuine
-  "why" explanations. Takes an optional mode argument — "fix" (edit the code locally,
-  the default), "flag-local" (just report what would change, no edits), or "flag-github"
-  (post inline review comments on the PR) — and an optional strictness argument, "low"
-  (the default) or "high" (also flags long block comments and file/module headers). Use
-  this whenever you've just written or modified code and are about to commit or open a PR,
-  or when the user asks to review, clean up, or check comment quality.
+description: Review code comments you added in the current PR or uncommitted changes — flagging narration, diff-history notes, and redundant comments while preserving genuine "why" explanations. Takes an optional mode argument — "fix" (edit the code locally, the default), "flag-local" (just report what would change, no edits), or "flag-github" (post inline review comments on the PR) — and an optional strictness argument, "low" (the default) or "high" (also flags long block comments and file/module headers). Use this whenever you've just written or modified code and are about to commit or open a PR, or when the user asks to review, clean up, or check comment quality.
 ---
 
 # Review comments added in this PR
@@ -15,11 +8,9 @@ description: Review code comments you added in the current PR or uncommitted cha
 This skill takes two optional arguments. The **`mode`** argument controls what happens with the
 comments it identifies:
 
-| Mode | What it does |
-| --- | --- |
-| `fix` *(default)* | Edit the code locally — rewrite or remove flagged comments, refactoring code to be self-documenting where that's the right fix. |
-| `flag-local` | Report in this session what *would* change. Make no edits and post nothing to GitHub. |
-| `flag-github` | Post inline review comments on the PR, one per flagged comment, attached to the relevant file and line. |
+- `fix` *(default)*: Edit the code locally — rewrite or remove flagged comments, refactoring code to be self-documenting where that's the right fix.
+- `flag-local`: Report in this session what *would* change. Make no edits and post nothing to GitHub.
+- `flag-github`: Post inline review comments on the PR, one per flagged comment, attached to the relevant file and line.
 
 If no mode is given, use `fix`. If an unrecognized value is given, briefly say so and list the
 three valid modes rather than guessing.
