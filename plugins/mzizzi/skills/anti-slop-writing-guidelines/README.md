@@ -1,1 +1,0 @@
-Pulled from [adenaufal/anti-slop-writing](https://github.com/adenaufal/anti-slop-writing/tree/bffa2a5692da892efcf97cba1a0d2cee413f02bc/english)

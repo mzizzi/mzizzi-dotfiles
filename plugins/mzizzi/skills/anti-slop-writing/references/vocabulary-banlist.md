@@ -1,40 +1,13 @@
 # AI Vocabulary Ban List
 
-Complete list of words and phrases to avoid, organized by category and AI model era.
+Complete list of words and phrases to avoid, organized by category. Model-era-specific vocabulary (the GPT-4 era timeline, the 2026 high-signal multipliers) lives in `references/model-era-tells.md`.
 
-## By AI Model Era
-
-### 2023 to mid-2024 (GPT-4 era)
-Additionally, boasts, bolstered, crucial, delve/delves/delving, emphasizing, enduring, garner, intricate/intricacies, interplay, key (adjective), landscape (figurative), meticulous/meticulously, pivotal, underscore, tapestry, testament, valuable, vibrant
-
-### Mid-2024 to mid-2025 (GPT-4o era)
-Align with, bolstered, crucial, emphasizing, enhance, enduring, fostering, highlighting, pivotal, showcasing, underscore, vibrant
-
-### Mid-2025 and on (GPT-5 era)
-Emphasizing, enhance, highlighting, showcasing, plus words associated with notability/attribution emphasis
-
-### Late 2025 to mid-2026 (GPT-5.1/5.2 and Claude 4.5-5 era)
-The highest-signal items in current-model output, from humanizer corpus data (80k+ pairs) and Claude Opus 4.5 corpus analysis:
-
-**Padding/hedging verbs (GPT-5.x signature):** ensuring (4.3x, strongest single AI word of 2026), ensures, highlights, supports, reflects, plays a role in, contributes to
-
-**Top trigram:** "plays a [crucial/critical/important] role in shaping" — delete on sight
-
-**Structural word swaps:** capable of → able to | rather than (overused) → rewrite comparison directly | conversely (50x) → but | nevertheless (8x) → still
-
-**Empty intensifiers (adverbial padding):** significantly, effectively, directly, increasingly, remarkably, notably — cut unless backed by a number
-
-**Claude 4.5-5 signature words:** comprehensive (24.5x), nuanced (17x), fundamentally (17x), paradigm (15.1x), in essence, essentially, worth noting, inherent tensions, thoughtful approach, metacognitive
-
-**Claude hedging adverbs (inflated rates):** typically (9.6x), often (4.9x), sometimes (4.2x), potentially (3.4x), usually (3.4x) — fine individually, a tell when clustered
-
-**Closers:** "one thing is clear", "the key takeaway", "at the end of the day", "as X continues to evolve"
-
-**IMPORTANT — legacy tells now absent:** delve, tapestry, vibrant, myriad have been trained OUT of the newest Claude models and largely out of GPT-5.1+. Em dashes are suppressed in GPT-5.1+ (but at 16.9x human rate in Claude Opus 4.5). Do not treat absence of legacy tells as evidence of human writing; the structural patterns are what persist.
+The core move is never "find a better synonym." When you hit a banned word, restructure the sentence to say what you actually mean in plain language. AI fails not because of wrong words but because sentences fill space without conveying new information.
 
 ## Complete Ban List by Category
 
 ### Significance Puffers
+
 - pivotal
 - crucial
 - vital
@@ -51,11 +24,16 @@ The highest-signal items in current-model output, from humanizer corpus data (80
 - lasting
 - ongoing (legacy/commitment)
 - deep/deeply rooted
+- paramount
+- indispensable
+- invaluable
+- quintessential
 - focal point
 - turning point (key turning point)
 - milestone
 
 ### Analytical/Emphasis Verbs
+
 - underscore
 - highlight (as verb meaning "to emphasize")
 - showcase
@@ -72,10 +50,17 @@ The highest-signal items in current-model output, from humanizer corpus data (80
 - emphasize/emphasizing (when used as participial tack-on)
 - illuminate
 - elucidate
-- underscore
 - navigate (figurative, "navigate challenges")
+- exemplify
+- embody
+- transcend
+- harness
+- spearhead
+- streamline
+- galvanize
 
 ### Promotional/Puffery Adjectives
+
 - vibrant
 - rich (figurative, "rich history/heritage")
 - comprehensive
@@ -95,8 +80,30 @@ The highest-signal items in current-model output, from humanizer corpus data (80
 - stunning
 - groundbreaking
 - state-of-the-art
+- multifaceted
+- holistic
+- overarching
+- compelling
+
+### Puffery Adverbs
+
+- seamlessly
+- meticulously
+- profoundly
+- intrinsically
+- fundamentally
+- remarkably
+- notably
+- crucially
+- undeniably
+- inherently
+- poignantly
+- relentlessly
+- tirelessly
+- vividly
 
 ### Figurative/Poetic Nouns
+
 - tapestry (figurative)
 - landscape (figurative, "evolving landscape")
 - realm
@@ -111,8 +118,17 @@ The highest-signal items in current-model output, from humanizer corpus data (80
 - cornerstone (figurative)
 - beacon
 - pillar
+- catalyst
+- crucible
+- linchpin
+- hallmark
+- confluence
+- odyssey
+- trajectory
+- underpinning
 
 ### Copula-Avoidance Constructions
+
 - serves as (a) → use "is"
 - stands as (a) → use "is"
 - marks (a) → describe directly
@@ -121,11 +137,15 @@ The highest-signal items in current-model output, from humanizer corpus data (80
 - features (meaning "has") → use "has"
 - offers (meaning "has") → use "has"
 - holds the distinction of → use "is"
+- emerged as → use "became" or "is"
+- constitutes → use "is"
 - ventured into → use "entered" or "became"
 
 ### Formal Connectives (replace with simple alternatives)
+
 - furthermore → also, and
 - moreover → also, and
+- additionally → also
 - consequently → so
 - accordingly → so
 - nonetheless → still, but
@@ -135,10 +155,17 @@ The highest-signal items in current-model output, from humanizer corpus data (80
 - wherein → where, in which
 - thus → so
 - hence → so
+- conversely → but
+
+Don't mechanically swap every one for the same replacement (all "so," all "also"); that just trades one tell for another. Vary across the natural set, and often the cleanest fix is a period or a comma. See "Diversify Function Words" in `references/structural-patterns.md`.
 
 ### Opening/Closing Crutches
+
 - "In today's [world/society/landscape]"
+- "In today's fast-paced world"
+- "In an era of/where"
 - "In the ever-evolving landscape of"
+- "As we navigate the complexities of"
 - "In conclusion"
 - "In summary"
 - "Overall"
@@ -147,11 +174,16 @@ The highest-signal items in current-model output, from humanizer corpus data (80
 - "It's worth noting that"
 - "It should be mentioned that"
 - "At the end of the day"
+- "Without further ado"
+- "In a nutshell"
+- "The bottom line is"
+- "Last but not least"
 - "No discussion of X would be complete without"
 - "Crucially"
 - "As a matter of fact"
 
 ### Promotional Phrases
+
 - "commitment to [excellence/innovation/sustainability]"
 - "natural beauty"
 - "in the heart of"
@@ -161,6 +193,10 @@ The highest-signal items in current-model output, from humanizer corpus data (80
 - "setting the stage for"
 - "contributing to the broader"
 - "reflects broader trends"
+- "the landscape of X is evolving"
+- "in the realm of"
+- "shed light on"
+- "a game-changer"
 - "shaping the future of"
 - "paving the way for"
 - "at the forefront of"
@@ -168,6 +204,7 @@ The highest-signal items in current-model output, from humanizer corpus data (80
 - "redefining what it means to"
 
 ### Vague Attribution Phrases
+
 - "Experts argue/say/note"
 - "Observers have cited"
 - "Industry reports suggest"
@@ -177,9 +214,61 @@ The highest-signal items in current-model output, from humanizer corpus data (80
 - "According to some"
 - "It is widely regarded"
 - "It is generally accepted"
+- "Studies show" (without naming the study)
 - "Research suggests" (without naming specific research)
 
+### Formulaic Sentence Patterns (never use)
+
+- "It's not just X, it's Y"
+- "It's not about X, it's about Y"
+- "Not only X, but also Y"
+- "No X. No Y. Just Z." (staccato triplet)
+- "Whether you're [X] or [Y]..."
+- "From [X] to [Y], [sweeping generalization]"
+
+### Formulaic Pairs (don't use together)
+
+- "challenges and opportunities"
+- "on one hand... on the other hand"
+- "pros and cons"
+- "risks and rewards"
+
+### Fake Authenticity Signals (recognized AI tells)
+
+- "But honestly?"
+- "Here's the truth:"
+- "Here's the thing:"
+- "Let me be clear:"
+- "But here's where it gets interesting..."
+- "Think about it this way..."
+- "Let me break this down..."
+
+### Common AI Filler Phrases (cut or replace)
+
+- "plays a [crucial/key/important] role" → state the action directly
+- "when it comes to" → rewrite with a verb
+- "in order to" → "to"
+- "a wide range of" → name what's in the range
+- "needless to say" → cut
+- "it goes without saying" → cut
+- "more often than not" → "usually" or give a number
+- "take a closer look at" → cut or be direct
+- "at this point in time" → "now"
+- "in recent years" → give the actual years or timeframe
+- "dive deep into" → just discuss it
+- "navigate the complexities of" → name the complexities
+
+### Passive Hedging Constructions (cut the framing, state the fact)
+
+- "It should be noted that" → cut
+- "It must be emphasized that" → cut
+- "It has been observed that" → say who observed it
+- "It can be argued that" → argue it or don't
+- "It is important to remember that" → cut
+- "There are several factors that" → name them
+
 ### Collaborative Chat Artifacts (never include)
+
 - "I hope this helps!"
 - "Of course!"
 - "Certainly!"
@@ -188,9 +277,15 @@ The highest-signal items in current-model output, from humanizer corpus data (80
 - "Is there anything else..."
 - "Let me know if..."
 - "Here is a..."
+- "I'd be happy to..."
+- "Great question!"
 - "As an AI language model..."
 
 ## Replacement Strategy
+
+Use short, common words: "use" not "utilize," "help" not "facilitate," "show" not "demonstrate," "end" not "conclude," "start" not "embark," "dig into" not "delve into."
+
+Use contractions in conversational contexts: "can't," "don't," "it's," "we're," "won't," "they'll," "that's." Stiffness reads as machine.
 
 When you encounter a banned word, don't just swap it for a synonym. Restructure the sentence to say what you actually mean in plain language.
 
