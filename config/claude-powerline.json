@@ -33,8 +33,8 @@
           },
           "context": {
             "enabled": true,
-            "showPercentageOnly": false,
-            "displayStyle": "blocks-line",
+            "showPercentageOnly": true,
+            "displayStyle": "text",
             "autocompactBuffer": 33000,
             "percentageMode": "used",
             "showIcon": false
@@ -103,16 +103,12 @@
         "segments": {
           "block": {
             "enabled": true,
-            "displayStyle": "blocks-line"
+            "displayStyle": "text"
           },
           "weekly": {
             "enabled": true,
-            "displayStyle": "blocks-line"
-          }
-        }
-      },
-      {
-        "segments": {
+            "displayStyle": "text"
+          },
           "session": {
             "enabled": true,
             "type": "cost",
@@ -123,76 +119,6 @@
             "enabled": true,
             "type": "cost",
             "showUnits": false
-          },
-          "directory": {
-            "enabled": false,
-            "style": "basename"
-          },
-          "model": {
-            "enabled": false
-          },
-          "git": {
-            "enabled": false,
-            "showSha": false,
-            "showWorkingTree": false,
-            "showOperation": false,
-            "showTag": false,
-            "showTimeSinceCommit": false,
-            "showStashCount": false,
-            "showUpstream": false,
-            "showRepoName": false
-          },
-          "block": {
-            "enabled": false,
-            "type": "cost",
-            "burnType": "cost",
-            "displayStyle": "text"
-          },
-          "weekly": {
-            "enabled": false,
-            "displayStyle": "text"
-          },
-          "version": {
-            "enabled": false
-          },
-          "tmux": {
-            "enabled": false
-          },
-          "sessionId": {
-            "enabled": false,
-            "showIdLabel": true
-          },
-          "context": {
-            "enabled": false,
-            "showPercentageOnly": false,
-            "displayStyle": "text",
-            "autocompactBuffer": 33000
-          },
-          "metrics": {
-            "enabled": false,
-            "showResponseTime": true,
-            "showLastResponseTime": true,
-            "showDuration": true,
-            "showMessageCount": true,
-            "showLinesAdded": true,
-            "showLinesRemoved": true
-          },
-          "env": {
-            "enabled": false,
-            "variable": ""
-          },
-          "agent": {
-            "enabled": false,
-            "showLabel": false
-          },
-          "thinking": {
-            "enabled": false,
-            "showEnabled": true,
-            "showEffort": true
-          },
-          "cacheTimer": {
-            "enabled": false,
-            "displayMode": "elapsed"
           }
         }
       }
