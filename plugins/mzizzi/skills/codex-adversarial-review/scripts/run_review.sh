@@ -38,10 +38,21 @@ if [ ! -f "$script" ]; then
 fi
 
 tmp_err="${TMPDIR:-/tmp}/codex-adversarial-review.$$.stderr"
-trap 'rm -f "$tmp_err"' EXIT
+tmp_out="${TMPDIR:-/tmp}/codex-adversarial-review.$$.stdout"
+trap 'rm -f "$tmp_err" "$tmp_out"' EXIT
 
-if ! node "$script" adversarial-review "$focus_args" 2>"$tmp_err"; then
-  status=$?
+# No `if !` or `||` guard in front of this call: both reset $? and would report
+# every failure as success. stdout is buffered rather than streamed so that a
+# non-zero exit really does mean empty stdout — the companion can render a
+# partial report before it settles on a failing status.
+set +e
+node "$script" adversarial-review "$focus_args" >"$tmp_out" 2>"$tmp_err"
+status=$?
+set -e
+
+if [ "$status" -ne 0 ]; then
   cat "$tmp_err" >&2
   exit "$status"
 fi
+
+cat "$tmp_out"
