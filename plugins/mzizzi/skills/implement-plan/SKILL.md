@@ -44,33 +44,13 @@ Confirm your understanding of the scope back to the user in one line before movi
 
 ## Step 2: Prepare the feature branch
 
-Put the implementation on its own branch so its diff maps back to the plan and never lands on the trunk. Step 4's Codex review reads the working-tree diff, so the baseline must be clean. Work through the following in order.
+Put the implementation on its own branch so its diff maps back to the plan and never lands on the trunk. Step 4's Codex review reads the working-tree diff, so the baseline must be clean.
 
-1. **Derive the feature branch name** — `<username>/<slug>`, also used as the worktree name:
-   - `<username>` — local-part of `git config user.email` (`mhzizzi@gmail.com` → `mhzizzi`).
-   - `<slug>` — plan directory basename, leading `yyyymmdd-` stripped (`20260713-oauth-token-refresh` → `oauth-token-refresh`).
+    Skill(skill: "prepare-feature-branch", args: "<plan directory> [--worktree]")
 
-2. **Gather git state:**
-   ```bash
-   git status --porcelain                             # dirty if non-empty
-   git symbolic-ref --short refs/remotes/origin/HEAD  # trunk (origin/main -> main); no remote -> local main/master
-   git rev-parse --abbrev-ref HEAD                    # current branch
-   git worktree list                                  # existing worktrees + branches
-   git branch --list "<username>/<slug>"              # does the branch exist?
-   ```
+Pass the plan directory from Step 1, plus `--worktree` if the user gave that flag. The skill derives the branch name, reuses existing feature work for this plan, creates it off the trunk otherwise, and announces the result. It aborts on a dirty tree — if it does, stop here and relay that to the user rather than stashing on their behalf.
 
-3. **Dirty tree?** → abort. Tell the user to commit/stash/move changes and re-run clean.
-
-4. **Feature work for this plan exists?** → reuse it (ignore `--worktree`). It exists if the `<username>/<slug>` branch or worktree is present, or you're already on a branch clearly meant for this plan (fuzzy match — an unrelated non-trunk branch doesn't count).
-   - Already on its branch/worktree → stay.
-   - Worktree exists, not in it → `EnterWorktree(path: <path from git worktree list>)`.
-   - Only the branch exists → `git switch <username>/<slug>`.
-
-5. **Otherwise create it** off the trunk. `git fetch <remote>` first so the base is current (skip if no remote), then:
-   - `--worktree` given → `EnterWorktree(name: "<username>/<slug>")` (new branch + worktree off `origin/<trunk>`; read the real branch name with `git rev-parse --abbrev-ref HEAD` after).
-   - default → `git switch -c <username>/<slug> origin/<trunk>` (plain branch, no worktree; use local `<trunk>` if no remote).
-
-6. **Announce** the branch (reused or created) and, if in a worktree, its path. Keep referencing the plan by its Step 1 absolute path — entering a worktree changes the session cwd, but that path still points at the canonical plan file.
+Keep referencing the plan by its Step 1 absolute path from here on. Entering a worktree changes the session cwd, but that path still points at the canonical plan file.
 
 ## Step 3: Implement
 
