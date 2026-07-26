@@ -9,7 +9,7 @@
     {
       "name": "mzizzi",
       "source": "./plugins/mzizzi",
-      "description": "Planning and review workflow skills: grill, brainstorm, create-plan, create-plan-dir, review-comments, and codex-adversarial-review."
+      "description": "An end-to-end planning workflow: grill and brainstorm an idea, turn it into a phased plan, implement it a phase at a time, and review the result with Codex. Also ships the simple/standard/complex subagent tiers and a prose de-slopping skill."
     }
   ]
 }

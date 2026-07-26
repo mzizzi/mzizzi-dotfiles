@@ -1,6 +1,6 @@
 ---
 name: standard
-description: Mid tier for work that needs stronger reasoning than the default — system and architecture design, technology tradeoffs, subtle multi-file debugging, security-sensitive review, and the review/verify checkpoint over `simple`'s output. Step up to `complex` for the most critical or long-horizon work. Runs Opus 4.8 at high effort.
+description: Mid tier for work that needs stronger reasoning than the default — system and architecture design, technology tradeoffs, subtle multi-file debugging, security-sensitive review, and the review/verify checkpoint over `simple`'s output. Step up to `complex` for the most critical or long-horizon work. Runs the current Opus at high effort.
 model: opus
 effort: high
 ---
