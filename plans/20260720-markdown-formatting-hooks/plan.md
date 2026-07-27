@@ -286,3 +286,17 @@ Editor side, so the unwrapped files stay readable. For VS Code, `"[markdown]": {
 - **Repo-level format check.** If this repo ever gains a second committer or CI for another reason, add `pre-commit run --all-files` as a required check. The local hook is best-effort by construction.
 - **Widen the hook to YAML and JSON** via `types_or` in `.pre-commit-config.yaml`, once the markdown case has proven stable.
 - **markdownlint-cli2 as a second layer.** Catches structural issues formatting cannot (heading hierarchy, bare URLs). Would need MD013 (line length) disabled, since one-line-per-paragraph deliberately violates it. Deferred until formatting alone proves insufficient.
+
+### Wire `pre-commit install` into `scripts/windows/install.ps1`
+
+- **What:** Phase 4's `Ensure-PreCommitHook` function and its `-Uninstall` counterpart were not implemented. `pre-commit install` is currently a manual per-clone step, documented in README rather than absorbed by the installer.
+- **Where:** `scripts/windows/install.ps1`; the plan sketches the function in Implementation Phase 4.
+- **Why deferred:** explicitly excluded from this round's scope by the user, not a finding.
+- **Suggested fix:** as sketched in Phase 4 — follow the `Ensure-CodexDependency` shape, warn rather than `Fail` when Python or pre-commit is missing, and drop the README's manual `python -m pre_commit install` step once it lands. The plan's Phase 4 verification list has two installer checks (re-run reports "already installed"; `-Uninstall` removes the hook) that go with it.
+
+### `embeddedLanguageFormatting: "off"` does not protect fence bytes
+
+- **What:** the plan treats the setting as the guard for the verbatim ` ```markdown ` templates. It only disables _recursive language_ formatting; the outer markdown printer still rewrites fence bodies, and it trimmed trailing whitespace inside `create-plan`'s template. The four verbatim templates now carry `<!-- prettier-ignore -->` instead, but the plan's Design section and Resolved Questions still describe the setting as sufficient.
+- **Where:** plan.md Design ("Nested markdown fences — mitigated by config, not left to review") and the `embeddedLanguageFormatting` entry in Resolved Questions.
+- **Why deferred:** documentation accuracy in a plan that has already been executed; the code-side fix has landed.
+- **Suggested fix:** amend both passages to say the setting reduces the blast radius but that byte-exact templates need an explicit `<!-- prettier-ignore -->`.
