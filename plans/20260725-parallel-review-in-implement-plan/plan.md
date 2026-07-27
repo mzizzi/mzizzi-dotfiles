@@ -22,14 +22,14 @@ parallel-review
 
 ### Two arms, two shapes
 
-|              | Codex arm                                                   | code-review arm                                            |
-| ------------ | ----------------------------------------------------------- | ---------------------------------------------------------- |
-| Reached via  | `Skill(codex-adversarial-review)` → `run_review.sh`          | new `run_code_review.sh` → `claude -p "/code-review"`       |
-| Lens         | implementation approach, design choices, plan fidelity       | CLAUDE.md adherence, bugs, git-history context, comments    |
-| Target       | working-tree diff (`--scope auto`)                           | working diff (bare invocation)                              |
-| Focus text   | receives it                                                  | none — runs bare                                            |
-| Output       | prose report (`Verdict:` / `Findings:` / `Next steps:`)      | JSON object extracted from `ReportFindings`                 |
-| Failure      | exit 2 = plugin missing, exit 1 = review failed              | exit 2 = can't run, exit 1 = run failed                     |
+|  | Codex arm | code-review arm |
+| --- | --- | --- |
+| Reached via | `Skill(codex-adversarial-review)` → `run_review.sh` | new `run_code_review.sh` → `claude -p "/code-review"` |
+| Lens | implementation approach, design choices, plan fidelity | CLAUDE.md adherence, bugs, git-history context, comments |
+| Target | working-tree diff (`--scope auto`) | working diff (bare invocation) |
+| Focus text | receives it | none — runs bare |
+| Output | prose report (`Verdict:` / `Findings:` / `Next steps:`) | JSON object extracted from `ReportFindings` |
+| Failure | exit 2 = plugin missing, exit 1 = review failed | exit 2 = can't run, exit 1 = run failed |
 
 The lenses are complementary by construction rather than by instruction: Codex gets the focus text and reads the plan document, so plan fidelity rides on that arm; the built-in runs bare because its argument slot selects a _target_, not a lens, and free text there is unverified behavior. Running it bare is what "the genuine built-in, in its usual form" means.
 
@@ -77,12 +77,12 @@ Every flag, justified:
 
 **Allowlist** (auto-approved):
 
-| Entry                                                    | Why a review needs it                                                                                                                                 |
-| -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Read`, `Glob`, `Grep`                                    | read the changed files and their neighbourhood                                                                                                         |
-| `Agent`, `Task`                                           | the built-in fans out to reviewer subagents; both names listed for CLI-version tolerance                                                                |
-| `ReportFindings`                                          | the channel the findings come back on — denied means no output                                                                                         |
-| `TodoWrite`                                               | the built-in tracks its own review passes                                                                                                               |
+| Entry | Why a review needs it |
+| --- | --- |
+| `Read`, `Glob`, `Grep` | read the changed files and their neighbourhood |
+| `Agent`, `Task` | the built-in fans out to reviewer subagents; both names listed for CLI-version tolerance |
+| `ReportFindings` | the channel the findings come back on — denied means no output |
+| `TodoWrite` | the built-in tracks its own review passes |
 | read-only `git` subcommands (`status`, `log`, `show`, `blame`, `rev-parse`, `merge-base`, `ls-files`, `diff-tree`, and `diff`) | the diff itself, plus the git-history context the built-in reviews for. Enumerated individually rather than `Bash(git *)` so `checkout`/`commit`/`clean` aren't reachable |
 
 **Denylist** (hard block, belt to the allowlist's braces): the file-writing tools (`Edit`, `Write`, `MultiEdit`, `NotebookEdit`) — a review writes nothing; and the network tools (`WebFetch`, `WebSearch`) — keeps the run hermetic and bounded.
@@ -128,12 +128,12 @@ The `structured` boolean is what keeps both honest. The skill never claims "no f
 
 **Success stdout** — one JSON object:
 
-| Field      | Type           | Source                                                                                                                                    |
-| ---------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `findings`   | array          | `ReportFindings.input.findings`, verbatim — each entry keeps `file`, `line`, `summary`, `short_summary`, `failure_scenario`, `category`, `verdict`, `outcome` |
-| `level`      | string \| null | `ReportFindings.input.level` (effort the review ran at)                                                                                    |
-| `summary`    | string \| null | the terminal `result` event's text — the reviewer's prose, useful when `findings` is empty                                                 |
-| `structured` | boolean        | whether a `ReportFindings` call was actually present. `false` means the empty `findings` array is an absence of data, not a clean bill of health |
+| Field | Type | Source |
+| --- | --- | --- |
+| `findings` | array | `ReportFindings.input.findings`, verbatim — each entry keeps `file`, `line`, `summary`, `short_summary`, `failure_scenario`, `category`, `verdict`, `outcome` |
+| `level` | string \| null | `ReportFindings.input.level` (effort the review ran at) |
+| `summary` | string \| null | the terminal `result` event's text — the reviewer's prose, useful when `findings` is empty |
+| `structured` | boolean | whether a `ReportFindings` call was actually present. `false` means the empty `findings` array is an absence of data, not a clean bill of health |
 
 ```bash
 jq -n -c --argjson rf "$rf" --argjson res "$res" '{
@@ -150,11 +150,11 @@ jq -n -c --argjson rf "$rf" --argjson res "$res" '{
 
 Both scripts use the same shape, so the skill's degradation logic is symmetric.
 
-| Code | Codex arm (`run_review.sh`, existing)                        | code-review arm (`run_code_review.sh`, new)                                                            |
-| ---- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
-| 0    | prose report on stdout                                        | JSON object on stdout (`structured` says whether findings data was actually present)                     |
-| 2    | codex plugin not installed (`CODEX_NOT_INSTALLED:`)           | can't run at all (`CODE_REVIEW_UNAVAILABLE:`) — `claude` not on PATH, not a git repo, or recursion guard |
-| 1    | installed but the review failed — auth, not a git repo, timeout | the run started and failed — non-zero exit, timeout, error result, no terminal event                     |
+| Code | Codex arm (`run_review.sh`, existing) | code-review arm (`run_code_review.sh`, new) |
+| --- | --- | --- |
+| 0 | prose report on stdout | JSON object on stdout (`structured` says whether findings data was actually present) |
+| 2 | codex plugin not installed (`CODEX_NOT_INSTALLED:`) | can't run at all (`CODE_REVIEW_UNAVAILABLE:`) — `claude` not on PATH, not a git repo, or recursion guard |
+| 1 | installed but the review failed — auth, not a git repo, timeout | the run started and failed — non-zero exit, timeout, error result, no terminal event |
 
 This describes `run_review.sh` **after** the exit-status fix in Phase 0. Today it exits 0 on every failure, so nothing downstream can currently distinguish a failed Codex review from an empty one. `parallel-review`'s degradation logic is only meaningful once that's corrected.
 
@@ -182,16 +182,16 @@ One honest caveat: the one-message batching is enforced by prose, not by any mec
 
 Every finding, from either arm, normalizes to one record:
 
-| Field     | Codex source                             | code-review source                        |
-| --------- | ---------------------------------------- | ----------------------------------------- |
-| `arms`    | `[codex]`                                | `[code-review]` — becomes `[codex, code-review]` on a merge |
-| `file`    | from the `(file:line-range)` suffix      | `file`                                    |
-| `line`    | the range's start                        | `line`                                    |
-| `title`   | the finding's title                      | `short_summary` (fall back to `summary`)  |
-| `weight`  | the `[severity]` marker                  | `verdict` (CONFIRMED / PLAUSIBLE) + `category` |
-| `what`    | the body prose                           | `summary`                                 |
-| `failure` | — (often folded into the body)           | `failure_scenario`                        |
-| `fix`     | the `Recommendation:` line, if present   | —                                         |
+| Field | Codex source | code-review source |
+| --- | --- | --- |
+| `arms` | `[codex]` | `[code-review]` — becomes `[codex, code-review]` on a merge |
+| `file` | from the `(file:line-range)` suffix | `file` |
+| `line` | the range's start | `line` |
+| `title` | the finding's title | `short_summary` (fall back to `summary`) |
+| `weight` | the `[severity]` marker | `verdict` (CONFIRMED / PLAUSIBLE) + `category` |
+| `what` | the body prose | `summary` |
+| `failure` | — (often folded into the body) | `failure_scenario` |
+| `fix` | the `Recommendation:` line, if present | — |
 
 Missing fields stay empty rather than being invented; the two engines don't report the same shape and pretending otherwise fabricates detail.
 
@@ -206,7 +206,7 @@ Same claim at clearly different locations still merges if it's evidently one def
 
 ### Returned output
 
-````markdown
+```markdown
 ## Parallel review — 7 findings (2 raised by both arms)
 
 **Arms:** codex ok · code-review ok
@@ -243,20 +243,20 @@ Same claim at clearly different locations still merges if it's evidently one def
 <details><summary>Raw code-review findings (JSON)</summary>
 ...verbatim JSON object...
 </details>
-````
+```
 
 Raw output from both arms is appended verbatim so triage can drill into anything normalization flattened. Nothing is written to disk — `implement-plan` already has the durable channel that matters (Step 7 folds deferred findings into the plan's `## Follow-ups`), and `parallel-review` can't assume a plan directory exists when run standalone.
 
 ### Degradation
 
-| Situation                     | What the skill returns                                                                                                                 |
-| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| Both arms ok                  | merged list, arm status both `ok`                                                                                                       |
-| One arm exit 1 or 2           | the surviving arm's findings in full, plus an arm-status line naming the failed arm and its stderr reason. Header says `1 of 2 arms`     |
-| Both arms failed              | no findings list. A short "review unavailable" block naming each arm and each reason                                                     |
-| An arm returns zero findings  | `ok — no findings`, not a failure. Its prose summary, if any, goes in the arm-status line                                                |
+| Situation | What the skill returns |
+| --- | --- |
+| Both arms ok | merged list, arm status both `ok` |
+| One arm exit 1 or 2 | the surviving arm's findings in full, plus an arm-status line naming the failed arm and its stderr reason. Header says `1 of 2 arms` |
+| Both arms failed | no findings list. A short "review unavailable" block naming each arm and each reason |
+| An arm returns zero findings | `ok — no findings`, not a failure. Its prose summary, if any, goes in the arm-status line |
 | code-review arm returns `structured: false` | `ok — ran, no structured findings`. Never reported as "no findings"; the prose summary is surfaced so the caller can see what it said |
-| Working tree clean at preflight | say there's nothing to review and stop, before spawning either arm                                                                     |
+| Working tree clean at preflight | say there's nothing to review and stop, before spawning either arm |
 
 Reasons are surfaced verbatim from stderr — the `CODEX_NOT_INSTALLED:` / `CODE_REVIEW_UNAVAILABLE:` prefixes, an auth message pointing at `/codex:setup`, a timeout notice. Plausible subprocess failure modes to name accurately: `claude` not on PATH, an unrecognized flag after a CLI update, the timeout expiring on a large diff, the budget cap tripping mid-review, and a stream that ends without a terminal result event.
 
@@ -276,11 +276,7 @@ if ! node "$script" adversarial-review "$focus_args" 2>"$tmp_err"; then
 fi
 ```
 
-Every documented exit-1 case (auth failure, not a git repo, timeout) currently
-exits 0 instead. `codex-adversarial-review`'s own SKILL.md documents an
-exit-code contract the script doesn't honor, and both `create-plan` and
-`implement-plan` branch on it — so a Codex outage today reads as a review that
-ran and found nothing. Fix by capturing the status without the negation:
+Every documented exit-1 case (auth failure, not a git repo, timeout) currently exits 0 instead. `codex-adversarial-review`'s own SKILL.md documents an exit-code contract the script doesn't honor, and both `create-plan` and `implement-plan` branch on it — so a Codex outage today reads as a review that ran and found nothing. Fix by capturing the status without the negation:
 
 ```bash
 set +e
@@ -293,10 +289,7 @@ if [ "$status" -ne 0 ]; then
 fi
 ```
 
-**Testing:** drive the wrapper with a stub `node` exiting 1 and 2, asserting the
-wrapper exits with the same code and writes nothing to stdout. Exit-status
-propagation is the most defect-prone part of both wrappers — Phase 1's new
-script gets the same stub treatment — so it's a scripted check, not eyeballing.
+**Testing:** drive the wrapper with a stub `node` exiting 1 and 2, asserting the wrapper exits with the same code and writes nothing to stdout. Exit-status propagation is the most defect-prone part of both wrappers — Phase 1's new script gets the same stub treatment — so it's a scripted check, not eyeballing.
 
 ### Implementation Phase 1 — the code-review arm's script
 
@@ -398,8 +391,7 @@ fi
 # ... jq extraction and the outcome decision from the Design section
 ```
 
-Exit-status propagation is the single most defect-prone part of both wrappers,
-so it gets explicit test coverage rather than eyeballing.
+Exit-status propagation is the single most defect-prone part of both wrappers, so it gets explicit test coverage rather than eyeballing.
 
 **Integration:** self-contained; the skill invokes it by path via `${CLAUDE_PLUGIN_ROOT}`, exactly as `codex-adversarial-review/SKILL.md` invokes `run_review.sh`.
 
@@ -424,7 +416,7 @@ Frontmatter matches the plugin's house style (`name`, `description`, `argument-h
 
 Body — the actual proposed prose, since the skill text is the deliverable. Note what it deliberately does **not** contain: any `claude` flag names, timeout values, or model defaults. Those live in the script.
 
-````markdown
+```markdown
 # Parallel review
 
 Review the working diff with two engines at once and hand back one merged list.
@@ -514,7 +506,7 @@ in full, and name the failed arm and its reason in the arm-status block —
 throwing away a review that ran because the other engine wasn't authenticated
 wastes it. Only when **both** arms fail is the answer "review unavailable",
 naming each arm and each reason.
-````
+```
 
 **Integration:** invoked by `implement-plan` Step 4, and standalone as `/mzizzi:parallel-review`.
 
@@ -532,6 +524,7 @@ naming each arm and each reason.
 
 _Frontmatter `description`_ — the current text advertises a Codex-only review, which is now wrong and is what the model matches on when deciding to trigger.
 
+<!-- prettier-ignore -->
 > **Before:** `…turn a plan.md (or a subset of it) into working code, then run a Codex adversarial review of the changes and triage the findings.`
 > **After:** `…turn a plan.md (or a subset of it) into working code, then run a parallel cross-model review of the changes and triage the findings.`
 
@@ -539,11 +532,13 @@ The same sentence appears in the skill's opening paragraph and gets the same tre
 
 _Step 0, task-list seed_ — the seeded item names the step, and the name is now wrong:
 
+<!-- prettier-ignore -->
 > **Before:** `…implement (a placeholder — expanded below), Codex review, triage, apply trivial fixes, record follow-ups, review comments, summarize.`
 > **After:** `…implement (a placeholder — expanded below), parallel review, triage, apply trivial fixes, record follow-ups, review comments, summarize.`
 
 _Step 0, status discipline_ — the "moot step" example assumes one engine:
 
+<!-- prettier-ignore -->
 > **Before:** `(e.g. the Codex review is unavailable, so triage has nothing to do)`
 > **After:** `(e.g. both review arms are unavailable, so triage has nothing to do)`
 
@@ -582,6 +577,7 @@ _Step 5 — agreement as evidence._ Judgment 1 gains a paragraph; the three judg
 
 _Step 9 — the review-outcome bullet now covers two arms._
 
+<!-- prettier-ignore -->
 > **Before:** `- The Codex review outcome: how many findings, how many you fixed inline, how many you deferred. If the review was unavailable, say so and why.`
 > **After:** `- The **review outcome**, covering both arms: which arms ran, how many findings came back and how many both arms raised independently, how many you fixed inline, how many you deferred. Name any arm that was unavailable and why — the user should know when a round got one engine instead of two.`
 
@@ -678,5 +674,5 @@ Findings from the phases 0–2 implementation review that were not fixed in that
 
 - **What:** `--setting-sources user,project` merges the user's and project's `permissions.allow` rules into the unattended reviewer, and allow rules are additive. An inherited `Bash(...)` grant, or any hook, can therefore write to the very tree being reviewed — the invariant the allowlist exists to protect. Currently low-risk in this environment specifically (user settings carry no hooks and an empty allow list), but that's a property of the machine, not of the design.
 - **Where:** `plugins/mzizzi/skills/parallel-review/scripts/run_code_review.sh` (`--setting-sources`, `allowed_tools`, `disallowed_tools`).
-- **Why deferred:** The plan already resolved this as a documented residual rather than an engineered guarantee, and closing it runs straight into the tension the plan named: isolating settings would cut project CLAUDE.md out of a review whose lens *is* CLAUDE.md adherence. Reopening it is a scope decision, not a fix.
+- **Why deferred:** The plan already resolved this as a documented residual rather than an engineered guarantee, and closing it runs straight into the tension the plan named: isolating settings would cut project CLAUDE.md out of a review whose lens _is_ CLAUDE.md adherence. Reopening it is a scope decision, not a fix.
 - **Suggested fix:** If it's ever worth closing, the shape is a purpose-built settings file that carries CLAUDE.md discovery but no `permissions.allow` and no hooks, plus a post-run assertion that the working tree's hash is unchanged — cheap, and it turns the invariant into something checked rather than assumed.

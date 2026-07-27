@@ -186,7 +186,7 @@ python scripts/check-format-safety.py --snapshot /tmp/fmt-check/before.json
 
 `scripts/check-format-safety.py` is a throwaway verification script — it does not need to be committed. It walks the tracked markdown files and emits, per file, the frontmatter parsed with `yaml.safe_load` and the list of fenced-code-block bodies extracted verbatim:
 
-```python
+````python
 # For each tracked .md file, record two things that must survive formatting:
 #   frontmatter: the PARSED yaml object, so reflowing a plain scalar is a
 #     no-op but a changed value, type, or dropped key is not
@@ -197,7 +197,7 @@ def snapshot(paths: list[str]) -> dict[str, dict]: ...
 # Compare two snapshots; report per-file frontmatter diffs (as parsed objects)
 # and any fence whose bytes changed. Exit non-zero if anything differs.
 def compare(before: dict, after: dict) -> int: ...
-```
+````
 
 After the reformat, run `--snapshot after.json` and compare. Both categories should be empty: parsed frontmatter identical for all files, fenced bodies byte-identical for all files. This is what makes the load-bearing-prompt risk tractable — spot-checking a few hand-picked constructs across a 26-file mechanical diff cannot establish that no skill's trigger text or output template changed, and those failures are silent.
 

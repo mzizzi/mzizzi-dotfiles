@@ -1,19 +1,5 @@
-Always loaded, and takes precedence over the strictness rules: a comment fitting a category below is
-**not** a violation — don't flag or cut it. If a comment both fits here and offends (also narrates
-history, tests, etc.), cut only the offending part. These aren't a license to over-write — each
-still earns its keep by being short (a one-line description, not a paragraph); trim, don't delete, an
-overgrown one.
+Always loaded, and takes precedence over the strictness rules: a comment fitting a category below is **not** a violation — don't flag or cut it. If a comment both fits here and offends (also narrates history, tests, etc.), cut only the offending part. These aren't a license to over-write — each still earns its keep by being short (a one-line description, not a paragraph); trim, don't delete, an overgrown one.
 
-* **Field/member definition comments.** Short doc comments on the fields of a *type definition* are
-  fine — TS `interface`/`type` members, Python `dataclass`/`TypedDict`/`NamedTuple`/Pydantic fields,
-  struct fields, enum variants, protobuf/GraphQL schema fields, config-schema keys. A one-line
-  comment saying what a field *is* or *holds* is API documentation, not narration — keep it even
-  when the name is already fairly clear. Don't strip as "restates the field name." Still drop an
-  incidental clause the signature proves (`Pure.`, `Readonly.`) and any history/test narration.
-* **Public API doc comments.** A short doc comment (JSDoc/TSDoc, docstring, rustdoc) on an
-  *exported/public* function, class, or method stating its contract (params, return, raises) is
-  acceptable — it's the caller's documentation. One or two lines, not a re-derivation of the body.
-  (At `high`, a *private*/module-internal header is still fair game.)
-* **Genuine "why" comments.** Restated from the strictness files as a reminder they survive: a
-  concise non-obvious *why* — an invariant, a workaround for a known bug, a surprising deliberate
-  choice, a `DO NOT`/`MUST` constraint. One line, occasionally two.
+- **Field/member definition comments.** Short doc comments on the fields of a _type definition_ are fine — TS `interface`/`type` members, Python `dataclass`/`TypedDict`/`NamedTuple`/Pydantic fields, struct fields, enum variants, protobuf/GraphQL schema fields, config-schema keys. A one-line comment saying what a field _is_ or _holds_ is API documentation, not narration — keep it even when the name is already fairly clear. Don't strip as "restates the field name." Still drop an incidental clause the signature proves (`Pure.`, `Readonly.`) and any history/test narration.
+- **Public API doc comments.** A short doc comment (JSDoc/TSDoc, docstring, rustdoc) on an _exported/public_ function, class, or method stating its contract (params, return, raises) is acceptable — it's the caller's documentation. One or two lines, not a re-derivation of the body. (At `high`, a _private_/module-internal header is still fair game.)
+- **Genuine "why" comments.** Restated from the strictness files as a reminder they survive: a concise non-obvious _why_ — an invariant, a workaround for a known bug, a surprising deliberate choice, a `DO NOT`/`MUST` constraint. One line, occasionally two.

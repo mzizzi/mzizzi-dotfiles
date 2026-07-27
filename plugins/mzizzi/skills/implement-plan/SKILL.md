@@ -20,23 +20,26 @@ Before doing anything else — before even opening the plan document — seed a 
 **Expansion:** once Step 1 resolves the scope, replace the implement placeholder with the real work items — one per file entry the in-scope `### Implementation Phase <N>` sections list, in plan order, grouping only where the plan itself groups tightly-coupled files, with each entry's testing notes folded into its item. The plan's own enumeration is the source of granularity; don't re-judge it per run.
 
 **Status discipline:**
-* Exactly one of *this run's* items in progress at a time: mark an item in progress when you start the step and completed immediately when it's done — never batch-complete at the end. The invariant covers only items this invocation created; if the session already has unrelated tasks, add this skill's items alongside and never change the unrelated tasks' statuses.
-* Never end the turn with this run's items pending unless the run genuinely stopped short — the user redirected or aborted, or execution is blocked (failing verification, an unavailable dependency, a tool error you can't resolve). In those cases annotate the current item with the blocker and leave it and everything downstream pending; pending is the honest state for unfinished work.
-* If a step becomes moot mid-run (e.g. the Codex review is unavailable, so triage has nothing to do), don't delete its item and don't leave it pending — append a short reason to the item ("skipped — review unavailable") and mark it completed, so the list ends resolved and the skip stays visible. Reserve this for steps with genuinely nothing to do; a blocked step is pending, not skipped.
+
+- Exactly one of _this run's_ items in progress at a time: mark an item in progress when you start the step and completed immediately when it's done — never batch-complete at the end. The invariant covers only items this invocation created; if the session already has unrelated tasks, add this skill's items alongside and never change the unrelated tasks' statuses.
+- Never end the turn with this run's items pending unless the run genuinely stopped short — the user redirected or aborted, or execution is blocked (failing verification, an unavailable dependency, a tool error you can't resolve). In those cases annotate the current item with the blocker and leave it and everything downstream pending; pending is the honest state for unfinished work.
+- If a step becomes moot mid-run (e.g. the Codex review is unavailable, so triage has nothing to do), don't delete its item and don't leave it pending — append a short reason to the item ("skipped — review unavailable") and mark it completed, so the list ends resolved and the skip stays visible. Reserve this for steps with genuinely nothing to do; a blocked step is pending, not skipped.
 
 ## Step 1: Resolve the target and scope
 
 Parse the user's input into these parts:
 
 **The plan document** — the file to implement from:
-* If the user gave a path to a `.md` file, that's the plan document.
-* If the user gave a directory, look inside it for `plan.md` (the /create-plan default). If the directory has a differently named plan file, use that; if it's ambiguous, ask.
-* Read the plan document in full. Also skim any sibling docs in the plan directory (e.g. `brainstorm.md`, a `design.md`) — they carry context and decisions the plan may reference rather than restate.
-* Note the **plan directory** — Step 2 derives the feature-branch name from it, so resolving the target first is what lets the branch be named before any code is written.
+
+- If the user gave a path to a `.md` file, that's the plan document.
+- If the user gave a directory, look inside it for `plan.md` (the /create-plan default). If the directory has a differently named plan file, use that; if it's ambiguous, ask.
+- Read the plan document in full. Also skim any sibling docs in the plan directory (e.g. `brainstorm.md`, a `design.md`) — they carry context and decisions the plan may reference rather than restate.
+- Note the **plan directory** — Step 2 derives the feature-branch name from it, so resolving the target first is what lets the branch be named before any code is written.
 
 **The scope** — how much of the plan to implement this round:
-* If the user named a subset (e.g. `plans/foo/plan.md phase 1`, or "just the first phase"), implement only that. Plans from /create-plan split work into `### Implementation Phase <N>` sections, so "phase 1" maps to `Implementation Phase 1`. Keeping rounds small keeps the resulting PR reviewable.
-* Otherwise, implement the whole plan.
+
+- If the user named a subset (e.g. `plans/foo/plan.md phase 1`, or "just the first phase"), implement only that. Plans from /create-plan split work into `### Implementation Phase <N>` sections, so "phase 1" maps to `Implementation Phase 1`. Keeping rounds small keeps the resulting PR reviewable.
+- Otherwise, implement the whole plan.
 
 **The `--worktree` flag** — an optional `--worktree` token anywhere in the arguments. If present, brand-new feature work gets an isolated git worktree instead of a plain branch (Step 2). It has no effect when the plan already has feature work to reuse.
 
@@ -57,9 +60,10 @@ Keep referencing the plan by its Step 1 absolute path from here on. Entering a w
 Work through the in-scope portion of the plan. Build a checklist from the plan's implementation steps and execute them in the order the plan lays out — plans are ordered so that later files can import earlier ones.
 
 While implementing:
-* Follow the plan's design and code sketches, but treat them as intent, not gospel. Plans are written before the code exists; if reality diverges (an API signature is different, a sketch won't compile, a better approach is obvious), do the right thing and note the deviation for the summary in Step 9. Don't blindly transcribe a sketch that doesn't fit.
-* Match the surrounding codebase's conventions, not the plan's illustrative style — the plan's code sketches optimize for explaining structure, not for fitting the repo.
-* Verify as you go. Run the relevant build, typecheck, or tests after meaningful chunks rather than saving all verification for the end — a failure caught early is cheaper to locate. If the plan named tests to write or update, write them.
+
+- Follow the plan's design and code sketches, but treat them as intent, not gospel. Plans are written before the code exists; if reality diverges (an API signature is different, a sketch won't compile, a better approach is obvious), do the right thing and note the deviation for the summary in Step 9. Don't blindly transcribe a sketch that doesn't fit.
+- Match the surrounding codebase's conventions, not the plan's illustrative style — the plan's code sketches optimize for explaining structure, not for fitting the repo.
+- Verify as you go. Run the relevant build, typecheck, or tests after meaningful chunks rather than saving all verification for the end — a failure caught early is cheaper to locate. If the plan named tests to write or update, write them.
 
 Leave the changes uncommitted (on top of the feature branch from Step 2). The Codex review in the next step reads the working-tree diff.
 
@@ -72,6 +76,7 @@ Run a cross-model review of the code you just wrote, using the Codex adversarial
 Where `<plan document path>` is the file from Step 1. `--scope auto` picks up the working-tree diff — your implementation. The focus text steers Codex toward code-quality and plan-fidelity concerns.
 
 On success, the output is a plain-text review report — read it as prose, not JSON:
+
 - A `Verdict:` line with the overall assessment, followed by a brief narrative summary.
 - A `Findings:` list — each entry starts with `- [severity] title (file:line-range)`, followed by the finding's body and, if present, a `Recommendation:` line.
 - A `Next steps:` list of suggested follow-up actions.
@@ -125,6 +130,7 @@ This edits the code locally, removing or rewriting flagged comments. Re-run the 
 ## Step 9: Summarize for the user
 
 Give the user a concise wrap-up — they can read the diff and the plan themselves, so focus on what they need to decide or know:
+
 - The **feature branch** the work landed on and, when applicable, the **worktree path** it lives in (the same ones announced in Step 2) — so the summary is self-contained and the work is easy to find for review/PR. If the work is in a worktree, mention that it persists after the session — on session exit the harness offers to keep or remove it; keep it to preserve the work for review/PR.
 - What was implemented (which plan / which scope).
 - Any deviations from the plan and why.

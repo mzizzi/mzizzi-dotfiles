@@ -30,7 +30,7 @@ Fix: align the reference to the zero-dash rule; reorder Rule 10's replacement li
 
 ### 4. Stale burstiness story
 
-The Core Principle and the reference's "Detection Metrics" section say AI has *low* burstiness (sentences cluster 10-25 words). Rule 1 and pattern #18 say current AI has *higher* length variation than humans (bimodal, CV 137% vs 70%). The legacy passages were never updated and now push a model toward exactly the seesaw artifact Rule 1 warns against — the contradiction most likely to degrade actual output.
+The Core Principle and the reference's "Detection Metrics" section say AI has _low_ burstiness (sentences cluster 10-25 words). Rule 1 and pattern #18 say current AI has _higher_ length variation than humans (bimodal, CV 137% vs 70%). The legacy passages were never updated and now push a model toward exactly the seesaw artifact Rule 1 warns against — the contradiction most likely to degrade actual output.
 
 Related tension: "Never 3+ consecutive sentences of similar length" vs. "50% of human sentences are 11-25 words." If half of human sentences sit in one band, runs of three similar-length sentences are common in human prose; the mechanical prohibition creates the metronome/seesaw artifact.
 

@@ -9,7 +9,7 @@ allowed-tools: Bash, EnterWorktree
 
 Get the working tree onto the right branch for a plan before any code is written, so the resulting diff maps back to the plan and never lands on the trunk.
 
-This is the single source of truth for the branch-naming convention. That matters beyond tidiness: `implement-plan-complex` prepares the branch once and then spawns per-phase sub-agents that each run `implement-plan`, which prepares the branch again. Those two have to derive the *same* name or every phase forks its own branch. One skill deriving it in one place is what makes them agree.
+This is the single source of truth for the branch-naming convention. That matters beyond tidiness: `implement-plan-complex` prepares the branch once and then spawns per-phase sub-agents that each run `implement-plan`, which prepares the branch again. Those two have to derive the _same_ name or every phase forks its own branch. One skill deriving it in one place is what makes them agree.
 
 ## Convention
 
@@ -42,7 +42,7 @@ It derives the branch name, gathers the git state, and prints `KEY=value` lines 
 
 **`switch`** — the branch exists in this working tree: `git switch <BRANCH>`.
 
-**`judge-current-branch-then-create`** — the conventionally-named branch doesn't exist, but you're sitting on some *other* non-trunk branch, and it might be hand-named feature work for this same plan. Decide before doing anything else:
+**`judge-current-branch-then-create`** — the conventionally-named branch doesn't exist, but you're sitting on some _other_ non-trunk branch, and it might be hand-named feature work for this same plan. Decide before doing anything else:
 
 - It's for this plan (e.g. `feat/oauth-refresh` when the plan is `20260713-oauth-token-refresh`) → stay on it. One piece of work shouldn't span two branches.
 - It's unrelated → create the new branch off the trunk, as below.

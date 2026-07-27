@@ -11,46 +11,48 @@ user-invocable: true
 
 Generate a technical plan document (`plan.md` by default, or a filename the user names) or update an existing one by extensively researching the codebase and interviewing the user.
 
-
 ## Instructions
 
 ### Step 1: Understand the request
 
 Parse the user's input to extract:
-* If the user provided one, read every document in the plan directory
-* **What:** they want to build or change
-* **Why:**: the motivation or problem being solved (if stated)
-* **Where:** it fits in the codebase (if obvious from context)
-* **Planning model:** which model the Step 4 planning sub-agent should run on. If the user named one (e.g. `--model sonnet`, or "plan this on haiku"), use it; otherwise default to `opus`. Accept the aliases `opus`, `sonnet`, and `haiku`.
+
+- If the user provided one, read every document in the plan directory
+- **What:** they want to build or change
+- **Why:**: the motivation or problem being solved (if stated)
+- **Where:** it fits in the codebase (if obvious from context)
+- **Planning model:** which model the Step 4 planning sub-agent should run on. If the user named one (e.g. `--model sonnet`, or "plan this on haiku"), use it; otherwise default to `opus`. Accept the aliases `opus`, `sonnet`, and `haiku`.
 
 ### Step 2: Resolve the plan directory and target file
 
 The plan is written to `<plan directory>/<target file>`. Resolve both from the user's input.
 
 **Target file** — the filename to write, defaulting to `plan.md`:
-* If the user named a target file (any argument ending in `.md`, e.g. `design.md`, or a full path like `plans/20260615-token-refresh/design.md`), use that filename.
-* Otherwise use `plan.md`.
+
+- If the user named a target file (any argument ending in `.md`, e.g. `design.md`, or a full path like `plans/20260615-token-refresh/design.md`), use that filename.
+- Otherwise use `plan.md`.
 
 **Plan directory:**
-* If the user gave a full path to the target file (it includes a directory component), that parent directory is the plan directory — continue to step 3.
-* Otherwise, if the user provided a plan directory, use it — continue to step 3.
-* Otherwise, use the /create-plan-dir skill to create one.
+
+- If the user gave a full path to the target file (it includes a directory component), that parent directory is the plan directory — continue to step 3.
+- Otherwise, if the user provided a plan directory, use it — continue to step 3.
+- Otherwise, use the /create-plan-dir skill to create one.
 
 Refer to the resolved destination as `<target file path>` in the steps below (e.g. `plans/20260615-token-refresh/plan.md`, or `plans/20260615-token-refresh/design.md` if the user named `design.md`).
 
 ### Step 3: Grill the user
 
-* Use the /grill skill to gather additional context and requirements for the desired change
-* If the target file already exists, or there is a brainstorm.md in the plan directory, use that as a starting point instead of re-asking
+- Use the /grill skill to gather additional context and requirements for the desired change
+- If the target file already exists, or there is a brainstorm.md in the plan directory, use that as a starting point instead of re-asking
 
 ### Step 4: Create a draft plan
 
-* Spawn a **Plan-mode sub-agent** (`subagent_type: "Plan"`), passing `model` set to the planning model resolved in Step 1 (default `opus`). Pinning `model` matters because a Plan sub-agent otherwise inherits the session model — so the plan would silently run on whatever the main session happens to be on. Planning leans on deep reasoning, which is why it defaults to Opus; `sonnet` or `haiku` are there for a faster, cheaper draft on simpler work. The sub-agent should be prompted with the following:
-  * The output format template from the "Plan Output Template" section at the bottom of this document
-  * Be sure the sub-agent is briefed with the context gathered, any existing target-file or brainstorm.md documents, and any other information that would help the sub-agent
-  * The sub-agent should split implementation into logical chunks where it makes sense to do so
-  * Code sketches should show structure and signatures, with comments explaining non-obvious logic. The sub-agent is constructing a plan document, not a copy-paste implementation.
-* Update or create the target file at `<target file path>` (from step 2) with the sub-agent's output
+- Spawn a **Plan-mode sub-agent** (`subagent_type: "Plan"`), passing `model` set to the planning model resolved in Step 1 (default `opus`). Pinning `model` matters because a Plan sub-agent otherwise inherits the session model — so the plan would silently run on whatever the main session happens to be on. Planning leans on deep reasoning, which is why it defaults to Opus; `sonnet` or `haiku` are there for a faster, cheaper draft on simpler work. The sub-agent should be prompted with the following:
+  - The output format template from the "Plan Output Template" section at the bottom of this document
+  - Be sure the sub-agent is briefed with the context gathered, any existing target-file or brainstorm.md documents, and any other information that would help the sub-agent
+  - The sub-agent should split implementation into logical chunks where it makes sense to do so
+  - Code sketches should show structure and signatures, with comments explaining non-obvious logic. The sub-agent is constructing a plan document, not a copy-paste implementation.
+- Update or create the target file at `<target file path>` (from step 2) with the sub-agent's output
 
 ### Step 5: Codex adversarial review
 
@@ -61,6 +63,7 @@ Invoke the Codex adversarial review skill to get a cross-model challenge of the 
 Where `<target file path>` is the path written in Step 4 (e.g., `plans/20260615-token-refresh/plan.md`). The focus text steers Codex toward plan-quality concerns rather than code-quality concerns.
 
 On success, the output is a plain-text review report — not JSON, read it as prose:
+
 - A `Verdict:` line with the overall assessment, followed by a brief narrative summary.
 - A `Findings:` list — each entry starts with `- [severity] title (file:line-range)`, followed by the finding's full body text and, if present, a `Recommendation:` line.
 - A `Next steps:` list of suggested follow-up actions.
@@ -102,6 +105,7 @@ Resolve all open questions through a user interview loop. The goal is to produce
 6. Update the `## Open Questions` section — remove resolved questions, add any new ones — and loop back to (1).
 
 **Guidelines:**
+
 - Batch related questions into a single AskUserQuestion call rather than asking one at a time.
 - Don't loop more than 3 iterations — if questions keep spawning, collect the remaining ones into an "Open Questions" section and move on.
 
@@ -122,6 +126,7 @@ Fix any issues found. This step exists because plans undergo multiple rounds of 
 ### Step 10: Present to the user
 
 After writing the plan, give the user a brief summary of:
+
 - Where the plan was saved
 - The key design decisions made
 - Whether the Codex adversarial review ran and what it surfaced (briefly — e.g., "Codex flagged 2 risks that were incorporated into the Design section")
@@ -149,7 +154,7 @@ The core technical approach. Include:
 * Data models with field-level detail (dataclasses, Pydantic models, SQL schemas)
 * Algorithms or workflows described step by step
 * Key decisions with rationale and any alternatives that were considered
-    
+
 ## Implementation
 
 ### Implementation Phase <N...>
@@ -164,7 +169,7 @@ Specific files to create or modify, in order. For each file:
     - New test files or test functions to create, with brief descriptions of what they verify
     - Existing tests that need updating or refactoring to accommodate the changes
     - Key scenarios and edge cases worth covering
-    
+
 ## Open Questions
 Topics that need investigation or a user decision before or during implementation.
 * ...

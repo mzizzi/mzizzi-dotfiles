@@ -11,7 +11,7 @@ Brainstorm is a thin wrapper that turns a [[grill]] session into a durable artif
 
 So the flow is: **interview (loop) → save → optionally implement.**
 
-A brainstorm can also be *resumed*: point the skill at a document an earlier session wrote and it continues that conversation instead of starting a new one.
+A brainstorm can also be _resumed_: point the skill at a document an earlier session wrote and it continues that conversation instead of starting a new one.
 
 ## Step 0: New brainstorm or continuation?
 
@@ -22,7 +22,7 @@ Look at the first argument. It's a **continuation** if it resolves to an existin
 
 Anything else — no argument, a topic description, a path that doesn't exist — is a **new brainstorm**. Don't guess a path into existence: if the user clearly meant to continue a saved brainstorm but the path doesn't resolve, say so and ask rather than silently starting fresh under a new directory.
 
-**For a continuation:** read the document, and read any sibling documents in its directory (a `plan.md`, notes) for context. Load its `## Decisions` entries into your running record as already-settled and its `## Open questions` as the live threads — those are where the interview should pick up. Remember the resolved path; Step 3 rewrites *that* file rather than minting a new directory. Any text the user passed after the path is the thread they want to explore next — seed Step 1 with it.
+**For a continuation:** read the document, and read any sibling documents in its directory (a `plan.md`, notes) for context. Load its `## Decisions` entries into your running record as already-settled and its `## Open questions` as the live threads — those are where the interview should pick up. Remember the resolved path; Step 3 rewrites _that_ file rather than minting a new directory. Any text the user passed after the path is the thread they want to explore next — seed Step 1 with it.
 
 **For a new brainstorm:** the argument is the idea to explore; run the flow as written below.
 
@@ -32,17 +32,17 @@ Invoke the **grill** skill and run its interview as written — one question at 
 
     Skill(skill: "grill", args: "<the idea/design/plan the user wants to brainstorm>")
 
-Grill is the single source of truth for *how* to interview; don't reinvent it here. Your only added responsibility is to **keep a running record as you go**, because you'll need it to write the log later. After each question resolves, note:
+Grill is the single source of truth for _how_ to interview; don't reinvent it here. Your only added responsibility is to **keep a running record as you go**, because you'll need it to write the log later. After each question resolves, note:
 
 - the decision being made (a short topic label),
 - the option the user chose,
-- the *why* — their reasoning, plus the research or rationale behind the recommendation.
+- the _why_ — their reasoning, plus the research or rationale behind the recommendation.
 
 Also keep a running sense of the overall framing (what we're exploring and why) and any threads that surface but don't get resolved.
 
 This step repeats (see Step 2). On a second or later pass, **continue the same interview** — build on what's already settled in your running record instead of re-asking it. If the user volunteered a specific new thread when choosing to keep going, start there.
 
-When resuming a saved brainstorm (Step 0), the first pass is already a "second pass": the decisions you loaded are settled, so don't re-litigate them. Open the interview on the recorded open questions, or on whatever thread the user named. If the document is thin on a decision's *why*, that's a fair thing to probe — but confirm the decision rather than reopening it from scratch.
+When resuming a saved brainstorm (Step 0), the first pass is already a "second pass": the decisions you loaded are settled, so don't re-litigate them. Open the interview on the recorded open questions, or on whatever thread the user named. If the document is thin on a decision's _why_, that's a fair thing to probe — but confirm the decision rather than reopening it from scratch.
 
 ## Step 2: Ask what's next
 
@@ -52,7 +52,7 @@ When a grill pass reaches a natural stopping point — the branches currently in
 - **Finish and save** → go to Step 3, write `brainstorm.md`, and stop.
 - **Finish and create implementation plan** → go to Step 3, then continue to Step 4 to build the plan from the brainstorm.
 
-Always present these three choices **in the exact order listed above** — `Continue brainstorming`, then `Finish and save`, then `Finish and create implementation plan` — every pass, regardless of how covered the design feels. The order is static so the menu is predictable across passes and usages; do **not** reorder it to float a recommendation to the top. `Continue brainstorming` is **always** the recommended option: keep it first and append **"(Recommended)"** to its label every time. Making a finish option the recommended (top) choice risks a stray selection jumping the flow into saving or planning before the user means to — the safe default is to keep exploring, and the user can always pick a finish option deliberately. Picking "Other" and typing a thread is the one-step shortcut for the same intent — treat it as *Continue brainstorming* already seeded with that topic, and skip the follow-up prompt.
+Always present these three choices **in the exact order listed above** — `Continue brainstorming`, then `Finish and save`, then `Finish and create implementation plan` — every pass, regardless of how covered the design feels. The order is static so the menu is predictable across passes and usages; do **not** reorder it to float a recommendation to the top. `Continue brainstorming` is **always** the recommended option: keep it first and append **"(Recommended)"** to its label every time. Making a finish option the recommended (top) choice risks a stray selection jumping the flow into saving or planning before the user means to — the safe default is to keep exploring, and the user can always pick a finish option deliberately. Picking "Other" and typing a thread is the one-step shortcut for the same intent — treat it as _Continue brainstorming_ already seeded with that topic, and skip the follow-up prompt.
 
 Loop Step 1 ↔ Step 2 until the user picks one of the two finish options.
 
@@ -66,7 +66,7 @@ Both finish options land here. First resolve where the document goes.
 
     Skill(skill: "create-plan-dir", args: "<short topic summary>")
 
-It stamps today's date and returns a path like `plans/20260625-oauth-token-refresh/`. Creating it *now* — after the looping — means the directory name reflects what the conversation actually settled on. The document is `brainstorm.md` inside it.
+It stamps today's date and returns a path like `plans/20260625-oauth-token-refresh/`. Creating it _now_ — after the looping — means the directory name reflects what the conversation actually settled on. The document is `brainstorm.md` inside it.
 
 Then write your running record to that path as a **decision log**. The point of this structure is reuse: when `create-plan` reads this file, it should be able to lift the settled decisions straight into the plan and only re-litigate what's genuinely open. Prose summaries bury that signal; a decision log surfaces it.
 
@@ -95,7 +95,7 @@ implementation. Omit this section entirely if everything got resolved.
 
 Keep the **Why** lines substantive: the rationale is the most valuable thing to preserve, since a bare decision without its reasoning invites someone to second-guess it later. If a decision was trivial, a one-line note is fine — don't pad it.
 
-On a continuation, the rewrite is a **merge, not a replacement**: carry every decision from the original document forward, keep them in their original order, and append this session's decisions after them. Update the framing in *The idea* only if the session actually changed the scope, and rebuild *Open questions* from what's still live — drop the ones this session settled, add the ones it surfaced. A decision this session overturned stays in the log with its entry revised to record the new choice and why it changed; deleting it loses the history that makes the reversal legible later. If the file uses headings that differ from the structure above, preserve its shape rather than reformatting it wholesale.
+On a continuation, the rewrite is a **merge, not a replacement**: carry every decision from the original document forward, keep them in their original order, and append this session's decisions after them. Update the framing in _The idea_ only if the session actually changed the scope, and rebuild _Open questions_ from what's still live — drop the ones this session settled, add the ones it surfaced. A decision this session overturned stays in the log with its entry revised to record the new choice and why it changed; deleting it loses the history that makes the reversal legible later. If the file uses headings that differ from the structure above, preserve its shape rather than reformatting it wholesale.
 
 If the user chose **Finish and save**, report the saved path and mention that `/create-plan <dir>` will turn it into a plan whenever they're ready. Done.
 

@@ -10,12 +10,14 @@ The single most recognizable AI pattern. A comma followed by an -ing phrase appe
 
 **AI pattern:**
 
+<!-- prettier-ignore -->
 > The team launched the product, revolutionizing the industry.
 > The temple was built in 1850, symbolizing the community's enduring faith.
 > As of 2008, the population stood at 56,998, creating a lively community.
 
 **Human alternative:**
 
+<!-- prettier-ignore -->
 > The team launched the product. The industry changed.
 > The temple was built in 1850.
 > As of 2008, the population was 56,998.
@@ -28,11 +30,13 @@ AI defaults to grouping things in threes: three adjectives, three bullet points,
 
 **AI pattern:**
 
+<!-- prettier-ignore -->
 > The conference features keynote sessions, panel discussions, and networking opportunities.
 > The design is bold, innovative, and timeless.
 
 **Human alternative:**
 
+<!-- prettier-ignore -->
 > The conference runs keynote sessions and panels. There's time to meet people between talks.
 > The design is bold. It'll still work in ten years.
 
@@ -44,11 +48,13 @@ Rule: List two things. Or four. Or one. Never three by default.
 
 **AI pattern:**
 
+<!-- prettier-ignore -->
 > This is not just a memoir — it's a love letter to the city.
 > The painting represents not merely an artistic achievement, but a cultural milestone.
 
 **Human alternative:**
 
+<!-- prettier-ignore -->
 > It's a memoir about growing up in the city. You can feel the author's affection for it on every page.
 > The painting became a cultural reference point. People still argue about it.
 
@@ -60,12 +66,14 @@ Vague figurative spectrum using "from X to Y" where no real scale exists.
 
 **AI pattern:**
 
+<!-- prettier-ignore -->
 > From intimate gatherings to global movements, the organization has made its mark.
 > From beginners to experts, everyone can benefit.
 > From the singularity of the Big Bang to the grand cosmic web...
 
 **Human alternative:**
 
+<!-- prettier-ignore -->
 > The organization started with twelve people in a living room. Last year 40,000 showed up to their conference.
 > Works whether you've been doing this for a week or a decade.
 
@@ -91,12 +99,14 @@ AI substitutes elaborate verb phrases for simple "is/are/has."
 
 **AI pattern:**
 
+<!-- prettier-ignore -->
 > Gallery 825 serves as LAAA's exhibition space for contemporary art.
 > The gallery features four separate spaces.
 > She holds the distinction of being the first female director.
 
 **Human alternative:**
 
+<!-- prettier-ignore -->
 > Gallery 825 is LAAA's exhibition space.
 > The gallery has four separate spaces.
 > She was the first female director.
@@ -109,12 +119,14 @@ Generic commentary attached to facts that need no commentary.
 
 **AI pattern:**
 
+<!-- prettier-ignore -->
 > The city has a population of 56,998, creating a lively community within its borders.
 > The inscriptions offer valuable insights into the construction of the mosque.
 > These citations illustrate the enduring relevance of his work.
 
 **Human alternative:**
 
+<!-- prettier-ignore -->
 > The city has a population of 56,998.
 > The inscriptions name the craftsmen who built the mosque.
 > His work keeps getting cited.
@@ -159,8 +171,7 @@ Formatting everything as bullet points with **Bold Header:** description.
 > - **AEO:** Techniques focused on optimizing content...
 > - **GIO:** Strategies for ensuring businesses are cited...
 
-**Human alternative:**
-Write it as prose. If a list is genuinely needed, keep it simple without bold headers and colon separators.
+**Human alternative:** Write it as prose. If a list is genuinely needed, keep it simple without bold headers and colon separators.
 
 ### 11. Undue Emphasis on Notability/Media Coverage
 
@@ -168,6 +179,7 @@ Painstakingly listing every source that covered the topic to prove it matters.
 
 **AI pattern:**
 
+<!-- prettier-ignore -->
 > Her views have been cited in The New York Times, BBC, Financial Times, and The Hindu.
 > The mall maintains a strong digital presence, particularly on Instagram.
 
@@ -242,6 +254,7 @@ Older models wrote uniform 3-4 sentence paragraphs. Newer models fragment into m
 
 **AI pattern:**
 
+<!-- prettier-ignore -->
 > Most people think X. The reality is Y.
 > Forget X. Focus on Y.
 > It is not about X. It is about Y.
