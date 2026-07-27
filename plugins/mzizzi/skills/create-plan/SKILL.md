@@ -142,6 +142,7 @@ Use the **absolute path** to the plan file written in Step 8 (e.g. `/mzizzi:impl
 
 ## Plan Output Template
 
+<!-- prettier-ignore -->
 ```markdown
 # Title
 
@@ -154,7 +155,7 @@ The core technical approach. Include:
 * Data models with field-level detail (dataclasses, Pydantic models, SQL schemas)
 * Algorithms or workflows described step by step
 * Key decisions with rationale and any alternatives that were considered
-
+    
 ## Implementation
 
 ### Implementation Phase <N...>
@@ -169,7 +170,7 @@ Specific files to create or modify, in order. For each file:
     - New test files or test functions to create, with brief descriptions of what they verify
     - Existing tests that need updating or refactoring to accommodate the changes
     - Key scenarios and edge cases worth covering
-
+    
 ## Open Questions
 Topics that need investigation or a user decision before or during implementation.
 * ...

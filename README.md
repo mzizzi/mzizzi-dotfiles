@@ -16,7 +16,7 @@ Safe to re-run any time, including after moving or re-cloning the repo -- it sel
 
 ## Markdown formatting
 
-Markdown here is stored one logical line per paragraph -- editors soft-wrap it, so a one-word edit no longer reshuffles a paragraph's wrap points into a multi-line diff. Prettier does the reflowing; `.prettierrc` is the contract, and both the git hook and any editor Prettier plugin read it, so format-on-save and commit-time enforcement agree by construction.
+Markdown here is stored one logical line per paragraph -- editors soft-wrap it, so a one-word edit no longer reshuffles a paragraph's wrap points into a multi-line diff. Prettier does the reflowing and `.prettierrc` is the contract, read by the git hook and by any editor Prettier plugin alike. The hook is authoritative: it pins its own Prettier version, while an editor plugin uses whatever version it ships with, so the two can still disagree on output the pin has changed. If format-on-save keeps producing edits the hook then rewrites, match your editor's Prettier to the version pinned in `.pre-commit-config.yaml`.
 
 Enforcement is a [pre-commit](https://pre-commit.com) hook (`.pre-commit-config.yaml`), which builds its own node environment and installs the pinned Prettier -- there is no `package.json` or `node_modules` in this repo. That is a client-side hook and therefore best-effort: it does not exist on a clone that never ran the steps below, and `git commit --no-verify` skips it. There is no CI check backing it up.
 

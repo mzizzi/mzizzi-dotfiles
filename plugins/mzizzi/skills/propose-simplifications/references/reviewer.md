@@ -42,6 +42,7 @@ Your reply is data for the parent skill, not a message to a person. No preamble,
 
 Use this shape exactly — the parent merges four of these:
 
+<!-- prettier-ignore -->
 ```markdown
 ### `src/auth/session.ts:142` — call the existing `retryWithBackoff` instead of hand-rolling it
 

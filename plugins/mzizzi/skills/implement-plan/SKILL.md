@@ -107,6 +107,7 @@ Fold every remaining valid finding (deferred, or valid-but-needs-thought) into t
 
 Plans from /create-plan seed a `## Follow-ups` placeholder (with a `_None yet._` line) at the end of the document. Replace that placeholder line the first time you add a real finding, and append to the section on later rounds. If the plan has no such section (e.g. it predates the template), create one at the end. For each finding, capture enough for a reviewer to pick it up cold:
 
+<!-- prettier-ignore -->
 ```markdown
 ## Follow-ups
 

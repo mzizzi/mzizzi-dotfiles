@@ -72,6 +72,7 @@ Then write your running record to that path as a **decision log**. The point of 
 
 Use this structure:
 
+<!-- prettier-ignore -->
 ```markdown
 # [Topic] — Brainstorm
 
