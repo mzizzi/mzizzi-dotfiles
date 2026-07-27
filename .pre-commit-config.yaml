@@ -1,0 +1,12 @@
+repos:
+  - repo: local
+    hooks:
+      # A local hook rather than an upstream mirror: pre-commit builds its own
+      # node environment and npm-installs the pin below, so the repo needs no
+      # package.json, lockfile, or node_modules just to format markdown.
+      - id: prettier
+        name: prettier
+        entry: prettier --write
+        language: node
+        types: [markdown]
+        additional_dependencies: ["prettier@3.6.2"]
