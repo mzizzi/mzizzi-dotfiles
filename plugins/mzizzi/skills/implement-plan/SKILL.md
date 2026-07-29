@@ -29,13 +29,15 @@ Keep referencing the plan by its Step 0 absolute path. Entering a worktree chang
 
 Every item is knowable now, so build the list in **two messages**: one carrying every `TaskCreate`, one carrying every `TaskUpdate` that chains them. Two only because `TaskCreate` has no blocked-by field.
 
-**Don't hand-write numbers into subjects.** The harness assigns each task an id, and that id is this run's task number. The plan's `### Implementation Phase <N>` numbers are a different scheme that won't line up — one phase becomes several tasks, and the tail items belong to no phase. Name the phase as text and let the id do the numbering:
+**Implementation items: exactly one per in-scope `### Implementation Phase <N>` section**, in plan order. One task per phase and no finer — not one per file the phase lists, not one per bullet inside it. A phase touching six files is one task. The count is checkable before you send it: implementation items should equal in-scope phases, and if it doesn't, you've split a phase that the plan already treats as one unit of work.
 
-    implement Phase 1 — parseVbo.ts: export CAPTURE_SECTION/VIDEO_SECTION
-    implement Phase 1 — paths.ts: repo-root-relative dir contract
-    implement Phase 2 — new batch CLI replacing judge-eval-gen
+The plan is the description of the work; the task list is a progress marker over it. Splitting per file duplicates the plan into the list, buries the phase boundaries the run is actually paced by, and puts a wall of items in front of the user that the plan already says better.
 
-**Implementation items:** one per file entry the in-scope phase sections list, in plan order, grouping only where the plan itself groups tightly-coupled files. The plan's enumeration is the source of granularity; don't re-judge it per run.
+**Don't hand-write numbers into subjects.** The harness assigns each task an id, and that id is this run's task number. The plan's phase numbers are a different scheme that won't line up with it, since the tail items belong to no phase at all. Name the phase as text — its own title from the plan — and let the id do the numbering:
+
+    implement Phase 1 — the shared, glob-free core
+    implement Phase 2 — the batch CLI, and the deletions
+    implement Phase 3 — the dev-server plugin
 
 **Tail items:** correctness pass, quality pass, comment fixes, summarize. Seeding them before any code exists is what protects the tail — finishing the implementation doesn't end the run.
 
