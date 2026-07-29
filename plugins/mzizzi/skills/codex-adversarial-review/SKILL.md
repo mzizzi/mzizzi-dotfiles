@@ -1,7 +1,7 @@
 ---
 name: codex-adversarial-review
-description: Run a Codex adversarial review directly against the codex plugin's companion script, bypassing the /codex:adversarial-review command's model-invocation gate (that command ships with disable-model-invocation: true, and there's no supported way to lift it without hand-editing the vendored plugin file, which gets wiped on every plugin update). Use this whenever a plan or draft document needs a cross-model adversarial challenge triggered programmatically rather than by a human typing the slash command — the create-plan skill calls it after drafting a plan.
-argument-hint: <focus/scope text, same as you'd pass to /codex:adversarial-review>
+description: "Run a Codex adversarial review directly against the codex plugin's companion script, bypassing the /codex:adversarial-review command's model-invocation gate (that command ships with disable-model-invocation: true, and there's no supported way to lift it without hand-editing the vendored plugin file, which gets wiped on every plugin update). Use this whenever a plan or draft document needs a cross-model adversarial challenge triggered programmatically rather than by a human typing the slash command — the create-plan skill calls it after drafting a plan."
+argument-hint: "<focus/scope text, same as you'd pass to /codex:adversarial-review>"
 allowed-tools: Bash
 disable-model-invocation: false
 user-invocable: true

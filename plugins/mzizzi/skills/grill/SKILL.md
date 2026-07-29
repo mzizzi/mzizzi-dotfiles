@@ -1,6 +1,8 @@
 ---
 name: grill
 description: Interview the user relentlessly about a plan, design, or idea. Use when the user wants to stress-test a plan, design, or concept before building, or uses any 'grill' trigger phrases.
+disable-model-invocation: false
+user-invocable: true
 ---
 
 Interview me relentlessly about every aspect of the idea, design, or plan until we reach a shared understanding. Walk down each branch of the design tree, resolving dependencies between decisions one-by-one. Every single question should use the AskUserQuestion tool to gather responses.

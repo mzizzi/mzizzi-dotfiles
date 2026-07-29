@@ -1,7 +1,7 @@
 ---
 name: implement-plan-complex
-description: Run a multi-phase plan end to end by orchestrating one /implement-plan sub-agent per phase, chained with blocked-by task dependencies and a commit between each. Use this whenever the user wants several phases of a plan implemented in one go: "implement phases 1-3 of plans/…", "run the whole plan phase by phase", "implement the plan, one sub-agent per phase", or any request pairing a plan with a phase range. Prefer it over calling /implement-plan directly whenever more than one phase is in scope, because implementing phases inline piles every phase's context into one window and the later phases degrade.
-argument-hint: <plan directory or plan.md> [phase range, e.g. "phases 1-3"] [--worktree]
+description: "Run a multi-phase plan end to end by orchestrating one /implement-plan sub-agent per phase, chained with blocked-by task dependencies and a commit between each. Use this whenever the user wants several phases of a plan implemented in one go: \"implement phases 1-3 of plans/…\", \"run the whole plan phase by phase\", \"implement the plan, one sub-agent per phase\", or any request pairing a plan with a phase range. Prefer it over calling /implement-plan directly whenever more than one phase is in scope, because implementing phases inline piles every phase's context into one window and the later phases degrade."
+argument-hint: "<plan directory or plan.md> [phase range, e.g. \"phases 1-3\"] [--worktree]"
 allowed-tools: Read, Grep, Glob, Bash, Agent, AskUserQuestion, Skill, EnterWorktree, TaskCreate, TaskUpdate, TaskList
 disable-model-invocation: false
 user-invocable: true

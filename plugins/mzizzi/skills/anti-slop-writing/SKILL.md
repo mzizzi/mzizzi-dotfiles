@@ -2,6 +2,8 @@
 name: anti-slop-writing
 description: "Write or de-slop prose so it reads as genuinely human rather than AI slop. Two modes: load the guidelines to write natural text, or fix a supplied document (a pasted draft, a file, or AI-generated text) to strip the tells. Use whenever the user is writing or editing articles, essays, blog posts, emails, newsletters, or social copy that must read naturally, or asks to humanize, de-slop, or de-AI writing, remove AI writing patterns, avoid AI detection, or make text sound authentic and less robotic, even if they don't name the skill."
 argument-hint: "[target document to fix; omit to load references into context]"
+disable-model-invocation: false
+user-invocable: true
 ---
 
 # Core Principle

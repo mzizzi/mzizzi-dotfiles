@@ -1,8 +1,10 @@
 ---
 name: brainstorm
-description: Stress-test an idea, design, or plan through a relentless, looping interview, then persist the results as a brainstorm.md decision log in a fresh plan directory. Use this whenever the user wants to brainstorm, think an idea through before building, or capture the output of a grilling session to disk — especially when they say "brainstorm", "let's think through X", "grill me and write it up", or want a saved pre-planning artifact. Also use to resume an earlier session — when the user points at an existing brainstorm.md or its plan directory and wants to keep exploring, it picks up from the decisions already logged there and updates that file in place. Prefer this over /grill when the discussion should be persisted, and over /create-plan when the user wants to explore and capture decisions rather than produce a full implementation plan yet.
-argument-hint: [existing brainstorm.md or plan dir] <idea, design, or plan to brainstorm>
+description: "Stress-test an idea, design, or plan through a relentless, looping interview, then persist the results as a brainstorm.md decision log in a fresh plan directory. Use this whenever the user wants to brainstorm, think an idea through before building, or capture the output of a grilling session to disk — especially when they say \"brainstorm\", \"let's think through X\", \"grill me and write it up\", or want a saved pre-planning artifact. Also use to resume an earlier session — when the user points at an existing brainstorm.md or its plan directory and wants to keep exploring, it picks up from the decisions already logged there and updates that file in place. Prefer this over /grill when the discussion should be persisted, and over /create-plan when the user wants to explore and capture decisions rather than produce a full implementation plan yet."
+argument-hint: "[existing brainstorm.md or plan dir] <idea, design, or plan to brainstorm>"
 allowed-tools: Read, Grep, Glob, Bash, AskUserQuestion, Write, Skill
+disable-model-invocation: false
+user-invocable: true
 ---
 
 # Brainstorm

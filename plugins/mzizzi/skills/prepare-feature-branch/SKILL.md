@@ -1,8 +1,10 @@
 ---
 name: prepare-feature-branch
-description: Put implementation work for a plan onto its own feature branch (optionally an isolated git worktree), reusing the branch if it already exists — the single source of truth for the <username>/<slug> branch-naming convention. Use this whenever work is about to start against a plan directory and needs somewhere to land: the implement-plan and implement-plan-complex skills call it before writing any code, and you can invoke it directly whenever the user wants a branch or worktree set up for a plan.
-argument-hint: <plan directory or plan.md> [--worktree]
+description: "Put implementation work for a plan onto its own feature branch (optionally an isolated git worktree), reusing the branch if it already exists — the single source of truth for the <username>/<slug> branch-naming convention. Use this whenever work is about to start against a plan directory and needs somewhere to land: the implement-plan and implement-plan-complex skills call it before writing any code, and you can invoke it directly whenever the user wants a branch or worktree set up for a plan."
+argument-hint: "<plan directory or plan.md> [--worktree]"
 allowed-tools: Bash, EnterWorktree
+disable-model-invocation: false
+user-invocable: true
 ---
 
 # Prepare Feature Branch

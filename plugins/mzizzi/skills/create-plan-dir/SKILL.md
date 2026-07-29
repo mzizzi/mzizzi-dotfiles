@@ -3,6 +3,8 @@ name: create-plan-dir
 description: Create a date-stamped plan directory (under plans/, or .nocommit/plans/ if the project doesn't track plans in source control) following the yyyymmdd-short-description/ convention, and return its path. Use this whenever you need the destination folder for a plan document — the create-plan skill calls it before writing plan.md, and you can invoke it directly whenever the user wants to scaffold a new plan folder or asks where a plan should live.
 argument-hint: <topic or feature description>
 allowed-tools: Bash
+disable-model-invocation: false
+user-invocable: true
 ---
 
 # Create Plan Directory
