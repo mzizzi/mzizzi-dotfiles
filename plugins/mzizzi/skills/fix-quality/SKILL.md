@@ -1,20 +1,23 @@
 ---
-name: propose-simplifications
-description: Review a PR's changes for reuse, simplification, efficiency, and altitude, then report ranked proposals with rationale — never editing the code. Reviews the current branch's PR by default; pass a PR number/URL to target another, or "local" for the working tree. Quality only, not correctness bugs. Use this whenever the user wants to know what could be simplified or cleaned up before merging, asks for simplification feedback, or wants proposed changes rather than applied ones — including phrasings like "what would you simplify here", "review this PR for cleanup", or "tell me what to change, don't change it".
-argument-hint: "[<pr-number-or-url> | local]"
+name: fix-quality
+description: Review a change for reuse, simplification, efficiency, and altitude, then apply the cleanups that are contained and defer the rest. Reviews the current branch's PR by default; pass a PR number/URL to target another, or "local" for the working tree. Pass a plan file and deferred findings are written into its Follow-ups section; pass --dry-run to review and report without changing anything. Quality only, not correctness bugs. Use this whenever the user wants a change cleaned up before merging, asks what could be simplified, or says things like "tidy this up", "what would you simplify here", or "clean up this PR".
+argument-hint: "[<pr-number-or-url> | local] [--plan <path to plan.md>] [--dry-run]"
+allowed-tools: Read, Grep, Glob, Edit, Write, Bash, Agent, Skill
+disable-model-invocation: false
+user-invocable: true
 ---
 
-# Propose simplifications
+# Fix quality
 
-Orchestrate a four-angle quality review of a change and report ranked proposals. Quality only — correctness bugs belong to `/code-review`, comment quality to `/review-comments`. Work the steps in order.
+Orchestrate a four-angle quality review of a change, then act on what it finds: apply the contained cleanups, defer the invasive ones, and report both. Quality only — correctness bugs belong to `/mzizzi:fix-correctness`, comment quality to `/mzizzi:fix-comments`. Work the steps in order.
 
-**Produce a proposal, not a commit.** Nothing in this skill edits files, and neither do the agents it launches. The report is the whole deliverable — a one-character fix still gets proposed, not made. That's what makes this safe to run on someone else's PR, and what keeps the author the one deciding.
+**You apply; the review agents don't.** The agents launched in step 4 are strictly read-only, and that's load-bearing: step 5 drops proposals that are duplicated, out of scope, or wrong, and an edit made by an agent is an edit that skipped that filter. Every change to the working tree happens in step 6, after the filtering, and by you.
 
 Steps 3 onward pass file paths to sub-agents. Resolve the absolute path of this skill's directory first (the directory holding this `SKILL.md`) and use it wherever `<skill-dir>` appears below — sub-agents can't find these files from a relative path.
 
 ## 1. Resolve the target and read its changes
 
-The **target** is the argument. Resolve it, state what you resolved, then get the diff:
+Parse `--plan` and `--dry-run` out of the arguments first; the **target** is the bare value left over, and there may not be one. Resolve it, state what you resolved, then get the diff:
 
 - _(omitted — default)_ — the current branch's PR: `gh pr diff`. If there's no open PR or `gh` is unavailable, fall back to the branch's own changes (`git diff <base>...HEAD`, inferring the base from the upstream tracking branch or the repo's default branch) and say that's what you reviewed.
 - a **PR number or URL** — that PR: `gh pr diff <number-or-url>`.
@@ -24,19 +27,26 @@ Use the three-dot form for branch diffs. Two dots drags in base-branch commits t
 
 Uncommitted changes aren't part of a PR — leave them out of a PR-target review and note the exclusion in one line at the end, so the author knows the report may not match their working tree. If the target has no changes, say so and stop rather than widening scope to find work.
 
+**`--plan <path>`** is optional and independent of the target. Given one, step 2 reads that plan document for the intent behind the change, and step 7 writes deferred findings into it instead of leaving them in the report.
+
+**`--dry-run`** is optional: review and report, change nothing. Steps 6 and 7 are skipped, so nothing is applied and nothing is written — including to `--plan`, if both were passed.
+
+**Whether you can apply anything depends on the target.** `local`, or a PR that is this branch, means the code is in front of you and step 6 runs. A PR you don't have checked out means there's nothing to edit — skip step 6, say so once, and report every surviving proposal instead.
+
 Keep the exact command that produced the diff. Sub-agents re-run it themselves rather than receiving the diff through you, which keeps your context free and guarantees all of them see the same bytes.
 
 Then read the PR title and body (`gh pr view`) — they carry the intent behind the change, which is what separates a deliberate choice from an accident.
 
-## 2. Learn what this repo already decided
+## 2. Learn what's already been decided
 
 Do this once, here. Four agents independently reading the same config files wastes tokens and can reach different conclusions about the same rule.
 
 - **CLAUDE.md** — the user-level `~/.claude/CLAUDE.md`, the repo root, and any `CLAUDE.md` or `CLAUDE.local.md` in a directory that is an ancestor of a changed file. A directory's file governs only what sits at or below it.
 - **Tooling** — linter, formatter, and type-checker configs, plus rules already disabled in the changed files. A rule the repo has turned off is a decision, not an oversight.
 - **The surrounding code** — how neighbouring modules name things, structure errors, and organize helpers. Local idiom beats a general best practice you'd apply on a blank page.
+- **The plan document, if `--plan` was given** — read it in full. It carries the intent behind the change and the design decisions taken before the code existed. A shape the plan chose on purpose is not an accident waiting to be proposed away, and an agent that hasn't read it has no way to tell the difference. Carry the decisions that bear on the changed files into the brief; leave the rest out.
 
-Write this up as a short brief you can hand to every agent verbatim. Quote rules rather than paraphrasing them, so an agent can cite one without re-reading the file.
+Write this up as a short brief you can hand to every agent verbatim. Quote rules rather than paraphrasing them, so an agent can cite one without re-reading the file. Keep the verification commands it turns up — step 6 runs them.
 
 ## 3. Size the change and pick the fan-out shape
 
@@ -89,25 +99,56 @@ Merge every proposal and collapse duplicates. Two angles often reach the same pr
 
 Drop any proposal that:
 
-- would change observable behavior — this report trades on being behavior-preserving, and one item that quietly isn't costs the author their trust in all of them
+- would change observable behavior — everything downstream trades on this pass being behavior-preserving, and one item that quietly isn't costs the author their trust in all of them
 - reaches well outside the diff
 - trades clarity for brevity, or dissolves an abstraction that was earning its keep
 - you judge to be a false positive
 
 Rank what survives by payoff — how much duplication, waste, or future maintenance it removes — breaking ties toward the smaller, more contained edit. Rank across all angles together; which agent found something is an implementation detail the author doesn't care about.
 
-Be willing to come back with a short list. This lands on an open PR where every proposal costs a round trip, so a few high-confidence items beat a long tail of style preferences.
+Be willing to come out of this with a short list. A few high-confidence items beat a long tail of style preferences.
 
-## 6. Report
+## 6. Apply what's contained
 
-Open with the resolved target, the fan-out shape, and a one-line assessment: how much cleanup the change wants, and which one or two proposals are worth doing if only a couple happen. Then, in ranked order:
+**Skip this step under `--dry-run`, or when the target is a PR you don't have checked out.** Either way nothing gets applied and everything that survived step 5 goes to the report as deferred.
+
+Split the ranked list by the effort rating each proposal carries:
+
+- **trivial** and **contained** — apply them now. Their whole value is that they're cheap; handing one back as a to-do costs the author more than making the edit did.
+- **invasive** — defer. So does anything touching call sites well outside the diff, anything you're less than confident preserves behavior, and anything that's genuinely a judgment the author should own rather than a size call.
+
+Apply the edits, then run the verification the step 2 brief turned up — typecheck, tests, lint, formatter. A behavior-preserving cleanup that broke something has to surface here, not in the author's next run. If something fails and the fix isn't immediately obvious, revert that proposal and move it to the deferred list with the failure noted.
+
+## 7. Record what you deferred
+
+**Skip this step under `--dry-run`** — a dry run writes nothing, `--plan` or not. Say in the report that the plan was left untouched, so nobody goes looking for entries that aren't there.
+
+**Without `--plan`** — deferred proposals stay in the report below. Nothing is written anywhere.
+
+**With `--plan <path>`** — hand the deferred proposals to the skill that owns the format:
+
+    Skill(skill: "record-follow-ups", args: "<plan path> <the deferred proposals>")
+
+Give it each proposal's `file:line`, what the issue costs today, why you deferred it rather than applying it, and the fix you'd propose. It shapes and places the entries, dedups against what the plan already carries, and reports back what it wrote. That plan file is the only thing outside the change itself this pass writes.
+
+## 8. Report
+
+Open with the resolved target, the fan-out shape, and a one-line assessment: how much cleanup the change wanted, and what you did about it.
+
+**Applied** — ranked, one line each: `file:line`, what changed, why it was worth doing. The diff carries the detail; don't restate it. Name the verification you ran and its result, quoting any failure.
+
+**Deferred** — ranked, with enough for the author to act without re-deriving anything:
 
 - **`file:line` — one-line summary of the change**
   - _Why:_ what it costs today — the convention it breaks (quote it), the complexity it adds, the work it wastes, or the readability it loses.
-  - _Proposed change:_ a before/after snippet, or a precise description when it's too large to quote. Enough that the author can accept or reject without re-deriving it.
+  - _Proposed change:_ a before/after snippet, or a precise description when it's too large to quote.
   - _Behavior:_ confirm it preserves behavior, and name anything worth double-checking.
-  - _Effort:_ trivial / contained / invasive.
+  - _Effort:_ contained / invasive, and why it was deferred rather than applied.
 
-Close with **Considered and rejected** — what the agents spotted but you didn't propose, one line each with the reason. In apply-mode review, restraint shows up as the absence of an edit; here it's invisible unless you say it, and naming it stops the author wondering whether you missed something.
+If something was deferred because it broke verification, say that rather than filing it as a size call.
 
-Write for someone who knows this code better than you and chose the current form on purpose until shown otherwise. If the change is already clean, say so and stop — an empty report is a real result, and padding it to look thorough is how these reports stop getting read.
+Close with **Considered and rejected** — what the agents spotted but you dropped in step 5, one line each with the reason. Restraint is invisible unless you name it, and naming it stops the author wondering whether you missed something.
+
+Write for someone who knows this code better than you and chose the current form on purpose until shown otherwise. If the change is already clean, say so and stop — an empty result is a real one, and padding it to look thorough is how these reports stop getting read.
+
+With `--plan`, close by naming the plan file and the follow-up titles `record-follow-ups` reported writing, so the author sees what landed there without opening it.

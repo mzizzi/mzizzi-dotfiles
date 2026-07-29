@@ -1,12 +1,15 @@
 ---
-name: review-comments
-description: Review code comments in a set of changes — flagging narration, diff-history notes, and redundant comments while preserving genuine "why" explanations. Reviews your uncommitted local changes by default; pass "pr" to review the current branch's PR, or a PR number/URL to review that PR. Runs in review mode by default (report what should change, no edits); pass --fix to apply the changes locally. An optional --strictness argument selects the guideline set, "high" (the default) or "low"; high also flags long block comments and file/module headers. Use this whenever you've just written or modified code and are about to commit or open a PR, or when the user asks to review, clean up, or check comment quality.
-argument-hint: "[--fix] [--strictness=high|low] [pr | <pr-number-or-url>]"
+name: fix-comments
+description: Fix code comments in a set of changes — cutting narration, diff-history notes, and redundant comments while preserving genuine "why" explanations. Works on your uncommitted local changes by default; pass "pr" to target the current branch's PR, or a PR number/URL for that PR. Applies the fixes by default; pass --dry-run to report what would change without editing. An optional --strictness argument selects the guideline set, "high" (the default) or "low"; high also flags long block comments and file/module headers. Use this whenever you've just written or modified code and are about to commit or open a PR, or when the user asks to review, clean up, or check comment quality.
+argument-hint: "[--dry-run] [--strictness=high|low] [pr | <pr-number-or-url>]"
+allowed-tools: Read, Grep, Glob, Bash, Edit
+disable-model-invocation: false
+user-invocable: true
 ---
 
-# Review comments
+# Fix comments
 
-Review the comments in a set of changes against the loaded guidelines, then either suggest or apply the fixes. Work the steps in order.
+Review the comments in a set of changes against the loaded guidelines, then apply the fixes. Work the steps in order.
 
 ## 1. Resolve the target and read its changes
 
@@ -29,7 +32,9 @@ Then the `--strictness` argument (default `high`; unrecognized → `high`) selec
 
 ## 3. Determine the mode
 
-`--fix` present → **fix** mode. Otherwise → **review** mode (suggest only, no edits). Fix mode edits the working tree, so it needs the target's code checked out locally; for a `pr`/number/URL target, compare its head branch (`gh pr view <target> --json headRefName`) against the current branch, and if they differ, fall back to review mode and say why.
+**Fix** is the default — the fixes get applied. `--dry-run` present → **dry-run** mode: report what would change and edit nothing.
+
+Fix mode edits the working tree, so it needs the target's code checked out locally. `local` and `pr` always are — `pr` resolves to this branch's own PR. A **number or URL** might not be, so check: `gh pr view <number-or-url> --json headRefOid` against `git rev-parse HEAD`. If they differ, fall back to dry-run mode and say why. Comparing commits rather than branch names is what catches a fork reusing the branch name, or a local branch sitting behind the PR head — either would otherwise apply someone else's diff to your files.
 
 ## 4. Process each comment
 
@@ -38,7 +43,7 @@ Only comments **added in the target diff** are in scope — comments on added or
 For each added comment, judge it against the loaded references and decide the fix (remove, rewrite, or — where the code needs it — refactor the code to be self-documenting). Default to **cut**: the burden is on each comment to justify surviving. Then, per mode:
 
 - **fix** — apply the change directly.
-- **review** — report it: `file:line`, the current text, what's wrong, and the suggested fix. Group by file; end with a one-line offer to re-run with `--fix`.
+- **dry-run** — report it: `file:line`, the current text, what's wrong, and the suggested fix. Group by file; end with a one-line offer to re-run without `--dry-run`.
 
 If nothing is worth flagging, say so plainly rather than inventing changes.
 
