@@ -1,6 +1,6 @@
 ---
 name: fix-quality
-description: Review a change for reuse, simplification, efficiency, and altitude, then apply the cleanups that are contained and defer the rest. Reviews the current branch's PR by default; pass a PR number/URL to target another, or "local" for the working tree. Pass a plan file and deferred findings are written into its Follow-ups section; pass --dry-run to review and report without changing anything. Quality only, not correctness bugs. Use this whenever the user wants a change cleaned up before merging, asks what could be simplified, or says things like "tidy this up", "what would you simplify here", or "clean up this PR".
+description: Review a change for reuse, simplification, proportionality, efficiency, and altitude, then apply the cleanups that are contained and defer the rest. Reviews the current branch's PR by default; pass a PR number/URL to target another, or "local" for the working tree. Pass a plan file and deferred findings are written into its Follow-ups section; pass --dry-run to review and report without changing anything. Quality only, not correctness bugs. Use this whenever the user wants a change cleaned up before merging, asks what could be simplified, or says things like "tidy this up", "what would you simplify here", or "clean up this PR".
 argument-hint: "[<pr-number-or-url> | local] [--plan <path to plan.md>] [--dry-run]"
 allowed-tools: Read, Grep, Glob, Edit, Write, Bash, Agent, Skill
 disable-model-invocation: false
@@ -9,7 +9,7 @@ user-invocable: true
 
 # Fix quality
 
-Orchestrate a four-angle quality review of a change, then act on what it finds: apply the contained cleanups, defer the invasive ones, and report both. Quality only — correctness bugs belong to `/mzizzi:fix-correctness`, comment quality to `/mzizzi:fix-comments`. Work the steps in order.
+Orchestrate a multi-angle quality review of a change, then act on what it finds: apply the contained cleanups, defer the invasive ones, and report both. Quality only — correctness bugs belong to `/mzizzi:fix-correctness`, comment quality to `/mzizzi:fix-comments`. Work the steps in order.
 
 **You apply; the review agents don't.** The agents launched in step 4 are strictly read-only, and that's load-bearing: step 5 drops proposals that are duplicated, out of scope, or wrong, and an edit made by an agent is an edit that skipped that filter. Every change to the working tree happens in step 6, after the filtering, and by you.
 
@@ -39,7 +39,7 @@ Then read the PR title and body (`gh pr view`) — they carry the intent behind 
 
 ## 2. Learn what's already been decided
 
-Do this once, here. Four agents independently reading the same config files wastes tokens and can reach different conclusions about the same rule.
+Do this once, here. Every agent independently reading the same config files wastes tokens, and they can reach different conclusions about the same rule.
 
 - **CLAUDE.md** — the user-level `~/.claude/CLAUDE.md`, the repo root, and any `CLAUDE.md` or `CLAUDE.local.md` in a directory that is an ancestor of a changed file. A directory's file governs only what sits at or below it.
 - **Tooling** — linter, formatter, and type-checker configs, plus rules already disabled in the changed files. A rule the repo has turned off is a decision, not an oversight.
@@ -55,9 +55,10 @@ Run the diff command with `--stat` and look at file count and changed lines.
 A single agent asked to scan a large diff for one pattern will find a few good examples early and let the rest blur — and that result is indistinguishable from a change that only had a few problems. Sharding is how you stop that, but it only works on angles whose findings are local to the files they're looking at:
 
 - **Reuse, simplification, efficiency** shard cleanly. Split the changed files into groups small enough that one agent can read every file in its group _and_ the surrounding context carefully — roughly a handful of files, or a few hundred changed lines. Group by directory or module so each agent sees related code together; scattered files make reuse scanning much weaker.
+- **Proportionality shards too, but wants smaller groups.** It works unit by unit rather than scanning, so it costs more per file than the scanning angles and degrades quietly when overloaded: an agent given too much starts skimming, and a thin result from a skimmed shard looks exactly like a clean change. Size its shards down accordingly. It anchors on production code and follows each unit out to its own tests, so don't try to group test files with their subjects — that happens inside the agent.
 - **Altitude never shards.** It's about how the whole change sits in the system, and its strongest signal — the same special case appearing in several places — is invisible to an agent holding one third of the diff. One agent, whole PR, always.
 
-Small changes need no sharding: four agents, one per angle. Say what shape you chose and why, so a reader knows how much coverage stands behind the report.
+Small changes need no sharding: one agent per angle. Say what shape you chose and why, so a reader knows how much coverage stands behind the report.
 
 If the split would produce a lot of agents, prefer fewer, larger shards over exhaustive coverage at any cost — and say plainly in the report that shards were sized up, rather than letting the number imply more thoroughness than there was.
 
@@ -65,9 +66,9 @@ If the split would produce a lot of agents, prefer fewer, larger shards over exh
 
 Launch every agent with the Agent tool at the `mzizzi:standard` tier, all in a single message so they run concurrently.
 
-Each agent reviews from exactly one angle, reading its file from `references/angles/`: `reuse.md`, `simplification.md`, `efficiency.md`, or `altitude.md`.
+Each agent reviews from exactly one angle, reading its file from `references/angles/`: `reuse.md`, `simplification.md`, `proportionality.md`, `efficiency.md`, or `altitude.md`.
 
-Unsharded, that's four agents. A sharded angle gets one agent per shard, all reading the same angle file and differing only in scope — three shards of reuse means three agents on `reuse.md`.
+Unsharded, that's one agent per angle. A sharded angle gets one agent per shard, all reading the same angle file and differing only in scope — three shards of reuse means three agents on `reuse.md`.
 
 Send each agent exactly this prompt, filling the bracketed slots and changing nothing else. It carries wiring only — which files to read, and the three inputs. What to do with them lives entirely in those files, which is what keeps it identical between runs; anything you add here is drift:
 
@@ -89,7 +90,7 @@ Repo conventions:
 - `<scope>` — `the whole change`, or the explicit list of files in this shard
 - `<conventions-brief>` — the brief from step 2, pasted in full rather than summarized
 
-If the Agent tool isn't available, read the reference files yourself and work all four angles in one pass — dropping angles for lack of fan-out just hides findings. Say in the report that it was a single pass, so nobody reads it as broader coverage than it was.
+If the Agent tool isn't available, read the reference files yourself and work every angle in one pass — dropping angles for lack of fan-out just hides findings. Say in the report that it was a single pass, so nobody reads it as broader coverage than it was.
 
 ## 5. Dedup, filter, and rank
 

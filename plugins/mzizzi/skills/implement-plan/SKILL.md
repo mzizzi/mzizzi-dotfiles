@@ -81,7 +81,7 @@ If it reports the review was unavailable, or a verification failure, deal with t
 
     Skill(skill: "fix-quality", args: "local --plan <plan document path>")
 
-`local` is the right target — the implementation is still uncommitted. That skill does the whole pass: it reviews from four quality angles, applies the contained cleanups, and writes what it deferred into the plan's `## Follow-ups` section itself. Read its report and carry the outcome into Step 7.
+`local` is the right target — the implementation is still uncommitted. That skill does the whole pass: it reviews from every quality angle, applies the contained cleanups, and writes what it deferred into the plan's `## Follow-ups` section itself. Read its report and carry the outcome into Step 7.
 
 If it reports a verification failure, or an applied cleanup you disagree with, fix that here rather than passing it on.
 
