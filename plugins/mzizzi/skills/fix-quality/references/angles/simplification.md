@@ -9,6 +9,7 @@ What to look for:
 - **Deep nesting** — guard clauses and early returns usually flatten it. Nesting past three levels is where readers start losing the thread.
 - **Nested ternaries and dense one-liners** — a switch or an if/else chain reads plainly and debugs plainly. Fewer lines is not the goal.
 - **Dead code left behind** — a branch the new logic can't reach, a parameter nobody passes, an import nothing uses, a flag with one caller that always sets it the same way.
+- **Files in the diff for no reason** — a file whose entire change is a reword, a reflow, or a formatting shuffle with no semantic difference. Propose reverting it to its pre-change state so it leaves the diff entirely, and say plainly that nothing in it is load-bearing. This only applies when the _whole_ file is churn; where a real change sits alongside a reflow, propose dropping the reflow. Look hardest at files touched by a direction the change later abandoned — the code got reverted and the comment edit didn't.
 - **Names that make the reader work** — a variable whose meaning only becomes clear three lines later, or a function whose name describes its implementation rather than its purpose.
 - **Comments compensating for unclear code** — sometimes the fix is the code, not the comment. Comment quality on its own belongs to `/mzizzi:fix-comments`; only raise it here when restructuring the code is what makes the comment unnecessary.
 

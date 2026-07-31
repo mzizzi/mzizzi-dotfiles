@@ -38,12 +38,14 @@ Fix mode edits the working tree, so it needs the target's code checked out local
 
 ## 4. Process each comment
 
-Only comments **added in the target diff** are in scope — comments on added or modified lines, not pre-existing comments that merely appear as unchanged context. Reviewing untouched code erodes trust and buries the comments that actually need attention.
+Only comments **added in the target diff** are in scope — comments on added or modified lines, not pre-existing comments that merely appear as unchanged context. Reviewing untouched code erodes trust and buries the comments that actually need attention. One exception: a pre-existing comment whose _subject_ the diff changed is in scope, because the diff created the drift even though the comment line itself is unchanged.
 
 For each added comment, judge it against the loaded references and decide the fix (remove, rewrite, or — where the code needs it — refactor the code to be self-documenting). Default to **cut**: the burden is on each comment to justify surviving. Then, per mode:
 
 - **fix** — apply the change directly.
 - **dry-run** — report it: `file:line`, the current text, what's wrong, and the suggested fix. Group by file; end with a one-line offer to re-run without `--dry-run`.
+
+When a rule fires on one comment, sweep the rest of the changed files for the same class of offender and handle every instance in this pass. One violation is evidence of a habit, not an isolated slip — being pointed at the second and third instance means the sweep didn't happen.
 
 If nothing is worth flagging, say so plainly rather than inventing changes.
 

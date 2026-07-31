@@ -87,9 +87,9 @@ If it reports a verification failure, or an applied cleanup you disagree with, f
 
 ## Step 6: Fix the comments you added
 
-    Skill(skill: "fix-comments", args: "--strictness=low")
+    Skill(skill: "fix-comments", args: "--strictness=high")
 
-The implementation plus the fixes from Steps 4 and 5 tends to leave narration and decision-trail comments a reviewer doesn't need. This edits the code locally; re-run the relevant verification if the cleanup touched code, e.g. a comment folded into a rename.
+The implementation plus the fixes from Steps 4 and 5 tends to leave narration and decision-trail comments a reviewer doesn't need. `high` also covers the long block comments and module headers fresh implementation work tends to produce. This edits the code locally; re-run the relevant verification if the cleanup touched code, e.g. a comment folded into a rename.
 
 ## Step 7: Summarize for the user
 
