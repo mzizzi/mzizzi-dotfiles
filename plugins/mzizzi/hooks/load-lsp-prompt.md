@@ -1,0 +1,2 @@
+- Call `ToolSearch` with the query `select:LSP` now, then stop and wait — no summary, no other tool calls. If no language server is configured here, `LSP` will say so; carry on with grep.
+- Prefer `LSP` for symbols: what a name binds to, where it is referenced, renaming it, or things that LSP is generally good at. It resolves scope, imports, and shadowing; a name match does not. Prefer grep for text: strings, config keys, comments, filenames, and Glob for paths. These are guidelines, not hard rules. Use the right tool for the job.
