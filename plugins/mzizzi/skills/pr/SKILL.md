@@ -1,5 +1,5 @@
 ---
-name: github-pr
+name: pr
 description: Manage pull requests and git workflows using the gh CLI and git commands. Use when creating PRs, viewing PR details, managing branches, committing changes, or working with GitHub pull request workflows.
 allowed-tools:
   - Bash(gh pr list*)
@@ -31,10 +31,12 @@ You can use the GitHub CLI (`gh`) and Git commands to access repository informat
 ## IMPORTANT: Safety rules that must always be respected
 
 **NEVER push directly to master or main branches without explicit user permission.**
+
 - Always create a feature branch for changes
 - The default workflow is: feature branch → pull request → review → merge
 
 **NEVER perform destructive Git operations that could cause data loss:**
+
 - NO force pushes (`git push --force` or `git push -f`) without explicit user permission
 - NO hard resets that discard commits (`git reset --hard`)
 - NO branch deletions
@@ -46,6 +48,7 @@ If the user requests a potentially destructive operation, deny it and ask the us
 ## Viewing Pull Requests
 
 Use these commands to view and check pull requests:
+
 - `gh pr list` - List all pull requests
 - `gh pr view [number]` - View details of a specific PR
 - `gh pr status` - Check the status of PRs
@@ -97,18 +100,23 @@ Use this template when the repository does not provide its own PR template:
 ```
 ## Description
 
-Concisely describes the **what** and **why** of the PR
+Concise, high level, description of the changes made and the **why** of the PR. Less is more. This is meant to quickly orient a human reviewer. LESS IS MORE.
 
 ## Related
 
-bulleted list of links to related PRs, GitHub issues, etc
+bulleted list of links to related PRs, GitHub issues, Linear issues (if applicable), etc
 
 ## Detail
 
-* Concise description of the changes made. This should be high level.
-* If other issues with sufficient detail are provided in the Related section then do not duplicate information. Just link to it.
-* Do not document every line of code. Just the high level approach and summary with a few code pointers if absolutely necessary.
-* Do not count things ("adds 5 parameters", "modifies 3 files"), enumerate lists of names, or narrate the structure of the diff ("before X, adds a block that calls Y"). Reviewers read the diff — restating it is noise. Focus on the approach, motivation, and anything non-obvious.
+IMPORTANT: Less is more. Prefer omitting this section altogether if the guidelines below would lead to an empty/weak details section. LESS IS MORE.
+
+* GOOD DETAILS:
+  * Focus on the approach, motivation, and anything non-obvious to orient a human reviewer
+* BAD DETAILS, DO NOT:
+  * Rehash trivial details that a reader would know from the diff
+  * repeat information from other sections in the document
+  * count things ("adds 5 parameters", "modifies 3 files"), enumerate lists of names
+  * narrate the structure of the diff ("before X, adds a block that calls Y")
 ```
 
 Keep each section concise. Omit a section if it adds no value (e.g. "Why" is obvious from the title, or "How" would just repeat the diff). The goal is to give reviewers enough context to review efficiently, not to document everything.
@@ -117,4 +125,3 @@ Keep each section concise. Omit a section if it adds no value (e.g. "Why" is obv
 
 - `git checkout -b <branch-name>` - Create and switch to a new branch
 - `git branch` - List branches or check current branch
-

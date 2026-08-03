@@ -16,7 +16,7 @@ Run a Codex adversarial review by calling the codex plugin's underlying script d
 Run the bundled script, passing the same focus/scope text you'd pass to `/codex:adversarial-review`:
 
 ```bash
-bash "${CLAUDE_PLUGIN_ROOT}/skills/codex-adversarial-review/scripts/run_review.sh" "--scope auto focus on feasibility, completeness, missing risks, and questionable assumptions in the plan at plans/20260615-token-refresh/plan.md"
+python "${CLAUDE_PLUGIN_ROOT}/skills/codex-adversarial-review/scripts/run_review.py" "--scope auto focus on feasibility, completeness, missing risks, and questionable assumptions in the plan at plans/20260615-token-refresh/plan.md"
 ```
 
 Run it without backgrounding (no `run_in_background: true`) and with a generous timeout — the script has no internal cap on how long a Codex review can take, so give it the maximum (600000ms). The call must complete before you have a result to act on.

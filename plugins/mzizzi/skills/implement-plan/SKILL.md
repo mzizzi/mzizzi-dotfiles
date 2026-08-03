@@ -21,7 +21,7 @@ Confirm the scope back to the user in one line before moving on, so a misread is
 
     Skill(skill: "prepare-feature-branch", args: "<plan directory> [--worktree]")
 
-The branch keeps the diff mapped to the plan and off the trunk, and Steps 4–6 all read the working-tree diff, so the baseline must be clean. The skill derives the name, reuses existing feature work for this plan or creates it off the trunk, and announces the result. It aborts on a dirty tree — relay that and stop, rather than stashing on the user's behalf.
+The branch keeps the diff mapped to the plan and off the trunk, and Step 4 reads the working-tree diff, so the baseline must be clean. The skill derives the name, reuses existing feature work for this plan or creates it off the trunk, and announces the result. It aborts on a dirty tree — relay that and stop, rather than stashing on the user's behalf.
 
 Keep referencing the plan by its Step 0 absolute path. Entering a worktree changes the cwd; that path still resolves.
 
@@ -39,11 +39,11 @@ The plan is the description of the work; the task list is a progress marker over
     implement Phase 2 — the batch CLI, and the deletions
     implement Phase 3 — the dev-server plugin
 
-**Tail items:** correctness pass, quality pass, comment fixes, summarize. Seeding them before any code exists is what protects the tail — finishing the implementation doesn't end the run.
+**Tail items:** review passes, summarize. One item for the review passes, not three — Step 4 hands them to `fix-all`, which seeds its own tasks. Seeding the tail before any code exists is what protects it — finishing the implementation doesn't end the run.
 
 **Descriptions are pointers, not copies.** A file:line reference (`plan.md:517`) or half a line of gist. The plan holds the instructions and stays correct; restating it spends context saying the same thing twice.
 
-**Chain them.** Each task blocked by the one before it: implementation items in plan order, then the tail in step order, with the correctness pass blocked by the last implementation item. All in one message:
+**Chain them.** Each task blocked by the one before it: implementation items in plan order, then the tail in step order, with the review-passes item blocked by the last implementation item. All in one message:
 
 ```
 TaskUpdate {taskId: "2", addBlockedBy: ["1"]}
@@ -57,41 +57,29 @@ The chain puts the run's order in the list while changing it is still free.
 - Bookkeeping never gets its own turn. A completion rides in the same message as the next item's first tool call, alongside that item's in-progress mark. An update travels alone only when the run is ending.
 - Exactly one of _this run's_ items in progress at a time; complete each as it's done, never in a batch at the end. Unrelated tasks already in the session get left alone.
 - Never end the turn with this run's items pending unless the run genuinely stopped short — redirected, aborted, or blocked (failing verification, an unavailable dependency, an unresolvable tool error). Annotate the current item with the blocker and leave it and everything downstream pending; pending is the honest state for unfinished work.
-- A step that becomes moot (the correctness pass reports the review was unavailable, so there is nothing to act on) gets a short reason appended and is marked completed — not deleted, not left pending. Blocked is pending; moot is completed.
+- A step that becomes moot (a phase turns out to be already satisfied by existing code, so there is nothing to write) gets a short reason appended and is marked completed — not deleted, not left pending. Blocked is pending; moot is completed.
 
 ## Step 3: Implement
 
 Take the Step 2 items in chain order — plans order files so that later ones can import earlier ones.
 
-- Treat the plan's design and code sketches as intent, not gospel. If reality diverges — an API signature differs, a sketch won't compile, a better approach is obvious — do the right thing and note the deviation for Step 7.
+- Treat the plan's design and code sketches as intent, not gospel. If reality diverges — an API signature differs, a sketch won't compile, a better approach is obvious — do the right thing and note the deviation for Step 5.
 - Match the surrounding codebase's conventions, not the plan's illustrative style.
 - Verify as you go, after meaningful chunks rather than all at the end; a failure caught early is cheaper to locate. Write any tests the plan named.
 
 Leave the changes uncommitted on the Step 1 branch. All three passes ahead read the working-tree diff.
 
-## Step 4: Correctness pass
+## Step 4: Review passes
 
-    Skill(skill: "fix-correctness", args: "--plan <plan document path>")
+    Skill(skill: "fix-all", args: "local --plan <plan document path> --strictness=high")
 
-`<plan document path>` is the file from Step 0. That skill runs the Codex adversarial review over the working-tree diff — steered toward plan fidelity by the `--plan` argument — triages what it finds, applies the trivial in-scope fixes, verifies, and writes the rest into the plan's `## Follow-ups`. Read its report and carry the outcome into Step 7.
+`<plan document path>` is the file from Step 0. `local` is the right target — the implementation is still uncommitted. `--strictness=high` covers the long block comments and module headers fresh implementation work tends to produce.
 
-If it reports the review was unavailable, or a verification failure, deal with that here rather than passing it on.
+That skill runs the correctness, quality, and comment passes in order over the working-tree diff, steers the first two toward plan fidelity, applies the contained fixes, writes what it defers into the plan's `## Follow-ups`, and verifies afterwards. Read its per-pass report and carry each outcome into Step 5 separately.
 
-## Step 5: Quality pass
+If it reports a review was unavailable, a verification failure, or an applied cleanup you disagree with, deal with that here rather than passing it on.
 
-    Skill(skill: "fix-quality", args: "local --plan <plan document path>")
-
-`local` is the right target — the implementation is still uncommitted. That skill does the whole pass: it reviews from every quality angle, applies the contained cleanups, and writes what it deferred into the plan's `## Follow-ups` section itself. Read its report and carry the outcome into Step 7.
-
-If it reports a verification failure, or an applied cleanup you disagree with, fix that here rather than passing it on.
-
-## Step 6: Fix the comments you added
-
-    Skill(skill: "fix-comments", args: "--strictness=high")
-
-The implementation plus the fixes from Steps 4 and 5 tends to leave narration and decision-trail comments a reviewer doesn't need. `high` also covers the long block comments and module headers fresh implementation work tends to produce. This edits the code locally; re-run the relevant verification if the cleanup touched code, e.g. a comment folded into a rename.
-
-## Step 7: Summarize for the user
+## Step 5: Summarize for the user
 
 The user can read the diff and the plan themselves, so cover what they need to decide or know:
 

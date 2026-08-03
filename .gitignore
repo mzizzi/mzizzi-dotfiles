@@ -10,3 +10,5 @@
 *.env
 
 .claude/hooks/allow-s*
+
+venv/
