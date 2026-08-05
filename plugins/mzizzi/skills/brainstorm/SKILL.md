@@ -2,7 +2,7 @@
 name: brainstorm
 description: "Stress-test an idea, design, or plan through a relentless, looping interview, then persist the results as a brainstorm.md decision log in a plan directory. Use this whenever the user wants to brainstorm, think an idea through before building, or capture a grilling session to disk. Also use to resume an earlier session — pointed at an existing brainstorm.md or its plan directory, it picks up from the decisions logged there and updates that file in place. Prefer this over /grill when the discussion should be persisted, and over /create-plan when the user wants to explore and capture decisions rather than produce a full implementation plan yet."
 argument-hint: "[existing brainstorm.md or plan dir] <idea, design, or plan to brainstorm>"
-allowed-tools: Read, Grep, Glob, Bash, AskUserQuestion, Write, Skill, WebFetch, WebSearch
+allowed-tools: Read, Grep, Glob, Bash, AskUserQuestion, Write, Skill, Agent, WebFetch, WebSearch
 disable-model-invocation: false
 user-invocable: true
 ---
@@ -87,6 +87,12 @@ implementation. Omit this section entirely if everything got resolved.
 Keep the **Why** lines substantive: the rationale is the most valuable thing to preserve, since a bare decision without its reasoning invites someone to second-guess it later. A Why carries the decision's _weight_, not just its direction: the evidence behind it (**checked** facts kept as stated, **not checked** ones named as such) and the tradeoff actually weighed — what the choice adds vs. removes, and what it deliberately declines to defend. If a decision was trivial, a one-line note is fine — don't pad it.
 
 On a continuation, the rewrite is a **merge, not a replacement**: carry the original decisions forward and append this session's, rebuilding _Open questions_ from what's still live. A decision this session overturned stays in the log, its entry revised to record the new choice and why — deleting it loses the history that makes the reversal legible.
+
+After writing the document, run a pragmatic review of it and wait for the result:
+
+    Agent(subagent_type: "mzizzi:pragmatic-reviewer", prompt: "Review the brainstorm at <path to the document>.", run_in_background: false)
+
+If it reports `No material findings.`, move on. Otherwise summarize the findings and ask via AskUserQuestion whether to fold them back in — **"Continue brainstorming with the findings (Recommended)"** resumes the Step 1 ↔ Step 2 loop seeded with them (a decision the review overturns gets re-logged per the merge rules above, and the next save rewrites the same file), **"Keep as saved"** moves on without changes.
 
 If the user chose **Finish and save**, report the saved path and mention that `/create-plan <dir>` will turn it into a plan whenever they're ready. Done.
 
