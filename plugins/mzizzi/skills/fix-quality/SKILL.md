@@ -96,7 +96,11 @@ If the Agent tool isn't available, read the reference files yourself and work ev
 
 Agents work their assigned files systematically and report only what they found — take their coverage as given rather than auditing it. If one says outright that something stopped it covering its scope, send another agent at what's left before continuing.
 
+Count the proposals you received before merging anything, and keep that number — step 8 reconciles against it.
+
 Merge every proposal and collapse duplicates. Two angles often reach the same problem from opposite directions and describe it in different words, so judge by what a proposal would actually change rather than how it's phrased, and keep the clearest framing. Sharded angles also produce near-identical proposals against parallel code in different files — merge those into one item listing every affected location.
+
+**Merge only when two proposals would make the same edit _for the same reason_.** Two agents landing on the same lines from different premises are two findings, not one — the same edit that answers one can leave the other's problem standing, and merging them lets the weaker fix report as if it covered both. When you do merge, note which proposals went in; step 8 asks.
 
 Drop any proposal that:
 
@@ -118,6 +122,8 @@ Split the ranked list by the effort rating each proposal carries:
 - **trivial** and **contained** — apply them now. Their whole value is that they're cheap; handing one back as a to-do costs the author more than making the edit did.
 - **invasive** — defer. So does anything touching call sites well outside the diff, anything you're less than confident preserves behavior, and anything that's genuinely a judgment the author should own rather than a size call.
 
+When merged proposals offer variants of the same fix at different strengths, **apply the strongest and let verification arbitrate** — it runs at the end of this step regardless, so a variant that doesn't hold up surfaces in seconds. Your own risk estimate is not the arbiter, and an agent that already verified the thing you're hedging against (a runtime version, an API's availability, a behavior it traced case by case) has done work you'd be discarding. Downgrading to the safer variant anyway is a step 8 disclosure, not a free call.
+
 Apply the edits, then run the verification the step 2 brief turned up — typecheck, tests, lint, formatter. A behavior-preserving cleanup that broke something has to surface here, not in the author's next run. If something fails and the fix isn't immediately obvious, revert that proposal and move it to the deferred list with the failure noted.
 
 ## 7. Record what you deferred
@@ -136,7 +142,11 @@ Give it each proposal's `file:line`, what the issue costs today, why you deferre
 
 Open with the resolved target, the fan-out shape, and a one-line assessment: how much cleanup the change wanted, and what you did about it.
 
+Every proposal the agents returned appears exactly once across the sections below — **Applied**, **Applied in weaker form**, **Deferred**, or **Considered and rejected**. Open by stating the count you received in step 5, so the four sections visibly reconcile against it. A proposal that reaches the author in none of these states is one you dropped without deciding to.
+
 **Applied** — ranked, one line each: `file:line`, what changed, why it was worth doing. The diff carries the detail; don't restate it. Name the verification you ran and its result, quoting any failure.
+
+**Applied in weaker form** — the section that exists because this outcome hides inside **Applied**. It fires whenever the edit you made is not one the proposing agent would recognize as its proposal: a variant it rated trivial that you applied as something smaller, half of a two-part fix, or a merged item where only one input's problem actually got solved. One line each: what was proposed, what you applied instead, and why — the same justification a rejection owes. If you merged proposals in step 5, name which ones merged and confirm the applied edit answers each of them; a merge that answers only one belongs here rather than under **Applied**.
 
 **Deferred** — ranked, with enough for the author to act without re-deriving anything:
 
@@ -148,7 +158,7 @@ Open with the resolved target, the fan-out shape, and a one-line assessment: how
 
 If something was deferred because it broke verification, say that rather than filing it as a size call.
 
-Close with **Considered and rejected** — what the agents spotted but you dropped in step 5, one line each with the reason. Restraint is invisible unless you name it, and naming it stops the author wondering whether you missed something.
+Close with **Considered and rejected** — what the agents spotted but you dropped in step 5, one line each with the reason. Restraint and dilution are both invisible unless you name them, and naming them stops the author wondering whether you missed something.
 
 Write for someone who knows this code better than you and chose the current form on purpose until shown otherwise. If the change is already clean, say so and stop — an empty result is a real one, and padding it to look thorough is how these reports stop getting read.
 

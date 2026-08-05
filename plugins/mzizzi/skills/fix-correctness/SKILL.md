@@ -63,7 +63,11 @@ Give it each finding's `file:line`, what the issue is, why you deferred it rathe
 
 Open with the review's verdict and a one-line assessment: what it found and what you did about it.
 
+Every finding the review returned appears exactly once across the sections below — **Fixed**, **Fixed in weaker form**, **Deferred**, or **Discarded**. State the count the review reported, so the sections visibly reconcile against it. A finding that reaches the author in none of these states is one you dropped without deciding to.
+
 **Fixed** — one line each: `file:line`, what was wrong, what changed. Name the verification you ran and its result, quoting any failure.
+
+**Fixed in weaker form** — the outcome that otherwise hides inside **Fixed**: the edit you made is not one the review would recognize as its recommendation — half of a two-part fix, or a narrower change that leaves the reported failure reachable by another path. One line each: what was recommended, what you did instead, and why. If the remaining exposure is real, it belongs in **Deferred** too.
 
 **Deferred** — one line each: `file:line`, the issue, and why it wasn't fixed now. With `--plan`, say which of these landed in the plan, using the titles `record-follow-ups` reported.
 
