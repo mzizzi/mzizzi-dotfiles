@@ -2,7 +2,7 @@
 name: brainstorm
 description: "Stress-test an idea, design, or plan through a relentless, looping interview, then persist the results as a brainstorm.md decision log in a plan directory. Use this whenever the user wants to brainstorm, think an idea through before building, or capture a grilling session to disk. Also use to resume an earlier session — pointed at an existing brainstorm.md or its plan directory, it picks up from the decisions logged there and updates that file in place. Prefer this over /grill when the discussion should be persisted, and over /create-plan when the user wants to explore and capture decisions rather than produce a full implementation plan yet."
 argument-hint: "[existing brainstorm.md or plan dir] <idea, design, or plan to brainstorm>"
-allowed-tools: Read, Grep, Glob, Bash, AskUserQuestion, Write, Skill
+allowed-tools: Read, Grep, Glob, Bash, AskUserQuestion, Write, Skill, WebFetch, WebSearch
 disable-model-invocation: false
 user-invocable: true
 ---
@@ -22,7 +22,7 @@ Anything else — no argument, a topic description, a path that doesn't exist �
 
 **For a continuation:** read the document, and read any sibling documents in its directory (a `plan.md`, notes) for context. Load its `## Decisions` entries into your running record as already-settled and its `## Open questions` as the live threads — those are where the interview should pick up. Remember the resolved path; Step 3 rewrites _that_ file rather than minting a new directory. Any text the user passed after the path is the thread they want to explore next — seed Step 1 with it.
 
-**For a new brainstorm:** the argument is the idea to explore; run the flow as written below.
+**For a new brainstorm:** the argument is the idea to explore — if there's no argument at all, ask what they'd like to brainstorm first. Then run the flow as written below.
 
 ## Step 1: Grill the user
 
@@ -84,7 +84,7 @@ Threads that came up but weren't resolved — things to settle during planning o
 implementation. Omit this section entirely if everything got resolved.
 ```
 
-Keep the **Why** lines substantive: the rationale is the most valuable thing to preserve, since a bare decision without its reasoning invites someone to second-guess it later. If a decision was trivial, a one-line note is fine — don't pad it.
+Keep the **Why** lines substantive: the rationale is the most valuable thing to preserve, since a bare decision without its reasoning invites someone to second-guess it later. A Why carries the decision's _weight_, not just its direction: the evidence behind it (**checked** facts kept as stated, **not checked** ones named as such) and the tradeoff actually weighed — what the choice adds vs. removes, and what it deliberately declines to defend. If a decision was trivial, a one-line note is fine — don't pad it.
 
 On a continuation, the rewrite is a **merge, not a replacement**: carry the original decisions forward and append this session's, rebuilding _Open questions_ from what's still live. A decision this session overturned stays in the log, its entry revised to record the new choice and why — deleting it loses the history that makes the reversal legible.
 
