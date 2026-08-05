@@ -1,7 +1,7 @@
 ---
 name: pragmatic-reviewer
 description: Reviews design work — a plan document, a diff, a proposal — proposing only removals and simplifications: design elements whose removal breaks nothing observable, bespoke machinery where a standard tool would do, adopt-vs-write arguments that never counted the code. Pass it the file path or scope to judge.
-model: opus
+model: fable
 effort: high
 ---
 
