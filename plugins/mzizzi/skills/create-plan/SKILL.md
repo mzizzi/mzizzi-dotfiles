@@ -54,9 +54,15 @@ Refer to the resolved destination as `<target file path>` in the steps below (e.
   - Code sketches should show structure and signatures, with comments explaining non-obvious logic. The sub-agent is constructing a plan document, not a copy-paste implementation.
 - Update or create the target file at `<target file path>` (from step 2) with the sub-agent's output
 
-### Step 5: Codex adversarial review
+### Step 5: Adversarial reviews
 
-Invoke the Codex adversarial review skill to get a cross-model challenge of the draft plan from Codex (using whichever GPT model the user has configured):
+Two reviewers challenge the draft, each with its own grain: Codex looks for what's missing, the pragmatic reviewer for what's excess. Spawn the pragmatic reviewer first — it runs in the background while the blocking Codex call absorbs its runtime:
+
+    Agent(subagent_type: "mzizzi:pragmatic-reviewer", prompt: "Review the plan at <target file path>.")
+
+Its report is findings only, highest severity first (or `No material findings.`) — read it as prose and hold it for the incorporation step.
+
+Then invoke the Codex adversarial review skill to get a cross-model challenge of the draft plan from Codex (using whichever GPT model the user has configured):
 
     Skill(skill: "codex-adversarial-review", args: "--wait --scope auto focus on feasibility, completeness, missing risks, and questionable assumptions in the plan at <target file path>")
 
@@ -70,21 +76,23 @@ On success, the output is a plain-text review report — not JSON, read it as pr
 
 Hold the full response for the incorporation step.
 
-**If the review is unavailable** (plugin not installed, authentication error, CLI unavailable, or another runtime failure), the skill returns a failure reason instead of the report above. Note the failure, tell the user the Codex review was unavailable (including the reason), and continue directly to Step 7 (open questions loop), skipping Step 6.
+**If a review is unavailable** (for Codex: plugin not installed, authentication error, CLI unavailable, or another runtime failure — the skill returns a failure reason instead of the report; for the pragmatic reviewer: the agent fails or returns nothing usable), tell the user which review was missing and why, and continue to Step 6 with the report you have. Only if both reviews failed, skip Step 6 and continue directly to Step 7 (open questions loop).
 
-### Step 6: Incorporate Codex feedback
+### Step 6: Incorporate review feedback
 
-Process the Codex adversarial review findings and strengthen the draft plan. This step runs in the main conversation — no sub-agents.
+Process the findings from both reviews and revise the draft plan. This step runs in the main conversation — no sub-agents.
 
 **For each finding, by severity:**
 
 - **Critical or high severity:** The plan has a significant gap or questionable assumption. Directly revise the relevant section (Design, Implementation, or Testing) to address the concern. Don't just acknowledge it — strengthen the plan text so the concern is resolved. If the finding identifies something genuinely missing (error handling strategy, performance risk, dependency issue), add it.
-- **Medium severity:** Often surfaces unconsidered tradeoffs or dismissed alternatives. If the fix is clear, apply it. If it requires a user decision, add it to `## Open Questions` with a `[Codex]` prefix.
+- **Medium severity:** Often surfaces unconsidered tradeoffs or dismissed alternatives. If the fix is clear, apply it. If it requires a user decision, add it to `## Open Questions` with its source prefix (`[Codex]` or `[Pragmatism]`).
 - **Low severity:** Apply trivially fixable suggestions (clarity, organization). Discard the rest unless they add genuine value.
+
+**Findings run in both directions.** When a finding proposes removing or simplifying an element — the pragmatic reviewer's whole mandate — the resolution is the simplification: delete the element and its supporting text from the plan rather than strengthening its justification. If keeping it is genuinely the user's call, make it an open question. When the two reviews collide on the same element — one wants it hardened, the other removed — always put it to the user as an open question rather than resolving it silently in either direction: a wrong call here surfaces post-implementation, at many times the price.
 
 **For `next_steps` from Codex:** Scan for actionable items. Those that map to user decisions become `[Codex]` open questions. Those that are purely technical and clearly correct get applied directly.
 
-**Provenance:** When adding or revising content based on Codex findings, tag new open questions with `[Codex]` so the user knows their origin during the interview loop. Individual edits to plan sections don't need tagging.
+**Provenance:** When adding or revising content based on review findings, tag new open questions by source — `[Codex]` or `[Pragmatism]` — so the user knows their origin during the interview loop. Individual edits to plan sections don't need tagging.
 
 After incorporating all findings, update the draft plan in memory (do not write to disk yet — that happens in Step 8 after the interview loop).
 
@@ -129,7 +137,7 @@ After writing the plan, give the user a brief summary of:
 
 - Where the plan was saved
 - The key design decisions made
-- Whether the Codex adversarial review ran and what it surfaced (briefly — e.g., "Codex flagged 2 risks that were incorporated into the Design section")
+- Whether the adversarial reviews ran and what they surfaced (briefly — e.g., "Codex flagged 2 risks and the pragmatic reviewer 1 simplification, all incorporated into the Design section")
 - Any deferred questions that remain
 
 Don't recite the whole plan back — they can read the file. Focus on decisions they should weigh in on.
