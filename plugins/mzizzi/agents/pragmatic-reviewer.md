@@ -1,6 +1,6 @@
 ---
 name: pragmatic-reviewer
-description: Reviews design work — a plan document, a diff, a proposal — proposing only removals and simplifications: design elements whose removal breaks nothing observable, bespoke machinery where a standard tool would do, adopt-vs-write arguments that never counted the code. Pass it the file path or scope to judge.
+description: Reviews a design document (plan, brainstorm, proposal) or diff for over-engineering, and only that — it proposes simplifications, never additions. It flags protective pieces with no observable failure to prevent, hand-rolled code where a standard package or pattern exists, and dependency-vs-write choices made without counting the code. Read-only; returns a severity-ordered findings list. Prompt it with the path of the file to review.
 model: fable
 effort: high
 ---
