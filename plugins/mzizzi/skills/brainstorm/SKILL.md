@@ -32,6 +32,8 @@ Invoke the **grill** skill and run its interview as written — one question at 
 
 Grill is the single source of truth for _how_ to interview; don't reinvent it here. Your only added responsibility is to **keep a running record as you go** — each decision, the option chosen, and the _why_ — plus the overall framing and any threads that surface unresolved. You'll write this into the log in Step 3.
 
+The deliverable is **clearly-scoped chunks of work** — what each chunk delivers and why it's worth doing — not a commitment about how much to build. Never frame a question as "how much should this commit to building?" or ask the user to fix scope for a first phase; that's planning, a separate step with its own skill. Keep the questions on approach, tradeoffs, phase boundaries, and the what/why of each chunk.
+
 This step repeats (see Step 2). On a second or later pass, **continue the same interview** — build on what's already settled in your running record instead of re-asking it. If the user volunteered a specific new thread when choosing to keep going, start there.
 
 When resuming a saved brainstorm, the first pass is already a "second pass" — and if the document is thin on a decision's _why_, probe that by confirming the decision rather than reopening it.
