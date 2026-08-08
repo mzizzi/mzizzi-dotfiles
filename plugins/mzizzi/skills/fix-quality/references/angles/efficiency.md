@@ -4,12 +4,11 @@ Find wasted work the diff introduces, and name the cheaper alternative.
 
 What to look for:
 
-- **Redundant computation** — the same value derived repeatedly inside a loop, or recomputed on every call when it could be built once.
-- **Repeated I/O** — a file, config, or query read per iteration or per call rather than once. Watch for the innocuous-looking helper that opens something every time it's invoked.
-- **Sequential independent operations** — awaited one at a time when nothing forces the order.
-- **Work added to startup or a hot path** — an import, a scan, or a network call that now runs on every request or every launch rather than on demand.
-- **Captured environments on long-lived objects** — an object built from a closure keeps its entire enclosing scope alive for as long as the object lives. When that scope holds a large buffer, a response body, or a whole config tree, this is a leak that profilers rarely attribute correctly. Prefer a struct or class that copies only the fields it needs.
-- **Accidental quadratic behavior** — a lookup inside a loop over the same collection, where a set or map built once would do.
+- Work on a hot path or at startup: an import, scan, query, or network call that now runs on every request, render, or launch rather than on demand.
+- Repeated computation — a value derived again on every call or every iteration when it could be computed once, including a file, config, or query read per iteration.
+- Fetching more than you use: loading, parsing, or querying a whole set before filtering it down to the few entries actually read.
+- Broken memoization — a new object or array built on every call, so a downstream cache keyed on it never hits and redoes work it already had.
+- A data structure mismatched to its access pattern: a linear scan for lookup or membership inside a loop over the same collection, where a set or map makes it O(1). State the complexity before and after.
 
 Two things to be honest with yourself about.
 

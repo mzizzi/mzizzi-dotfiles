@@ -13,19 +13,21 @@ Run a Codex adversarial review by calling the codex plugin's underlying script d
 
 ## How to run it
 
-Run the bundled script, passing the same focus/scope text you'd pass to `/codex:adversarial-review`:
+Run the bundled script. `--files` scopes the review to specific paths; anything else is focus text:
 
 ```bash
-python "${CLAUDE_PLUGIN_ROOT}/skills/codex-adversarial-review/scripts/run_review.py" "--scope auto focus on feasibility, completeness, missing risks, and questionable assumptions in the plan at plans/20260615-token-refresh/plan.md"
+node "${CLAUDE_PLUGIN_ROOT}/skills/codex-adversarial-review/scripts/run_review.mjs" --files plans/20260615-token-refresh/plan.md "focus on feasibility, completeness, missing risks, and questionable assumptions"
 ```
 
 Run it without backgrounding (no `run_in_background: true`) and with a generous timeout — the script has no internal cap on how long a Codex review can take, so give it the maximum (600000ms). The call must complete before you have a result to act on.
+
+**Scope.** Prefer `--files`: it sends those paths' staged diff, unstaged diff, and current contents, and nothing else. Without it the review falls back to the codex plugin's own targeting — `--scope auto|working-tree|branch`, or `--base <ref>` — which sends the **entire** working-tree diff when the tree is dirty and the entire branch diff when it's clean. Naming a file in focus text alone does not limit anything, so an unscoped review carries whatever unrelated work you have pending. Committing first does not narrow it; it flips `auto` to a branch diff, which is usually wider.
 
 ## Reading the result
 
 - **Success:** stdout is the same markdown-formatted review report `/codex:adversarial-review` would print for a human — a `Verdict:`, a summary, a `Findings:` list (each with severity, title, file:line, body, and recommendation), and a `Next steps:` list.
 - **Failure:** stdout is empty; the reason is on stderr and the exit code distinguishes why:
-  - **Exit 2** — the codex plugin itself isn't installed (no `codex@openai-codex` entry in `installed_plugins.json`, or its script is missing from the resolved install path). Message starts with `CODEX_NOT_INSTALLED:`.
-  - **Exit 1** — the codex plugin is installed but the review itself failed (Codex CLI not authenticated, not inside a git repository, timeout, etc.). This is the underlying script's own error text, passed through unchanged — it often names the specific fix (e.g. pointing at `/codex:setup`).
+  - **Exit 2** — the review never started. `CODEX_NOT_INSTALLED:` means no `codex@openai-codex` entry in `installed_plugins.json` or no libraries at the resolved install path; `CODEX_CONTRACT_CHANGED:` means the plugin updated and no longer exposes the modules this script imports; anything else is a bad argument (an unknown `--files` path, or `--files` resolving to nothing).
+  - **Exit 1** — the codex plugin is installed but the review itself failed (Codex CLI not authenticated, not inside a git repository, timeout, etc.). Usually the underlying script's own error text, passed through unchanged — it often names the specific fix (e.g. pointing at `/codex:setup`). The one exception is `CODEX_EMPTY_REPORT:`, raised by this script when the companion exits cleanly but hands back no report on two consecutive attempts.
 
   Either way, treat this as "the review is unavailable right now" and surface the stderr text as the reason to whatever workflow called this skill — don't treat it as a fatal error.

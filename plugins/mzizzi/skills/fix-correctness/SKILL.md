@@ -21,7 +21,7 @@ The target is always the **working-tree diff** — uncommitted changes on the cu
 
 ## 2. Run the review
 
-    Skill(skill: "codex-adversarial-review", args: "--scope auto focus on correctness, edge cases, error handling")
+    Skill(skill: "codex-adversarial-review", args: "--scope auto focus on correctness, edge cases, error handling. Right-size each recommendation to the problem — KISS/YAGNI/DRY balanced against the complexity the change actually warrants; no guards, retries, or abstraction for failures this diff does not exhibit.")
 
 With `--plan`, append `, and whether the implementation faithfully follows the plan at <plan path>` to that focus text. `--scope auto` picks up the working-tree diff.
 

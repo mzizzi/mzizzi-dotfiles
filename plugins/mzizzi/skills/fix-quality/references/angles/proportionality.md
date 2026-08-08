@@ -1,19 +1,19 @@
 # Angle: proportionality
 
-Ask one question of every unit the diff adds or rewrites: is the complexity here proportionate to the problem it solves?
+For each unit the diff adds or rewrites, judge whether its complexity is proportionate to the problem it solves.
 
-A scan won't answer it — code that's convoluted for its problem trips no smell in isolation, it just looks like work. Go unit by unit instead, and take each one through three steps:
+Scanning won't surface these; convoluted code looks like work in isolation. Work unit by unit:
 
-1. **Restate.** Say in one sentence what the unit does — its contract, not its steps. Struggling to write that sentence is already the finding.
-2. **Re-derive.** Without re-reading the implementation, sketch the simplest version that satisfies the sentence.
-3. **Compare.** Report only when the gap is large. Ten percent shorter is noise; half the size and flat where the original nested is a finding.
+1. Write the unit's contract in one sentence — what it does, not how. If you can't, that is the finding.
+2. Without re-reading the implementation, sketch the simplest version that satisfies that contract. If you can't, the implementation is handling something your contract sentence missed.
+3. Compare the two. Report only when the difference is structural — fewer branches, less state, flatter control flow. A marginally shorter version is not a finding.
+4. Rule out justified complexity: an extension point for dependency injection or mocking, a stable public API, an edge case your sketch dropped, a design the plan chose deliberately, a cost someone measured. Where one applies, there is no finding.
 
-A **unit** is a function or method. Escalate one level only when the structure itself is the overspend — a class with a single method and no state, a builder for a two-field object. No further than that; where a change sits in the system belongs to the altitude angle.
+A **unit** is a function or method. Widen to the enclosing type only when the structure itself is disproportionate — a class with a single method and no state, a builder for a two-field object. Go no further; where a change sits in the system belongs to the altitude angle.
 
-Then follow each unit out to its tests and ask the same question of them: is the effort spent verifying this proportionate to what it verifies? Fifty lines of fixtures behind an assertion that one string equals another is the shape to notice. You can right-size it, keeping the assertions and cutting the scaffolding; consolidate, when the assertion is worth keeping but a test at another layer could carry it in a line; or delete, when behavior doesn't change or the test only asserts that the language works. Propose against tests the diff added or modified — read the pre-existing ones for the contract they establish, then leave them alone. Be reasonable about what deserves a test rather than mechanical about it: weigh the blast radius before cutting one, defer anything whose consequences you can't see clearly, and where a cut leaves a real gap, cover it trivially at the right layer.
+Apply the same judgment to tests the diff adds or modifies:
 
-Then ask of every test the diff adds whether another test already covers it: what change to the production code would make _this_ test fail first? If another test already fails on every such change, this one adds nothing — a stricter assertion elsewhere (a whole-object `toEqual`, an exact-format check, a count) silently covers it. Expect two shapes: a test asserting a weaker property than a neighbour already pins exactly, and several tests driving one branch with different inputs, which want a single table-driven case. Run the same check over individual assertions too, not just whole tests — an assertion implied by a preceding structural-equality check is the same defect one level down.
+- Scaffolding out of proportion to the assertion: extensive fixtures behind a single equality check. Cut the scaffolding, move the assertion to a layer that carries it in one line, or delete it if it only asserts that the language works.
+- Coverage another test already provides: ask what production change would make _this_ test fail first. If a stricter assertion elsewhere already fails on every such change, this one adds nothing. The same holds for an assertion implied by a structural-equality check in the same test.
 
-Two gates before you propose anything, and both have to pass. **Write the replacement** — a finding doesn't exist until you can produce the simpler version and argue it does the same thing. "This could be simpler" is an impression, not a proposal, and failing to write it usually means the complexity was buying something you hadn't accounted for. **Rule out complexity that's earned** — a seam for injection or mocking, a stable public API, an edge case your sketch dropped, a shape the plan chose deliberately, a cost someone measured. Where one of those applies, there is no finding.
-
-The shapes named here are illustrations, not a checklist. The angle is the question at the top, and anything in the same class of simplification belongs here whether or not it resembles them.
+The examples here are illustrative, not exhaustive; report anything in the same class.

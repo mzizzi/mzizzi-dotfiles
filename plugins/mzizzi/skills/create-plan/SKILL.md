@@ -64,9 +64,9 @@ Its report is findings only, highest severity first (or `No material findings.`)
 
 Then invoke the Codex adversarial review skill to get a cross-model challenge of the draft plan from Codex (using whichever GPT model the user has configured):
 
-    Skill(skill: "codex-adversarial-review", args: "--wait --scope auto focus on feasibility, completeness, missing risks, and questionable assumptions in the plan at <target file path>")
+    Skill(skill: "codex-adversarial-review", args: "--files <target file path> focus on feasibility, completeness, missing risks, and questionable assumptions. Right-size each recommendation to the problem — KISS/YAGNI/DRY balanced against the complexity the plan actually warrants; no scope or machinery the plan's stated problem does not require.")
 
-Where `<target file path>` is the path written in Step 4 (e.g., `plans/20260615-token-refresh/plan.md`). The focus text steers Codex toward plan-quality concerns rather than code-quality concerns.
+Where `<target file path>` is the path written in Step 4 (e.g., `plans/20260615-token-refresh/plan.md`). `--files` is what confines the review to the plan — without it Codex receives the whole working-tree diff, so unrelated pending work would be reviewed alongside the plan and can surface in the findings. The focus text steers it toward plan-quality concerns rather than code-quality concerns.
 
 On success, the output is a plain-text review report — not JSON, read it as prose:
 

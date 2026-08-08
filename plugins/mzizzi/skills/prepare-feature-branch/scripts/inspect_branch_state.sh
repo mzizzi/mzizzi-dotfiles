@@ -2,11 +2,15 @@
 # Derive the feature-branch name for a plan and report the git state needed to
 # decide between reusing existing feature work and creating it fresh.
 #
-# Reports; never mutates. The caller performs the switch/create, because
-# entering a worktree is a harness tool call rather than a shell command.
+# Reports; never touches the working tree or local branches. The caller performs
+# the switch/create, because entering a worktree is a harness tool call rather
+# than a shell command. It does fetch when it needs to compare the trunk against
+# its remote, which only moves remote-tracking refs.
 #
 # Usage: inspect_branch_state.sh <plan-directory-or-plan-file>
 set -uo pipefail
+
+OTHER_LIST_CAP=20   # how many pending-edit lines to echo before summarizing the rest
 
 target="${1:-}"
 if [ -z "$target" ]; then
@@ -58,8 +62,38 @@ else
 fi
 
 current="$(git rev-parse --abbrev-ref HEAD)"
-dirty="no"
-[ -n "$(git status --porcelain)" ] && dirty="yes"
+
+# Uncommitted changes are split in two: the plan directory this run is about, and
+# everything else. The dominant flow is create-plan straight into implement-plan,
+# so the plan document is routinely untracked at this point — its own output is
+# not an obstacle to route around, and only the caller's real edits should abort.
+# Porcelain paths are relative to the repo root, and --show-prefix reports the
+# plan directory the same way. Subtracting --show-toplevel from `pwd` would not:
+# under Git Bash the two disagree on path form (`C:/x` vs `/c/x`).
+plan_rel="$(cd "$plan_dir" && git rev-parse --show-prefix)"
+plan_rel="${plan_rel%/}"
+plan_dirt="no"
+other_dirt="no"
+other_count=0
+other_entries=""
+# --untracked-files=all because the default collapses an untracked directory to its
+# shallowest path: the first plan in a project reports as `?? plans/`, which matches
+# no plan directory and would be read as somebody's unrelated work.
+while IFS= read -r entry; do
+  [ -z "$entry" ] && continue
+  path="${entry:3}"   # porcelain status codes occupy the first three columns
+  case "$path" in
+    "$plan_rel" | "$plan_rel"/*) plan_dirt="yes" ;;
+    *)
+      other_dirt="yes"
+      other_count=$((other_count + 1))
+      # Verbatim porcelain lines, so the caller can put the decision to the user
+      # without a follow-up `git status`. Capped: a formatter run over the tree
+      # would otherwise push hundreds of lines into the caller's context.
+      [ "$other_count" -le "$OTHER_LIST_CAP" ] && other_entries="${other_entries}${entry}"$'\n'
+      ;;
+  esac
+done < <(git status --porcelain --untracked-files=all)
 
 branch_exists="no"
 git show-ref --verify --quiet "refs/heads/${branch}" && branch_exists="yes"
@@ -70,9 +104,11 @@ worktree_path="$(git worktree list --porcelain | awk -v b="refs/heads/${branch}"
   $0 == "branch " b { print path; exit }
 ')"
 
-if [ "$dirty" = "yes" ]; then
-  action="abort-dirty-tree"
-elif [ "$current" = "$branch" ]; then
+# Pending edits are reported, not routed on: where the branch should come from and
+# what to do with somebody's work in progress are independent questions, and folding
+# the second into ACTION meant a dirty tree suppressed the branch routing the caller
+# still needs once the user has resolved it.
+if [ "$current" = "$branch" ]; then
   action="stay"
 elif [ -n "$worktree_path" ]; then
   action="enter-worktree"
@@ -88,6 +124,19 @@ else
   action="create"
 fi
 
+# Only a fresh branch has a base to get wrong, so the staleness check — and the
+# fetch it costs — is confined to the two actions that can end in one. This user
+# pushes at session end, so a local trunk behind its remote is the normal state.
+trunk_behind=0
+case "$action" in
+  create | judge-current-branch-then-create)
+    if [ -n "$remote" ]; then
+      git fetch --quiet "$remote" "$trunk" 2>/dev/null
+      trunk_behind="$(git rev-list --count "refs/heads/${trunk}..${remote}/${trunk}" 2>/dev/null || echo 0)"
+    fi
+    ;;
+esac
+
 cat <<EOF
 BRANCH=${branch}
 SLUG=${slug}
@@ -95,8 +144,20 @@ USERNAME=${username}
 TRUNK=${trunk}
 REMOTE=${remote}
 CURRENT_BRANCH=${current}
-DIRTY=${dirty}
+PLAN_DIR_DIRTY=${plan_dirt}
+OTHER_DIRTY=${other_dirt}
+OTHER_DIRTY_COUNT=${other_count}
+TRUNK_BEHIND=${trunk_behind}
 BRANCH_EXISTS=${branch_exists}
 WORKTREE_PATH=${worktree_path}
 ACTION=${action}
 EOF
+
+if [ "$other_dirt" = "yes" ]; then
+  echo "--- pending edits outside the plan directory ---"
+  printf '%s' "$other_entries"
+  # An `[ ... ] && echo` here would make a false test the script's exit status.
+  if [ "$other_count" -gt "$OTHER_LIST_CAP" ]; then
+    echo "... and $((other_count - OTHER_LIST_CAP)) more"
+  fi
+fi

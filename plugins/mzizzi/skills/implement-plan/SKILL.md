@@ -1,7 +1,7 @@
 ---
 name: implement-plan
 description: Implement a technical plan produced by /create-plan — turn a plan.md (or a subset of it) into working code, then run correctness, quality, and comment passes over the changes, each triaging what it finds. Use this skill whenever the user wants to build out, execute, or implement an existing plan, or says things like "implement the plan in plans/…", "let's build phase 1 of this plan", "execute plan.md", or points at a plan directory and says "go". Prefer this over ad-hoc implementation whenever a plan document already exists — it keeps the diff reviewable and folds deferred review findings back into the plan.
-argument-hint: <plan directory or plan.md> [subset to implement, e.g. "phase 1"] [--worktree]
+argument-hint: <plan directory or plan.md> [subset to implement, e.g. "phase 1"]
 allowed-tools: Read, Grep, Glob, Edit, Write, Bash, Agent, AskUserQuestion, Skill, EnterWorktree, TaskCreate, TaskUpdate, TaskList
 disable-model-invocation: false
 user-invocable: true
@@ -13,15 +13,13 @@ user-invocable: true
 
 **The scope.** A named subset (`plans/foo/plan.md phase 1`, "just the first phase") maps to that `### Implementation Phase <N>` section and nothing else — small rounds keep the PR reviewable. Otherwise, the whole plan.
 
-**`--worktree`.** An optional token anywhere in the arguments: brand-new feature work gets an isolated git worktree instead of a plain branch. No effect when the plan already has feature work to reuse.
-
 Confirm the scope back to the user in one line before moving on, so a misread is caught cheaply.
 
 ## Step 1: Prepare the feature branch
 
-    Skill(skill: "prepare-feature-branch", args: "<plan directory> [--worktree]")
+    Skill(skill: "prepare-feature-branch", args: "<plan directory>")
 
-The branch keeps the diff mapped to the plan and off the trunk, and Step 4 reads the working-tree diff, so the baseline must be clean. The skill derives the name, reuses existing feature work for this plan or creates it off the trunk, and announces the result. It aborts on a dirty tree — relay that and stop, rather than stashing on the user's behalf.
+The branch keeps the diff mapped to the plan and off the trunk, and Step 4 reads the working-tree diff, so the baseline must be clean. The skill derives the name, reuses existing feature work for this plan or creates it, commits the plan document onto the branch, and announces the result. An untracked plan directory is expected there and needs no intervention; unrelated pending edits get put to the user as a choice, so relay whatever they decided rather than re-litigating it here.
 
 Keep referencing the plan by its Step 0 absolute path. Entering a worktree changes the cwd; that path still resolves.
 

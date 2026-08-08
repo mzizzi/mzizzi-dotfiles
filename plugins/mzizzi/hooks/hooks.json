@@ -1,25 +1,3 @@
 {
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Agent",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python -S -E \"${CLAUDE_PLUGIN_ROOT}/hooks/load_lsp_subagent.py\""
-          }
-        ]
-      }
-    ],
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python -S -E \"${CLAUDE_PLUGIN_ROOT}/hooks/load_lsp.py\""
-          }
-        ]
-      }
-    ]
-  }
+  "hooks": {}
 }
