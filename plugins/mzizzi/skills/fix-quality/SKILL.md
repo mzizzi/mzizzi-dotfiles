@@ -1,7 +1,7 @@
 ---
 name: fix-quality
-description: Review a change for reuse, simplification, proportionality, efficiency, altitude, and language, then apply the cleanups that are contained and defer the rest. Reviews the current branch's PR by default; pass a PR number/URL to target another, or "local" for the working tree. Pass a plan file and deferred findings are written into its Follow-ups section; pass --dry-run to review and report without changing anything. Quality only, not correctness bugs. Use this whenever the user wants a change cleaned up before merging, asks what could be simplified, or says things like "tidy this up", "what would you simplify here", or "clean up this PR".
-argument-hint: "[<pr-number-or-url> | local] [--plan <path to plan.md>] [--dry-run]"
+description: Review a change for reuse, simplification, proportionality, efficiency, altitude, and language, then apply the cleanups that are contained and defer the rest. Works on your uncommitted local changes by default; pass "pr" to target the current branch's PR, or a PR number/URL for that PR. Pass a plan file and deferred findings are written into its Follow-ups section; pass --dry-run to review and report without changing anything. Quality only, not correctness bugs. Use this whenever the user wants a change cleaned up before merging, asks what could be simplified, or says things like "tidy this up", "what would you simplify here", or "clean up this PR".
+argument-hint: "[--dry-run] [--plan <path to plan.md>] [local | pr | <pr-number-or-url>]"
 allowed-tools: Read, Grep, Glob, Edit, Write, Bash, Agent, Skill
 disable-model-invocation: false
 user-invocable: true
@@ -19,9 +19,11 @@ Steps 3 onward pass file paths to sub-agents. Resolve the absolute path of this 
 
 Parse `--plan` and `--dry-run` out of the arguments first; the **target** is the bare value left over, and there may not be one. Resolve it, state what you resolved, then get the diff:
 
-- _(omitted — default)_ — the current branch's PR: `gh pr diff`. If there's no open PR or `gh` is unavailable, fall back to the branch's own changes (`git diff <base>...HEAD`, inferring the base from the upstream tracking branch or the repo's default branch) and say that's what you reviewed.
+- _(omitted — default)_ or `local` — uncommitted changes (`git diff HEAD`) plus untracked files (`git ls-files --others --exclude-standard`); treat a new file's whole content as added.
+- `pr` — the current branch's PR: `gh pr diff`. If there's no open PR or `gh` is unavailable, fall back to the branch's own changes (`git diff <base>...HEAD`, inferring the base from the upstream tracking branch or the repo's default branch) and say that's what you reviewed.
 - a **PR number or URL** — that PR: `gh pr diff <number-or-url>`.
-- `local` — uncommitted changes (`git diff HEAD`) plus untracked files (`git ls-files --others --exclude-standard`); treat a new file's whole content as added.
+
+Unrecognized value → say so and fall back to local. These are the same target tokens `fix-comments` takes, with the same meanings, so `fix-all` can pass one straight through to both.
 
 Use the three-dot form for branch diffs. Two dots drags in base-branch commits the author never wrote, producing proposals against code they did not write.
 
@@ -31,11 +33,11 @@ Uncommitted changes aren't part of a PR — leave them out of a PR-target review
 
 **`--dry-run`** is optional: review and report, change nothing. Steps 6 and 7 are skipped, so nothing is applied and nothing is written — including to `--plan`, if both were passed.
 
-**Whether you can apply anything depends on the target.** `local`, or a PR that is this branch, means the code is in front of you and step 6 runs. A PR you don't have checked out means there's nothing to edit — skip step 6, say so once, and report every surviving proposal instead.
+**Whether you can apply anything depends on the target.** The default and `pr` both mean the code is in front of you, so step 6 runs. A PR you don't have checked out means there's nothing to edit — skip step 6, say so once, and report every surviving proposal instead.
 
 Keep the exact command that produced the diff. Sub-agents re-run it themselves rather than receiving the diff through you, which keeps your context free and guarantees all of them see the same bytes.
 
-Then read the PR title and body (`gh pr view`) — they carry the intent behind the change, which is what separates a deliberate choice from an accident.
+On a PR target, then read its title and body (`gh pr view`) — they carry the intent behind the change, which is what separates a deliberate choice from an accident.
 
 ## 2. Learn what's already been decided
 

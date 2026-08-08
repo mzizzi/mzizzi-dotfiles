@@ -33,13 +33,31 @@ fi
 date_stamp=$(date +%Y%m%d)
 
 # Projects that commit their plans to source control already have a plans/
-# directory; reuse it. Otherwise, keep plans out of source control under
-# .nocommit/plans/ (gitignored — see .gitignore).
-if [ -d "plans" ]; then
-  base="plans"
-else
-  base=".nocommit/plans"
-fi
+# directory; reuse the nearest one at or above $PWD, so running from a
+# subdirectory adds to the existing tree instead of starting a second one.
+# Otherwise keep plans out of source control under .nocommit/plans/
+# (gitignored — see .gitignore).
+repo_root=$(git rev-parse --show-toplevel 2>/dev/null) || {
+  echo "error: not inside a git repository" >&2
+  exit 1
+}
+prefix=$(git rev-parse --show-prefix)
+
+# Walk from the current directory up to the repo root. Anchoring every candidate
+# on $repo_root keeps the whole search in one path form: under Git Bash $PWD is
+# /c/x where --show-toplevel is C:/x, and only the latter is a path the caller
+# can hand to a non-shell tool.
+base=""
+search="${repo_root}${prefix:+/${prefix%/}}"
+while :; do
+  if [ -d "${search}/plans" ]; then
+    base="${search}/plans"
+    break
+  fi
+  [ "$search" = "$repo_root" ] && break
+  search=$(dirname "$search")
+done
+base="${base:-${repo_root}/.nocommit/plans}"
 
 dir="${base}/${date_stamp}-${slug}"
 mkdir -p "$dir"

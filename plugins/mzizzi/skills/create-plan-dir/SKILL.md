@@ -19,9 +19,9 @@ Plan documents live at:
 
 - `yyyymmdd` — today's date, stamped automatically so the date never drifts or gets typed wrong.
 - `short-description` — a short, kebab-case summary of the topic (lowercase, words joined by hyphens). Keep it to a few words that capture the essence.
-- `<plans-base>` — `plans/` if the project already commits its plans to source control, otherwise `.nocommit/plans/` (gitignored) so plans don't get committed to a project that doesn't want them tracked. The script decides which to use; see its logic for the exact check.
+- `<plans-base>` — the nearest existing `plans/` at or above the current directory, stopping at the repo root; failing that, `<repo-root>/.nocommit/plans/` (gitignored) so plans don't get committed to a project that doesn't want them tracked. Resolving against the repo rather than the current directory is what stops a run from a subdirectory starting a second plans tree. The script decides; see its logic for the exact walk.
 
-Example: a plan about refreshing OAuth tokens → `plans/20260615-token-refresh/` (or `.nocommit/plans/20260615-token-refresh/` in a project without a tracked `plans/` dir). The plan file (`plan.md` by default, or a name the caller chooses) is then written inside that directory.
+Example: a plan about refreshing OAuth tokens → `<repo-root>/plans/20260615-token-refresh/`. The plan file (`plan.md` by default, or a name the caller chooses) is then written inside that directory.
 
 ## How to create it
 
@@ -31,6 +31,6 @@ Run the bundled script, passing a short description of the topic. The script slu
 bash "${CLAUDE_PLUGIN_ROOT}/skills/create-plan-dir/scripts/create_plan_dir.sh" "OAuth token refresh"
 ```
 
-The script prints the created directory path (e.g. `plans/20260615-oauth-token-refresh/` or `.nocommit/plans/20260615-oauth-token-refresh/`) to stdout and creates it with `mkdir -p`, so re-running is harmless. Use the printed path for whatever comes next — typically writing `plan.md` inside it.
+The script prints an **absolute** path to stdout and creates the directory with `mkdir -p`, so re-running is harmless and the caller never has to resolve the result against a working directory. Use the printed path as-is for whatever comes next — typically writing `plan.md` inside it. It errors out if run outside a git repository, since the base is resolved against the repo root.
 
-If running the script isn't possible in the current environment, fall back to creating the directory by hand: take today's date as `yyyymmdd`, slugify the topic to lowercase hyphen-separated words, and create `<plans-base>/<yyyymmdd>-<slug>/` — using `plans/` if that directory already exists in the project, otherwise `.nocommit/plans/`.
+If running the script isn't possible in the current environment, fall back to creating the directory by hand: take today's date as `yyyymmdd`, slugify the topic to lowercase hyphen-separated words, and create `<plans-base>/<yyyymmdd>-<slug>/` using the base rule above.

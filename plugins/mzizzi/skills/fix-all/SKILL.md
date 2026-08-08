@@ -22,17 +22,9 @@ Flags may appear in any order; the **target** is the bare value left over, and t
 
 State what you parsed in one line before starting. Three passes run on whatever you resolved, so a misparse is much cheaper caught here.
 
-## 2. Translate the target for each pass
+## 2. Note what the target means for fix-correctness
 
-fix-quality defaults to the branch's PR and calls the working tree `local`; fix-comments defaults to the working tree and calls the PR `pr`. Passing either one the user's bare token, or passing nothing through, aims them at opposite diffs — so translate:
-
-| target            | fix-quality            | fix-comments           |
-| ----------------- | ---------------------- | ---------------------- |
-| omitted / `local` | `local`                | _(omit — its default)_ |
-| `pr`              | _(omit — its default)_ | `pr`                   |
-| PR number or URL  | the number/URL         | the number/URL         |
-
-The omissions are load-bearing, not gaps.
+fix-quality and fix-comments take the same target tokens with the same meanings, so pass the user's target to both unchanged, or omit it from both when there wasn't one.
 
 fix-correctness takes no target at all — it always reviews the working tree. Against a PR target it will either review uncommitted changes that aren't in that PR, or find a clean tree and stop; either way say which in the report, rather than letting a pass that did nothing read as a pass that found nothing.
 

@@ -10,31 +10,26 @@
 
 **Issue.** The fix chain dominates spend: in 28 chain sessions, subagent fan-out alone was 43.7% of all billable tokens (everything after the first `fix-*`: 81.7%). Worst case: 201K tokens to build a nine-file display-string change, 943K across five Opus angle agents reviewing it — 88% of the session spent on review that yielded one rename, one ternary flatten, and four comment tweaks. No size floor exists; all five angles run on any diff. The efficiency angle returned zero proposals in 47% of runs at 184K tokens per proposal (2.4–3.6× any other angle; 6.6M Opus tokens in two weeks). Meanwhile the tier ladder is inverted: `simple` is documented as the default and no plugin skill routes to it — fix-quality's hardcoded `mzizzi:standard` alone is ~101 of 130 standard spawns. And 32% of runs already skip the fan-out by stretching the "Agent tool isn't available" fallback.
 
-**Fix.** Three edits to `fix-quality/SKILL.md` + one deletion: (a) Step 3 gains a gate — a diff small enough to read whole gets a single-pass review of all angles, no agents (sanctioning what a third of runs already do); delete the step-4 availability fallback. (b) Step 4: `mzizzi:standard` → `mzizzi:simple` — angle work is bounded scanning against a written spec, with the Opus parent already filtering, deduping, and applying. (c) Delete `references/angles/efficiency.md`; hoist its three durable bullets into `simplification.md`. Expected: conservatively half of the 37.3M subagent tokens per two weeks.
+**Fix.**
+
+- **(a) Size-gate the fan-out.** Step 3 gains a gate: a diff small enough to read whole gets a single-pass review of all angles, no agents — which sanctions what a third of runs already do by stretching the availability fallback.
+- **(b) Delete the step-4 availability fallback.** With (a) in place its only remaining use is the pretext runs currently use to skip the fan-out.
+- **(c) Route angle agents to `simple`.** Step 4's `mzizzi:standard` → `mzizzi:simple`: angle work is bounded scanning against a written spec, with the Opus parent already filtering, deduping, and applying.
+- **(d) Delete the efficiency angle.** Remove `references/angles/efficiency.md` and hoist its three durable bullets into `simplification.md`.
+
+Expected: conservatively half of the 37.3M subagent tokens per two weeks.
 
 ## 3. grill: invert the interview default — decide and narrate; ask only user-observable forks; a bounce is an answer
 
 **Issue.** The "Every single question should use the AskUserQuestion tool / interview me relentlessly" mandate produces a 33% decline rate corpus-wide (205 of 621 calls; worst session 73%). Declines are consistently the meta-move the skill forbids: "explain the tradeoffs", "draw a diagram", "your call — KISS/YAGNI". 24% of all question calls re-ask a question already asked (a bounce gets reformulated instead of absorbed). 75% of answered questions rubber-stamp the first (Recommended) option — the recommendation is the product; the menu is ceremony. Median interview: 41 minutes; worst: 2h03. Three rounds of corrective bullets did not move any of these numbers.
 
-**Fix.** Rewrite `grill/SKILL.md` around a different shape, at roughly half its current 629 words. Delete the mandate, the 130-word code-shape bullet, and the meta-options ban. New default: research each fork and state the call in a sentence with its reason; reserve AskUserQuestion for forks with user-observable outcomes where research left the call genuinely uncertain. Stated calls still land in the brainstorm decision log (which create-plan verifiably consumes — the research isn't lost, only the asking). One structural sentence replaces all bounce-handling: a reply that isn't an option pick is the interview working — answer it in prose, then state or ask the fork it informed; never re-issue an asked question. Then dedup: delete the now-redundant auto-memories (`feedback_decide_with_kiss_yagni`, `feedback_define_jargon_in_questions`) and the overlapping §KISS restatement so each rule exists in exactly one place. Deleting the mandate is the only move not yet tried, and it is net-negative text.
+**Fix.** Rewrite `grill/SKILL.md` at roughly half its current 629 words. Deleting the mandate is the only move not yet tried, and it is net-negative text.
 
-## 6. create-plan output: hand off a phase manifest, and delete the template text nothing reads
-
-**Issue.** Step 10 mandates a decision-focused prose summary and forbids reciting the plan — and in 7 of 33 sessions (zero counter-examples) the user's next message asked for the opposite artifact, near-verbatim: "How many phases? Bulleted list. 1-2 sentences/bullet." A guaranteed round-trip. Meanwhile the template's `## Resolved Questions` section is populated in 49 of 49 plans (~500 words each, 9% of all plan text), read by nothing downstream, duplicates brainstorm.md, and is re-read into context on every implement/review pass. And Steps 6/8 describe a draft-in-memory-then-overwrite workflow that happened in 0 of 37 sessions (the real signature is one Write plus 15–42 Edits), which is why Step 8's "remove the Open Questions section" clause is skipped half the time.
-
-**Fix.** All in `create-plan/SKILL.md`: rewrite Step 10 to present the saved path, a bulleted per-phase manifest (1–2 sentences each — the input to the user's actual next decision), and one line on reviews/deferred questions; keep the copyable `/mzizzi:implement-plan` handoff. Delete the `## Resolved Questions` template line (decision provenance keeps two homes: Design rationale and brainstorm.md). Delete the draft-in-memory fiction — Step 6 says "apply revisions to the plan file as you go", Step 8 dissolves, and the Open-Questions cleanup attaches to the interview loop's exit, a step that actually executes.
-
-## 7. create-plan-dir: create the directory after the interview, and resolve the base repo-aware
-
-**Issue.** The script runs before the grill, deciding location and slug at the moment of least information, and its `[ -d "plans" ]` test is cwd-relative. Results: plans scattered across three accidental trees in one repo, 4 sessions needing manual `mv`/`rmdir` repair (including a slug invalidated by the interview it preceded), and the model defensively prefixing `cd <abs> &&` in 9 of 39 invocations. The script itself never failed — 39/39 exit 0 on Windows; the defect is when it's asked and what it keys on.
-
-**Fix.** Reorder `create-plan` Step 2: only an explicitly given directory resolves up front; otherwise create-plan-dir runs after the Step 3 interview with the settled topic. In `create_plan_dir.sh`, replace the cwd-relative test with a walk from `$PWD` up to the git toplevel taking the nearest existing `plans/` (fallback `<repo-root>/.nocommit/plans`), and print the absolute path. The script stays the single source of truth; no new options.
-
-## 8. Delete the machinery nothing reaches: `pr` and the fix-\* PR-target surface
-
-**Issue.** Two pieces of machinery have effectively zero real traffic. `pr`: 0 invocations in 33 sessions; the one real PR was opened by hand with a body contradicting the skill's template (its "NEVER push directly to main" rule also contradicts the observed merge-to-main workflow in 14 sessions — likely why it never triggers). PR targets in the fix family: 0 of 62 invocations ever used one, yet fix-all carries a translation table (re-injected 19 times) solely to reconcile fix-quality and fix-comments disagreeing about vocabulary for targets nobody uses.
-
-**Fix.** Delete `skills/pr/` (move ~8 lines of PR-body style into `.claude/rules/` so the preference actually fires by any path, and drop the stale "NEVER push directly to main" rule rather than carrying it across). Standardize the fix family on the working tree: fix-comments drops PR targets and its never-fired `headRefOid` section; fix-quality flips its default to the working tree keeping an explicit PR argument as the one option; fix-all's step 2 translation table goes entirely. Note the ordering dependency: fix-quality's default flip touches the same Step 3/4 that issue 1 rewrites, so do them together.
+- **(a) Delete the ask-everything mandate**, the 130-word code-shape bullet, and the meta-options ban. These are the three rules the decline rate is measuring.
+- **(b) Invert the default.** Research each fork and state the call in a sentence with its reason; reserve AskUserQuestion for forks with user-observable outcomes where research left the call genuinely uncertain.
+- **(c) Keep the research by keeping the decision log.** Stated calls still land in brainstorm.md, which create-plan verifiably consumes — what's lost is the asking, not the thinking.
+- **(d) Replace all bounce-handling with one structural sentence.** A reply that isn't an option pick is the interview working: answer it in prose, then state or ask the fork it informed, and never re-issue an asked question.
+- **(e) Dedup what survives.** Delete the now-redundant auto-memories (`feedback_decide_with_kiss_yagni`, `feedback_define_jargon_in_questions`) and the overlapping §KISS restatement, so each rule exists in exactly one place.
 
 ---
 

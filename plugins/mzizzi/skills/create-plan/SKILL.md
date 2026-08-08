@@ -34,9 +34,9 @@ The plan is written to `<plan directory>/<target file>`. Resolve both from the u
 
 **Plan directory:**
 
-- If the user gave a full path to the target file (it includes a directory component), that parent directory is the plan directory — continue to step 3.
-- Otherwise, if the user provided a plan directory, use it — continue to step 3.
-- Otherwise, use the /create-plan-dir skill to create one.
+- If the user gave a full path to the target file (it includes a directory component), that parent directory is the plan directory.
+- Otherwise, if the user provided a plan directory, use it.
+- Otherwise, leave it unresolved — Step 3 settles the topic first, and the directory gets created at the end of that step.
 
 Refer to the resolved destination as `<target file path>` in the steps below (e.g. `plans/20260615-token-refresh/plan.md`, or `plans/20260615-token-refresh/design.md` if the user named `design.md`).
 
@@ -44,6 +44,7 @@ Refer to the resolved destination as `<target file path>` in the steps below (e.
 
 - Use the /grill skill to gather additional context and requirements for the desired change
 - If the target file already exists, or there is a brainstorm.md in the plan directory, use that as a starting point instead of re-asking
+- If Step 2 left the plan directory unresolved, create it now with the /create-plan-dir skill, using the topic as the interview settled it. Naming it beforehand fixes the slug at the point of least information, and a slug the interview invalidates has to be moved by hand.
 
 ### Step 4: Create a draft plan
 
@@ -94,7 +95,7 @@ Process the findings from both reviews and revise the draft plan. This step runs
 
 **Provenance:** When adding or revising content based on review findings, tag new open questions by source — `[Codex]` or `[Pragmatism]` — so the user knows their origin during the interview loop. Individual edits to plan sections don't need tagging.
 
-After incorporating all findings, update the draft plan in memory (do not write to disk yet — that happens in Step 8 after the interview loop).
+Apply revisions to `<target file path>` as you go. The file already exists from Step 4, so edit it in place rather than holding a revised copy in context.
 
 ### Step 7: Resolve open questions (loop)
 
@@ -102,8 +103,8 @@ Resolve all open questions through a user interview loop. The goal is to produce
 
 **For each iteration:**
 
-1. Parse the `## Open Questions` section from the current plan draft.
-2. If there are no open questions, exit the loop and proceed to Step 8.
+1. Parse the `## Open Questions` section from `<target file path>`.
+2. If there are no open questions, delete the `## Open Questions` section, then exit the loop and proceed to Step 8.
 3. For questions that are purely technical and the research clearly points to one answer, auto-resolve them — update the plan draft and note to the user what you resolved and why, so they can object if needed.
 4. Present remaining open questions to the user using AskUserQuestion. For each question:
    - State the question clearly
@@ -115,13 +116,9 @@ Resolve all open questions through a user interview loop. The goal is to produce
 **Guidelines:**
 
 - Batch related questions into a single AskUserQuestion call rather than asking one at a time.
-- Don't loop more than 3 iterations — if questions keep spawning, collect the remaining ones into an "Open Questions" section and move on.
+- Don't loop more than 3 iterations. If questions keep spawning, leave the remaining ones in `## Open Questions` and move on — these are genuinely unresolved and may block implementation, so they are the one reason that section survives into the finished plan.
 
-### Step 8: Write the final plan document
-
-Overwrite the draft plan (written in Step 4) with the final version. If the interview loop resolved all questions, remove the `## Open Questions` section entirely. If the loop hit the iteration cap with questions remaining, keep them in `## Open Questions` — these are genuinely unresolved and may block implementation.
-
-### Step 9: Consistency check
+### Step 8: Consistency check
 
 Re-read the final plan end-to-end and verify there are no internal contradictions or stale text. Specifically check:
 
@@ -131,22 +128,21 @@ Re-read the final plan end-to-end and verify there are no internal contradiction
 
 Fix any issues found. This step exists because plans undergo multiple rounds of revision (draft → Codex incorporation → user decisions) and each round can leave stale text behind.
 
-### Step 10: Present to the user
+### Step 9: Present to the user
 
-After writing the plan, give the user a brief summary of:
+Report, in this order:
 
-- Where the plan was saved
-- The key design decisions made
-- Whether the adversarial reviews ran and what they surfaced (briefly — e.g., "Codex flagged 2 risks and the pragmatic reviewer 1 simplification, all incorporated into the Design section")
-- Any deferred questions that remain
+- Where the plan was saved.
+- **A per-phase manifest**: one bullet per implementation phase, 1–2 sentences each, in plan order. This is the deliverable of this step — the user's next decision is which phases to implement and in what order, and they cannot make it from a decisions summary. Asking for this list by hand is the most common next message after a plan lands.
+- One line covering whether the adversarial reviews ran and what they surfaced (e.g. "Codex flagged 2 risks and the pragmatic reviewer 1 simplification, all incorporated into the Design section"), plus any questions left unresolved.
 
-Don't recite the whole plan back — they can read the file. Focus on decisions they should weigh in on.
+Don't recite the plan's contents beyond the manifest — they can read the file.
 
 Then, as the **very last line** of your output — after everything else — emit a copyable command to hand the plan off to implementation. It must be the final line, alone, with nothing after it, so the user can double- or triple-click to select and copy it:
 
     /mzizzi:implement-plan <target file path>
 
-Use the **absolute path** to the plan file written in Step 8 (e.g. `/mzizzi:implement-plan C:\Users\Matt\code\mzizzi-dotfiles\plans\20260615-token-refresh\plan.md`). Emit it as a bare line — no surrounding prose, backticks, or trailing punctuation.
+Use the **absolute path** to `<target file path>` (e.g. `/mzizzi:implement-plan C:\Users\Matt\code\mzizzi-dotfiles\plans\20260615-token-refresh\plan.md`). Emit it as a bare line — no surrounding prose, backticks, or trailing punctuation.
 
 ## Plan Output Template
 
@@ -181,9 +177,6 @@ Specific files to create or modify, in order. For each file:
     
 ## Open Questions
 Topics that need investigation or a user decision before or during implementation.
-* ...
-
-## Resolved Questions
 * ...
 
 ## Follow-ups
