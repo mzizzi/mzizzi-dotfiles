@@ -9,7 +9,7 @@ user-invocable: true
 
 # Fix quality
 
-Orchestrate a multi-angle quality review of a change, then act on what it finds: apply the contained cleanups, defer the invasive ones, and report both. Quality only — correctness bugs belong to `/mzizzi:fix-correctness`, comment quality to `/mzizzi:fix-comments`. Work the steps in order.
+Orchestrate a multi-angle quality review of a change, then act on what it finds: apply the contained cleanups, defer the invasive ones, and report both.
 
 **You apply; the review agents don't.** The agents launched in step 4 are strictly read-only. Step 5 drops proposals that are duplicated, out of scope, or wrong, and an edit made by an agent is an edit that skipped that filter. Every change to the working tree happens in step 6, after the filtering, and by you.
 
@@ -35,7 +35,7 @@ Uncommitted changes aren't part of a PR — leave them out of a PR-target review
 
 **Whether you can apply anything depends on the target.** The default and `pr` both mean the code is in front of you, so step 6 runs. A PR you don't have checked out means there's nothing to edit — skip step 6, say so once, and report every surviving proposal instead.
 
-Keep the exact command that produced the diff. Sub-agents re-run it themselves rather than receiving the diff through you, which keeps your context free and guarantees all of them see the same bytes.
+Write the diff to a file in a temp directory outside the repo — never the working tree, where it would land in the very diff under review — and keep the path. Sub-agents read it there rather than receiving it through you, which keeps your context free of it, and one file is what actually guarantees they all see the same bytes: a working tree can move while a review is running.
 
 On a PR target, then read its title and body (`gh pr view`) — they carry the intent behind the change, which is what separates a deliberate choice from an accident.
 
@@ -48,11 +48,11 @@ Do this once, here. Every agent independently reading the same config files wast
 - **The surrounding code** — how neighbouring modules name things, structure errors, and organize helpers. Local idiom beats a general best practice you'd apply on a blank page.
 - **The plan document, if `--plan` was given** — read it in full. It carries the intent behind the change and the design decisions taken before the code existed. A design the plan chose on purpose is not an accident, and an agent that hasn't read it can't tell the difference. Carry the decisions that bear on the changed files into the brief; leave the rest out.
 
-Write this up as a short brief you can hand to every agent verbatim. Quote rules rather than paraphrasing them, so an agent can cite one without re-reading the file. Keep the verification commands it turns up — step 6 runs them.
+Write this up as a short brief, in a file next to the diff, and keep the path — every agent reads it there. Quote rules rather than paraphrasing them, so an agent can cite one without re-reading the file. Open it with the diff's `--stat` summary, so nothing downstream re-derives the file and line counts. Keep the verification commands it turns up — step 6 runs them.
 
 ## 3. Size the change and pick the fan-out shape
 
-Run the diff command with `--stat` and look at file count and changed lines.
+Look at the file count and changed lines in the brief's stat summary.
 
 A single agent asked to scan a large diff for one pattern will find a few examples early and skim the rest, and that result is indistinguishable from a change that only had a few problems. Sharding is how you stop that, but it only works on angles whose findings are local to the files they're looking at:
 
@@ -78,29 +78,30 @@ Send each agent exactly this prompt, filling the bracketed slots and changing no
 Read <skill-dir>/references/reviewer.md and <skill-dir>/references/angles/<angle-file>, then
 follow them.
 
-Get the diff by running: <diff-command>
+The diff is in: <diff-path>
 
 Your scope: <scope>
 
-Repo conventions:
-<conventions-brief>
+Repo conventions: <brief-path>
 ```
 
 - `<skill-dir>` — the absolute path you resolved at the top of this file
 - `<angle-file>` — the bare filename for this agent's angle, e.g. `reuse.md`
-- `<diff-command>` — the exact command from step 1, unmodified, so every agent sees the same bytes
+- `<diff-path>` — the diff file from step 1
 - `<scope>` — `the whole change`, or the explicit list of files in this shard
-- `<conventions-brief>` — the brief from step 2, pasted in full rather than summarized
+- `<brief-path>` — the brief file from step 2
 
-## 5. Dedup, filter, and rank
+Launching returns as soon as the agents are running, so don't sit on the set — go to step 5 and work each report as it arrives.
 
-Agents work their assigned files systematically and report only what they found — take their coverage as given rather than auditing it. If one says outright that something stopped it covering its scope, send another agent at what's left before continuing.
+## 5. Triage each report, then merge and rank
 
-Count the proposals you received before merging anything, and keep that number — step 8 reconciles against it.
+Reading a report costs the same whenever you do it, and the gap between the first agent finishing and the last is where that cost can hide. Do the per-report work as each result arrives; a loop that waits on the whole set is idle for the length of the slowest agent.
 
-Merge every proposal and collapse duplicates. Two angles often reach the same problem from opposite directions and describe it in different words, so judge by what a proposal would actually change rather than how it's phrased, and keep the clearest framing. Sharded angles also produce near-identical proposals against parallel code in different files — merge those into one item listing every affected location.
+**As each report lands:**
 
-**Merge only when two proposals would make the same edit _for the same reason_.** Two agents landing on the same lines from different premises are two findings, not one — the same edit that answers one can leave the other's problem standing, and merging them lets the weaker fix report as if it covered both. When you do merge, note which proposals went in; step 8 asks.
+- Read it and add its proposals to a running count of everything received — step 8 reconciles against that number.
+- Judge each proposal on its own: what edit it would make, and whether it survives the drop criteria below. Understand it well enough to compare it against a proposal you haven't seen yet.
+- Take the agent's coverage as given rather than auditing it — agents work their assigned files systematically and report only what they found. If one says outright that something stopped it covering its scope, send another agent at what's left the moment you read that, so it runs alongside the agents still going.
 
 Drop any proposal that:
 
@@ -108,6 +109,12 @@ Drop any proposal that:
 - reaches well outside the diff
 - trades clarity for brevity, or removes an abstraction that is organizing the code
 - you judge to be a false positive
+
+**Everything from here on waits for the last report — including step 6.** Two proposals can only be compared once both exist, and an edit applied while an agent is still reading can conflict with what that agent comes back with. The set you wait for includes any agent you sent at missed scope.
+
+Merge every proposal and collapse duplicates. Two angles often reach the same problem from opposite directions and describe it in different words, so judge by what a proposal would actually change rather than how it's phrased, and keep the clearest framing. Sharded angles also produce near-identical proposals against parallel code in different files — merge those into one item listing every affected location.
+
+**Merge only when two proposals would make the same edit _for the same reason_.** Two agents landing on the same lines from different premises are two findings, not one — the same edit that answers one can leave the other's problem standing, and merging them lets the weaker fix report as if it covered both. When you do merge, note which proposals went in; step 8 asks.
 
 Rank what survives by payoff — how much duplication, waste, or future maintenance it removes — breaking ties toward the smaller, more contained edit. Rank across all angles together; which agent found something is an implementation detail the author doesn't care about.
 
