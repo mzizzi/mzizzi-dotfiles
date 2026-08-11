@@ -66,7 +66,14 @@ If the split would produce a lot of agents, prefer fewer, larger shards over exh
 
 ## 4. Fan out
 
-Launch every agent with the Agent tool at the `mzizzi:standard` tier, all in a single message so they run concurrently.
+Launch every agent with the Agent tool at the `mzizzi:standard` tier, all in a single message and every one with `run_in_background: true`, so they run concurrently:
+
+```
+Agent(subagent_type: "mzizzi:standard", run_in_background: true, description: "reuse review",
+      prompt: "<the prompt below>")
+```
+
+Never pass `run_in_background: false` here. Batching the calls into one message is not enough on its own — a single synchronous agent blocks the whole fan-out behind its own runtime, and the rest of the review can't start until it returns. Every agent in this step is one of many independent reviews whose results you only need at step 5, so none of them is worth waiting on.
 
 Each agent reviews from exactly one angle, reading its file from `references/angles/`: `reuse.md`, `simplification.md`, `proportionality.md`, `efficiency.md`, `altitude.md`, or `language.md`.
 
