@@ -11,7 +11,7 @@ user-invocable: true
 
 Orchestrate a multi-angle quality review of a change, then act on what it finds: apply the contained cleanups, defer the invasive ones, and report both.
 
-**You apply; the review agents don't.** The agents launched in step 4 are strictly read-only. Step 5 drops proposals that are duplicated, out of scope, or wrong, and an edit made by an agent is an edit that skipped that filter. Every change to the working tree happens in step 6, after the filtering, and by you.
+**You apply; the review agents don't.** The agents launched in step 4 are strictly read-only. Every change to the working tree happens in step 6, after step 5's filtering, and by you.
 
 Steps 3 onward pass file paths to sub-agents. Resolve the absolute path of this skill's directory first (the directory holding this `SKILL.md`) and use it wherever `<skill-dir>` appears below — sub-agents can't find these files from a relative path.
 
@@ -23,46 +23,44 @@ Parse `--plan` and `--dry-run` out of the arguments first; the **target** is the
 - `pr` — the current branch's PR: `gh pr diff`. If there's no open PR or `gh` is unavailable, fall back to the branch's own changes (`git diff <base>...HEAD`, inferring the base from the upstream tracking branch or the repo's default branch) and say that's what you reviewed.
 - a **PR number or URL** — that PR: `gh pr diff <number-or-url>`.
 
-Unrecognized value → say so and fall back to local. These are the same target tokens `fix-comments` takes, with the same meanings, so `fix-all` can pass one straight through to both.
+Unrecognized value → say so and fall back to local.
 
-Use the three-dot form for branch diffs. Two dots drags in base-branch commits the author never wrote, producing proposals against code they did not write.
+Use the three-dot form for branch diffs. Two dots drags in base-branch commits the author never wrote.
 
-Uncommitted changes aren't part of a PR — leave them out of a PR-target review and note the exclusion in one line at the end, so the author knows the report may not match their working tree. If the target has no changes, say so and stop rather than widening scope to find work.
+Uncommitted changes aren't part of a PR — leave them out of a PR-target review and note the exclusion in one line at the end. If the target has no changes, say so and stop rather than widening scope to find work.
 
 **`--plan <path>`** is optional and independent of the target. Given one, step 2 reads it and step 7 writes deferred findings into it instead of leaving them in the report.
 
-**`--dry-run`** is optional: review and report, change nothing. Steps 6 and 7 are skipped, so nothing is applied and nothing is written — including to `--plan`, if both were passed.
+**This is a read-only run** when either `--dry-run` was passed or the target is a PR you don't have checked out. Steps 6 and 7 are skipped: nothing is applied, nothing is written — including to `--plan` — and everything surviving step 5 is reported as deferred. Say once which condition applied.
 
-**Whether you can apply anything depends on the target.** The default and `pr` both mean the code is in front of you, so step 6 runs. A PR you don't have checked out means there's nothing to edit — skip step 6, say so once, and report every surviving proposal instead.
+Write the diff to a file in a temp directory outside the repo — never the working tree, where it would land in the very diff under review — and keep the path. Sub-agents read it there rather than receiving it through you.
 
-Write the diff to a file in a temp directory outside the repo — never the working tree, where it would land in the very diff under review — and keep the path. Sub-agents read it there rather than receiving it through you, which keeps your context free of it, and one file is what actually guarantees they all see the same bytes: a working tree can move while a review is running.
-
-On a PR target, then read its title and body (`gh pr view`) — they carry the intent behind the change, which is what separates a deliberate choice from an accident.
+On a PR target, then read its title and body (`gh pr view`) — they carry the intent behind the change.
 
 ## 2. Learn what's already been decided
 
-Do this once, here. Every agent independently reading the same config files wastes tokens, and they can reach different conclusions about the same rule.
+Do this once, here — agents that each read the config files duplicate the work and can reach different conclusions about the same rule.
 
 - **CLAUDE.md** — the user-level `~/.claude/CLAUDE.md`, the repo root, and any `CLAUDE.md` or `CLAUDE.local.md` in a directory that is an ancestor of a changed file. A directory's file governs only what sits at or below it.
 - **Tooling** — linter, formatter, and type-checker configs, plus rules already disabled in the changed files. A rule the repo has turned off is a decision, not an oversight.
 - **The surrounding code** — how neighbouring modules name things, structure errors, and organize helpers. Local idiom beats a general best practice you'd apply on a blank page.
-- **The plan document, if `--plan` was given** — read it in full. It carries the intent behind the change and the design decisions taken before the code existed. A design the plan chose on purpose is not an accident, and an agent that hasn't read it can't tell the difference. Carry the decisions that bear on the changed files into the brief; leave the rest out.
+- **The plan document, if `--plan` was given** — read it in full; it carries the design decisions taken before the code existed. A design the plan chose on purpose is not an accident. Carry the decisions that bear on the changed files into the brief; leave the rest out.
 
-Write this up as a short brief, in a file next to the diff, and keep the path — every agent reads it there. Quote rules rather than paraphrasing them, so an agent can cite one without re-reading the file. Open it with the diff's `--stat` summary, so nothing downstream re-derives the file and line counts. Keep the verification commands it turns up — step 6 runs them.
+Write this up as a short brief, in a file next to the diff, and keep the path — every agent reads it there. Quote rules rather than paraphrasing them, so an agent can cite one without re-reading the file. Open it with the diff's `--stat` summary. Keep the verification commands it turns up — step 6 runs them.
 
 ## 3. Size the change and pick the fan-out shape
 
 Look at the file count and changed lines in the brief's stat summary.
 
-A single agent asked to scan a large diff for one pattern will find a few examples early and skim the rest, and that result is indistinguishable from a change that only had a few problems. Sharding is how you stop that, but it only works on angles whose findings are local to the files they're looking at:
+Sharding stops an agent skimming a large diff once it has found a few examples, but it only works on angles whose findings are local to the files they're looking at:
 
-- **Reuse, simplification, efficiency, language** shard cleanly. Split the changed files into groups small enough that one agent can read every file in its group _and_ the surrounding context carefully. Group by directory or module so each agent sees related code together; scattered files make reuse scanning much weaker.
-- **Proportionality shards too, but wants smaller groups.** It works unit by unit rather than scanning, so it costs more per file than the scanning angles and degrades when overloaded. Size its shards down accordingly. It anchors on production code and follows each unit out to its own tests, so don't try to group test files with their subjects — that happens inside the agent.
-- **Altitude never shards.** It's about how the whole change sits in the system, and its strongest signal — the same special case appearing in several places — is invisible to an agent holding part of the diff. One agent, whole PR, always.
+- **Reuse, simplification, efficiency, language** shard cleanly. Split the changed files into groups small enough that one agent can read every file in its group _and_ the surrounding context carefully. Group by directory or module, so each agent sees related code together.
+- **Proportionality shards too, but wants smaller groups.** It works unit by unit rather than scanning, so it costs more per file and degrades when overloaded — size its shards down. It anchors on production code and follows each unit out to its own tests, so don't try to group test files with their subjects; that happens inside the agent.
+- **Altitude never shards.** Its strongest signal — the same special case appearing in several places — is invisible to an agent holding part of the diff. One agent, whole PR, always.
 
-Small changes need no sharding: one agent per angle. Say what shape you chose and why, so a reader knows how much coverage stands behind the report.
+Small changes need no sharding: one agent per angle. Say what shape you chose and why.
 
-If the split would produce a lot of agents, prefer fewer, larger shards over exhaustive coverage at any cost — and say plainly in the report that shards were sized up, rather than letting the number imply more thoroughness than there was.
+If the split would produce a lot of agents, prefer fewer, larger shards over exhaustive coverage at any cost — and say plainly in the report that shards were sized up.
 
 ## 4. Fan out
 
@@ -73,13 +71,15 @@ Agent(subagent_type: "mzizzi:standard", run_in_background: true, description: "r
       prompt: "<the prompt below>")
 ```
 
-Never pass `run_in_background: false` here. Batching the calls into one message is not enough on its own — a single synchronous agent blocks the whole fan-out behind its own runtime, and the rest of the review can't start until it returns. Every agent in this step is one of many independent reviews whose results you only need at step 5, so none of them is worth waiting on.
+Never pass `run_in_background: false` here. Batching the calls into one message is not enough on its own — a single synchronous agent blocks the whole fan-out until it returns, and you don't need any agent's result before step 5.
 
 Each agent reviews from exactly one angle, reading its file from `references/angles/`: `reuse.md`, `simplification.md`, `proportionality.md`, `efficiency.md`, `altitude.md`, or `language.md`.
 
+`idiomatic-python.md` is the one conditional angle: launch an agent on it only when the changed files are Python, and skip it entirely otherwise.
+
 Unsharded, that's one agent per angle. A sharded angle gets one agent per shard, all reading the same angle file and differing only in scope — three shards of reuse means three agents on `reuse.md`.
 
-Send each agent exactly this prompt, filling the bracketed slots and changing nothing else. It carries wiring only — which files to read, and the inputs. What to do with them lives entirely in those files, which is what keeps it identical between runs; anything you add here is drift:
+Send each agent exactly this prompt, filling the bracketed slots and changing nothing else. It carries wiring only — which files to read, and the inputs; what to do with them lives entirely in those files:
 
 ```
 Read <skill-dir>/references/reviewer.md and <skill-dir>/references/angles/<angle-file>, then
@@ -102,13 +102,13 @@ Launching returns as soon as the agents are running, so don't sit on the set —
 
 ## 5. Triage each report, then merge and rank
 
-Reading a report costs the same whenever you do it, and the gap between the first agent finishing and the last is where that cost can hide. Do the per-report work as each result arrives; a loop that waits on the whole set is idle for the length of the slowest agent.
+Do the per-report work as each result arrives; a loop that waits on the whole set is idle for the length of the slowest agent.
 
 **As each report lands:**
 
 - Read it and add its proposals to a running count of everything received — step 8 reconciles against that number.
 - Judge each proposal on its own: what edit it would make, and whether it survives the drop criteria below. Understand it well enough to compare it against a proposal you haven't seen yet.
-- Take the agent's coverage as given rather than auditing it — agents work their assigned files systematically and report only what they found. If one says outright that something stopped it covering its scope, send another agent at what's left the moment you read that, so it runs alongside the agents still going.
+- Take the agent's coverage as given rather than auditing it. If one says outright that something stopped it covering its scope, send another agent at what's left the moment you read that, so it runs alongside the agents still going.
 
 Drop any proposal that:
 
@@ -117,32 +117,32 @@ Drop any proposal that:
 - trades clarity for brevity, or removes an abstraction that is organizing the code
 - you judge to be a false positive
 
-**Everything from here on waits for the last report — including step 6.** Two proposals can only be compared once both exist, and an edit applied while an agent is still reading can conflict with what that agent comes back with. The set you wait for includes any agent you sent at missed scope.
+**Everything from here on waits for the last report — including step 6.** Two proposals can only be compared once both exist, and an edit applied while an agent is still reading can conflict with what it comes back with. The set you wait for includes any agent you sent at missed scope.
 
 Merge every proposal and collapse duplicates. Two angles often reach the same problem from opposite directions and describe it in different words, so judge by what a proposal would actually change rather than how it's phrased, and keep the clearest framing. Sharded angles also produce near-identical proposals against parallel code in different files — merge those into one item listing every affected location.
 
-**Merge only when two proposals would make the same edit _for the same reason_.** Two agents landing on the same lines from different premises are two findings, not one — the same edit that answers one can leave the other's problem standing, and merging them lets the weaker fix report as if it covered both. When you do merge, note which proposals went in; step 8 asks.
+**Merge only when two proposals would make the same edit _for the same reason_.** Two agents landing on the same lines from different premises are two findings, not one — the same edit that answers one can leave the other's problem standing. When you do merge, note which proposals went in; step 8 asks.
 
-Rank what survives by payoff — how much duplication, waste, or future maintenance it removes — breaking ties toward the smaller, more contained edit. Rank across all angles together; which agent found something is an implementation detail the author doesn't care about.
+Rank what survives by payoff — how much duplication, waste, or future maintenance it removes — breaking ties toward the smaller, more contained edit. Rank across all angles together, not per angle.
 
 A short list is a fine outcome: a few high-confidence items beat a long list of style preferences.
 
 ## 6. Apply what's contained
 
-**Skip this step under `--dry-run`, or when the target is a PR you don't have checked out.** Either way nothing gets applied and everything that survived step 5 goes to the report as deferred.
+**Skip on a read-only run (`--dry-run`, or an unchecked-out PR target)**
 
 Split the ranked list by the effort rating each proposal carries:
 
-- **trivial** and **contained** — apply them now. Their whole value is that they're cheap; handing one back as a to-do costs the author more than making the edit did.
+- **trivial** and **contained** — apply them now. Handing one back as a to-do costs the author more than making the edit did.
 - **invasive** — defer. So does anything touching call sites well outside the diff, anything you're less than confident preserves behavior, and anything that's genuinely a judgment the author should own rather than a size call.
 
-When merged proposals offer variants of the same fix at different strengths, **apply the strongest and let verification arbitrate** — it runs at the end of this step regardless, so a variant that doesn't hold up surfaces immediately. Your own risk estimate is not the arbiter, and an agent that already verified the thing you're hedging against (a runtime version, an API's availability, a behavior it traced case by case) has done work you'd be discarding. Downgrading to the safer variant anyway is a step 8 disclosure, not a free call.
+When merged proposals offer variants of the same fix at different strengths, **apply the strongest and let verification arbitrate** — it runs at the end of this step regardless. Your own risk estimate is not the arbiter, and an agent that already verified the thing you're hedging against has done work you'd be discarding. Downgrading to the safer variant anyway is a step 8 disclosure, not a free call.
 
-Apply the edits, then run the verification the step 2 brief turned up — typecheck, tests, lint, formatter. A behavior-preserving cleanup that broke something has to surface here, not in the author's next run. If something fails and the fix isn't immediately obvious, revert that proposal and move it to the deferred list with the failure noted.
+Apply the edits, then run the verification the step 2 brief turned up — typecheck, tests, lint, formatter. If something fails and the fix isn't immediately obvious, revert that proposal and move it to the deferred list with the failure noted.
 
 ## 7. Record what you deferred
 
-**Skip this step under `--dry-run`** — a dry run writes nothing, `--plan` or not. Say in the report that the plan was left untouched, so nobody goes looking for entries that aren't there.
+**Skip on a read-only run (`--dry-run`, or an unchecked-out PR target)**
 
 **Without `--plan`** — deferred proposals stay in the report below. Nothing is written anywhere.
 
@@ -150,7 +150,7 @@ Apply the edits, then run the verification the step 2 brief turned up — typech
 
     Skill(skill: "record-follow-ups", args: "<plan path> <the deferred proposals>")
 
-Give it each proposal's `file:line`, what the issue costs today, why you deferred it rather than applying it, and the fix you'd propose. It shapes and places the entries, dedups against what the plan already carries, and reports back what it wrote. That plan file is the only thing outside the change itself this pass writes.
+Give it each proposal's `file:line`, what the issue costs today, why you deferred it rather than applying it, and the fix you'd propose. It shapes and places the entries, dedups against what the plan already carries, and reports back what it wrote.
 
 ## 8. Report
 
@@ -172,8 +172,8 @@ Every proposal the agents returned appears exactly once across the sections belo
 
 If something was deferred because it broke verification, say that rather than filing it as a size call.
 
-Close with **Considered and rejected** — what the agents spotted but you dropped in step 5, one line each with the reason. Without it, a dropped proposal is indistinguishable from one nobody found.
+Close with **Considered and rejected** — what the agents spotted but you dropped in step 5, one line each with the reason.
 
-Write for someone who knows this code better than you and chose the current form on purpose until shown otherwise. If the change is already clean, say so and stop — an empty result is a real one, and padding it to look thorough is how these reports stop getting read.
+Write for someone who knows this code better than you and chose the current form on purpose until shown otherwise. If the change is already clean, say so and stop; an empty result is a real one.
 
-With `--plan`, close by naming the plan file and the follow-up titles `record-follow-ups` reported writing, so the author sees what landed there without opening it.
+With `--plan`, close by naming the plan file and the follow-up titles `record-follow-ups` reported writing — or, on a read-only run, that the plan was left untouched.
