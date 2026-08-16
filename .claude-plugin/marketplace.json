@@ -10,6 +10,22 @@
       "name": "mzizzi",
       "source": "./plugins/mzizzi",
       "description": "An end-to-end planning workflow: grill and brainstorm an idea, turn it into a phased plan, implement it a phase at a time, and review the result with Codex. Also ships the simple/standard/complex subagent tiers and a prose de-slopping skill."
+    },
+    {
+      "name": "mzizzi-ty-lsp",
+      "source": "./plugins/mzizzi-ty-lsp",
+      "description": "Python language server (ty) for type checking and code intelligence.",
+      "version": "1.0.0",
+      "lspServers": {
+        "ty": {
+          "command": "ty",
+          "args": ["server"],
+          "extensionToLanguage": {
+            ".py": "python",
+            ".pyi": "python"
+          }
+        }
+      }
     }
   ]
 }
