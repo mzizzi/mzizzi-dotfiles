@@ -1,6 +1,6 @@
 ---
 name: prepare-feature-branch
-description: "Put implementation work for a plan onto its own feature branch, reusing the branch if it already exists, and commit the plan document onto it — the single source of truth for the <username>/<slug> branch-naming convention. Use this whenever work is about to start against a plan directory and needs somewhere to land: the implement-plan skill calls it before writing any code, and you can invoke it directly whenever the user wants a branch set up for a plan."
+description: "Put a plan's implementation work onto a <username>/<slug> feature branch, reusing the branch if it exists, and commit the plan document onto it. The source of truth for that naming convention. Use when work against a plan directory needs somewhere to land."
 argument-hint: "<plan directory or plan.md>"
 allowed-tools: Bash, EnterWorktree, AskUserQuestion
 disable-model-invocation: false

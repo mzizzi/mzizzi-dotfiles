@@ -1,6 +1,6 @@
 ---
 name: fix-comments
-description: Fix code comments in a set of changes — cutting narration, diff-history notes, and redundant comments while preserving genuine "why" explanations. Works on your uncommitted local changes by default; pass "pr" to target the current branch's PR, or a PR number/URL for that PR. Applies the fixes by default; pass --dry-run to report what would change without editing. An optional --strictness argument selects the guideline set, "high" (the default) or "low"; high also flags long block comments and file/module headers. Use this whenever you've just written or modified code and are about to commit or open a PR, or when the user asks to review, clean up, or check comment quality.
+description: "Cut narration, diff-history notes, and redundant comments from a change while preserving genuine \"why\" explanations. Use before committing or opening a PR, or when the user asks to review or clean up comment quality."
 argument-hint: "[--dry-run] [--strictness=high|low] [local | pr | <pr-number-or-url>]"
 allowed-tools: Read, Grep, Glob, Bash, Edit
 disable-model-invocation: false

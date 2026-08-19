@@ -1,6 +1,6 @@
 ---
 name: audit-skills
-description: "Audit the skills in this repo against real session transcripts to find the ones that are inefficient, ignored, or actively causing rework, then produce a document of ranked issues and fixes. Use this whenever the user wants to know which skills are wasting tokens or not working, asks for a skill audit or efficiency review, or says things like 'which of my skills are broken', 'what's burning tokens', or 'audit my skills against the session history'."
+description: "Audit this repo's skills against real session transcripts to find the ones that are inefficient, ignored, or causing rework, and write up ranked issues and fixes. Use on \"audit my skills\", \"which of my skills are broken\", or \"what's burning tokens\"."
 argument-hint: "[time window, e.g. 'past 2 weeks'] [number of issues to keep]"
 allowed-tools: Read, Grep, Glob, Bash, Agent, Skill, Write, Edit
 disable-model-invocation: false

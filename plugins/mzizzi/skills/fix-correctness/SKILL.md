@@ -1,6 +1,6 @@
 ---
 name: fix-correctness
-description: Run a Codex adversarial review over the working-tree diff, triage what it finds, apply the fixes that are trivial and in scope, and defer the rest as follow-ups. Pass a plan file and the review also checks fidelity to it, with deferred findings written into its Follow-ups section; pass --dry-run to review and report without changing anything. Correctness only — bugs, edge cases, error handling — not comment or quality cleanup. Use this whenever a change needs a correctness review acted on rather than just reported, or when the user says "review this for bugs and fix them" or "check this is correct before I open a PR".
+description: "Review a change for correctness only — bugs, edge cases, error handling — then apply the trivial in-scope fixes and defer the rest as follow-ups. Use when a change needs a bug review acted on rather than just reported, e.g. \"review this for bugs and fix them\"."
 argument-hint: "[--plan <path to plan.md>] [--dry-run]"
 allowed-tools: Read, Grep, Glob, Edit, Write, Bash, AskUserQuestion, Skill
 disable-model-invocation: false

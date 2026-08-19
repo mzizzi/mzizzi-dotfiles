@@ -1,6 +1,6 @@
 ---
 name: brainstorm
-description: "Stress-test an idea, design, or plan through a relentless, looping interview, then persist the results as a brainstorm.md decision log in a plan directory. Use this whenever the user wants to brainstorm, think an idea through before building, or capture a grilling session to disk. Also use to resume an earlier session — pointed at an existing brainstorm.md or its plan directory, it picks up from the decisions logged there and updates that file in place. Prefer this over /grill when the discussion should be persisted, and over /create-plan when the user wants to explore and capture decisions rather than produce a full implementation plan yet."
+description: "Stress-test an idea, design, or plan through a relentless looping interview, then persist the decisions as brainstorm.md in a plan directory; pointed at an existing brainstorm.md or plan dir, it resumes from what is logged there. Use when the user wants to brainstorm or think an idea through before building. Prefer over grill when the session should be persisted, and over create-plan when exploring rather than committing to an implementation plan."
 argument-hint: "[existing brainstorm.md or plan dir] <idea, design, or plan to brainstorm>"
 allowed-tools: Read, Grep, Glob, Bash, AskUserQuestion, Write, Skill, Agent, WebFetch, WebSearch
 disable-model-invocation: false

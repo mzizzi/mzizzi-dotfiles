@@ -1,6 +1,6 @@
 ---
 name: record-follow-ups
-description: Write one or more follow-up items into a plan document's Follow-ups section, in the standard shape. Takes the plan file path plus the items to record. Use this whenever deferred work needs to land in a plan — a review finding that won't be fixed this round, a decision put off, anything a reviewer should pick up later — or when the user says "record a follow-up", "add this to the plan's follow-ups", or "defer this into the plan".
+description: "Write follow-up items into a plan document's Follow-ups section in the standard shape. Use when deferred work needs to land in a plan — a review finding not being fixed this round, a postponed decision — or on \"record a follow-up\" / \"defer this into the plan\"."
 argument-hint: "<path to plan.md> <follow-up items>"
 allowed-tools: Read, Grep, Edit, Write
 disable-model-invocation: false

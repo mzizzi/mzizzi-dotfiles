@@ -1,6 +1,6 @@
 ---
 name: fix-quality
-description: Review a change for reuse, simplification, proportionality, efficiency, altitude, and language, then apply the cleanups that are contained and defer the rest. Works on your uncommitted local changes by default; pass "pr" to target the current branch's PR, or a PR number/URL for that PR. Pass a plan file and deferred findings are written into its Follow-ups section; pass --dry-run to review and report without changing anything. Quality only, not correctness bugs. Use this whenever the user wants a change cleaned up before merging, asks what could be simplified, or says things like "tidy this up", "what would you simplify here", or "clean up this PR".
+description: "Review a change for reuse, simplification, proportionality, efficiency, altitude, and language, then apply the contained cleanups and defer the rest. Quality only, not correctness bugs. Use when the user wants a change tidied up before merging or asks what could be simplified."
 argument-hint: "[--dry-run] [--plan <path to plan.md>] [local | pr | <pr-number-or-url>]"
 allowed-tools: Read, Grep, Glob, Edit, Write, Bash, Agent, Skill
 disable-model-invocation: false

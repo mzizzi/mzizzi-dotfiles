@@ -1,6 +1,6 @@
 ---
 name: fix-all
-description: Wrapper skill for fix-correctness, fix-quality, and fix-comments.
+description: "Run the full review sweep over a change — fix-correctness, then fix-quality, then fix-comments — applying fixes and deferring the rest. Use when the user wants a change fully reviewed before committing or opening a PR, e.g. \"review and clean this up\"."
 argument-hint: "[--dry-run] [--plan <path to plan.md>] [--strictness=high|low] [local | pr | <pr-number-or-url>]"
 allowed-tools: Read, Grep, Glob, Bash, Edit, Skill, TaskCreate, TaskUpdate, TaskList
 disable-model-invocation: false

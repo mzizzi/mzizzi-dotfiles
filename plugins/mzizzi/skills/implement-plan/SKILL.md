@@ -1,6 +1,6 @@
 ---
 name: implement-plan
-description: Implement a technical plan produced by /create-plan — turn a plan.md (or a subset of it) into working code, then run correctness, quality, and comment passes over the changes, each triaging what it finds. Use this skill whenever the user wants to build out, execute, or implement an existing plan, or says things like "implement the plan in plans/…", "let's build phase 1 of this plan", "execute plan.md", or points at a plan directory and says "go". Prefer this over ad-hoc implementation whenever a plan document already exists — it keeps the diff reviewable and folds deferred review findings back into the plan.
+description: "Turn a plan.md (or a subset of it) into working code, then run the correctness, quality, and comment passes over the changes. Use whenever a plan document already exists and the user wants it built, executed, or implemented — including \"build phase 1 of this plan\" or pointing at a plan directory and saying \"go\"."
 argument-hint: <plan directory or plan.md> [subset to implement, e.g. "phase 1"]
 allowed-tools: Read, Grep, Glob, Edit, Write, Bash, Agent, AskUserQuestion, Skill, EnterWorktree, TaskCreate, TaskUpdate, TaskList
 disable-model-invocation: false

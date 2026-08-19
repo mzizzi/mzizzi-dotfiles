@@ -1,6 +1,6 @@
 ---
 name: pr
-description: Manage pull requests and git workflows using the gh CLI and git commands. Use when creating PRs, viewing PR details, managing branches, committing changes, or working with GitHub pull request workflows.
+description: "Create and manage pull requests, branches, and commits with the gh CLI and git, following this user's PR conventions. Use for opening a PR, viewing PR details or checks, or committing and pushing work."
 allowed-tools:
   - Bash(gh pr list*)
   - Bash(gh pr view*)

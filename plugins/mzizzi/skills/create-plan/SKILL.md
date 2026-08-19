@@ -1,6 +1,6 @@
 ---
 name: create-plan
-description: Create a technical plan document in plans/. Use this skill whenever the user wants to plan a new feature, design a system, write an implementation plan, or think through an approach before coding. Also use when the user says things like "let's plan", "how should we implement", "write up a plan for", or "I want to think through X before building it". Also use to turn an existing brainstorm or notes in a plan directory into a full plan — when the user cites a plan dir or a file like brainstorm.md, reuse that directory instead of creating a new one.
+description: "Write a technical plan document in plans/. Use when the user wants to plan a feature, design a system, or think an approach through before coding. If they cite an existing plan dir or brainstorm.md, reuse that directory instead of creating a new one."
 argument-hint: <plan directory or target .md file> <topic or feature description> [--model opus|sonnet|haiku]
 allowed-tools: Read, Grep, Glob, Agent, AskUserQuestion, Write, Skill
 disable-model-invocation: false

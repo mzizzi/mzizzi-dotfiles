@@ -1,6 +1,6 @@
 ---
 name: grill
-description: Interview the user relentlessly about a plan, design, or idea. Use when the user wants to stress-test a plan, design, or concept before building, or uses any 'grill' trigger phrases.
+description: "Interview the user relentlessly to stress-test a plan, design, or idea before building, without writing anything to disk. Use on \"grill me\" or when the user wants an idea pressure-tested in conversation; use brainstorm instead when the session should be persisted."
 disable-model-invocation: false
 user-invocable: true
 ---
