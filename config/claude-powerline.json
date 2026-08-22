@@ -9,6 +9,12 @@
     "lines": [
       {
         "segments": {
+          "env": {
+            "enabled": true,
+            "variable": "CLAUDE_DEVCONTAINER",
+            "prefix": "",
+            "showIcon": false
+          },
           "directory": {
             "enabled": true,
             "style": "basename",
@@ -92,10 +98,6 @@
           },
           "cacheTimer": {
             "enabled": false
-          },
-          "env": {
-            "enabled": false,
-            "variable": ""
           }
         }
       },
