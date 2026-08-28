@@ -1,7 +1,7 @@
 ---
 name: fix-all
 description: "Run the full review sweep over a change — fix-correctness, then fix-quality, then fix-comments — applying fixes and deferring the rest. Use when the user wants a change fully reviewed before committing or opening a PR, e.g. \"review and clean this up\"."
-argument-hint: "[--dry-run] [--plan <path to plan.md>] [--strictness=high|low] [local | pr | <pr-number-or-url>]"
+argument-hint: "[--apply=none|all] [--plan <path to plan.md>] [--strictness=high|low] [local | pr | <pr-number-or-url>]"
 allowed-tools: Read, Grep, Glob, Bash, Edit, Skill, TaskCreate, TaskUpdate, TaskList
 disable-model-invocation: false
 user-invocable: true
@@ -15,7 +15,7 @@ Run the three fix skills over one change, in order, then check nothing broke. Ea
 
 Flags may appear in any order; the **target** is the bare value left over, and there may not be one.
 
-- `--dry-run` — goes to all three: every pass reviews and reports, nothing is applied or written.
+- `--apply=none|all` — goes to all three. `none`: every pass reviews and reports, nothing is applied or written. `all`: each pass applies its large findings instead of deferring them.
 - `--plan <path>` — goes to fix-correctness and fix-quality, which write their deferred findings into that plan's Follow-ups. fix-comments has no such argument; don't pass it one.
 - `--strictness=high|low` — fix-comments only.
 - the **target** — `local` (the default), `pr`, or a PR number/URL.
@@ -32,9 +32,9 @@ fix-correctness takes no target at all — it always reviews the working tree. A
 
 Seed a task per pass plus one for verification, chained with blocked-by so the order is fixed while changing it is still free. Then run them in order, each with the arguments resolved above:
 
-    Skill(skill: "fix-correctness", args: "[--plan <path>] [--dry-run]")
-    Skill(skill: "fix-quality",     args: "[<target>] [--plan <path>] [--dry-run]")
-    Skill(skill: "fix-comments",    args: "[--strictness=<value>] [--dry-run] [<target>]")
+    Skill(skill: "fix-correctness", args: "[--plan <path>] [--apply=<value>]")
+    Skill(skill: "fix-quality",     args: "[<target>] [--plan <path>] [--apply=<value>]")
+    Skill(skill: "fix-comments",    args: "[--strictness=<value>] [--apply=<value>] [<target>]")
 
 Omit any argument the user didn't give. fix-comments reads its target as the last argument, so keep it there.
 
@@ -44,7 +44,7 @@ Read each pass's report before starting the next. A verification failure or an u
 
 ## 4. Verify
 
-Skip this under `--dry-run`: nothing changed, so there's nothing to check.
+Skip this under `--apply=none`: nothing changed, so there's nothing to check.
 
 Run the project's tests and linters. Three passes editing the same files in sequence is exactly where a cleanup that was supposed to preserve behavior turns out not to.
 

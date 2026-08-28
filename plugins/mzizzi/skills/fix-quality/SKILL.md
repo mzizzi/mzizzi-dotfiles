@@ -1,7 +1,7 @@
 ---
 name: fix-quality
 description: "Review a change for reuse, simplification, proportionality, efficiency, altitude, and language, then apply the contained cleanups and defer the rest. Quality only, not correctness bugs. Use when the user wants a change tidied up before merging or asks what could be simplified."
-argument-hint: "[--dry-run] [--plan <path to plan.md>] [local | pr | <pr-number-or-url>]"
+argument-hint: "[--apply=none|all] [--plan <path to plan.md>] [local | pr | <pr-number-or-url>]"
 allowed-tools: Read, Grep, Glob, Edit, Write, Bash, Agent, Skill
 disable-model-invocation: false
 user-invocable: true
@@ -17,7 +17,7 @@ Steps 3 onward pass file paths to sub-agents. Resolve the absolute path of this 
 
 ## 1. Resolve the target and read its changes
 
-Parse `--plan` and `--dry-run` out of the arguments first; the **target** is the bare value left over, and there may not be one. Resolve it, state what you resolved, then get the diff:
+Parse `--plan` and `--apply` out of the arguments first; the **target** is the bare value left over, and there may not be one. Resolve it, state what you resolved, then get the diff:
 
 - _(omitted — default)_ or `local` — uncommitted changes (`git diff HEAD`) plus untracked files (`git ls-files --others --exclude-standard`); treat a new file's whole content as added.
 - `pr` — the current branch's PR: `gh pr diff`. If there's no open PR or `gh` is unavailable, fall back to the branch's own changes (`git diff <base>...HEAD`, inferring the base from the upstream tracking branch or the repo's default branch) and say that's what you reviewed.
@@ -31,7 +31,9 @@ Uncommitted changes aren't part of a PR — leave them out of a PR-target review
 
 **`--plan <path>`** is optional and independent of the target. Given one, step 2 reads it and step 7 writes deferred findings into it instead of leaving them in the report.
 
-**This is a read-only run** when either `--dry-run` was passed or the target is a PR you don't have checked out. Steps 6 and 7 are skipped: nothing is applied, nothing is written — including to `--plan` — and everything surviving step 5 is reported as deferred. Say once which condition applied.
+**`--apply=all`** makes step 6 apply the invasive proposals too, instead of deferring them.
+
+**This is a read-only run** when either `--apply=none` was passed or the target is a PR you don't have checked out. Steps 6 and 7 are skipped: nothing is applied, nothing is written — including to `--plan` — and everything surviving step 5 is reported as deferred. Say once which condition applied.
 
 Write the diff to a file in a temp directory outside the repo — never the working tree, where it would land in the very diff under review — and keep the path. Sub-agents read it there rather than receiving it through you.
 
@@ -129,12 +131,14 @@ A short list is a fine outcome: a few high-confidence items beat a long list of 
 
 ## 6. Apply what's contained
 
-**Skip on a read-only run (`--dry-run`, or an unchecked-out PR target)**
+**Skip on a read-only run (`--apply=none`, or an unchecked-out PR target)**
 
 Split the ranked list by the effort rating each proposal carries:
 
 - **trivial** and **contained** — apply them now. Handing one back as a to-do costs the author more than making the edit did.
 - **invasive** — defer. So does anything touching call sites well outside the diff, anything you're less than confident preserves behavior, and anything that's genuinely a judgment the author should own rather than a size call.
+
+Under `--apply=all`, apply the invasive ones too — it raises the size ceiling, never the bar.
 
 When merged proposals offer variants of the same fix at different strengths, **apply the strongest and let verification arbitrate** — it runs at the end of this step regardless. Your own risk estimate is not the arbiter, and an agent that already verified the thing you're hedging against has done work you'd be discarding. Downgrading to the safer variant anyway is a step 8 disclosure, not a free call.
 
@@ -142,7 +146,7 @@ Apply the edits, then run the verification the step 2 brief turned up — typech
 
 ## 7. Record what you deferred
 
-**Skip on a read-only run (`--dry-run`, or an unchecked-out PR target)**
+**Skip on a read-only run (`--apply=none`, or an unchecked-out PR target)**
 
 **Without `--plan`** — deferred proposals stay in the report below. Nothing is written anywhere.
 

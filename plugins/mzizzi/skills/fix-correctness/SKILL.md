@@ -1,7 +1,7 @@
 ---
 name: fix-correctness
 description: "Review a change for correctness only — bugs, edge cases, error handling — then apply the trivial in-scope fixes and defer the rest as follow-ups. Use when a change needs a bug review acted on rather than just reported, e.g. \"review this for bugs and fix them\"."
-argument-hint: "[--plan <path to plan.md>] [--dry-run]"
+argument-hint: "[--plan <path to plan.md>] [--apply=none|all]"
 allowed-tools: Read, Grep, Glob, Edit, Write, Bash, AskUserQuestion, Skill
 disable-model-invocation: false
 user-invocable: true
@@ -17,7 +17,7 @@ The target is always the **working-tree diff** — uncommitted changes on the cu
 
 **`--plan <path>`** is optional. Given one, step 2 steers the review toward fidelity to that plan, and step 5 writes deferred findings into it. Without it, deferred findings stay in the report.
 
-**`--dry-run`** is optional: review and report, change nothing. Steps 4 and 5 are skipped, so nothing is applied and nothing is written — including to `--plan`, if both were passed.
+**`--apply`** is optional. `none` — review and report, change nothing: steps 4 and 5 are skipped, so nothing is written, including to `--plan`. `all` — step 4 applies every valid finding instead of only the small ones.
 
 ## 2. Run the review
 
@@ -41,15 +41,15 @@ When the fix-now/defer call is really a scope judgment the author should own, as
 
 ## 4. Apply what's trivial
 
-**Skip this step under `--dry-run`** — everything valid goes to the report as deferred instead.
+**Skip this step under `--apply=none`** — everything valid goes to the report as deferred instead.
 
-Apply every finding that is **valid AND fix-now AND trivial**. Everything else that's valid is deferred.
+Apply every finding that is **valid AND fix-now AND trivial**. Everything else that's valid is deferred. Under `--apply=all`, apply everything valid — it raises the size ceiling, never the bar.
 
 Then run the project's verification — typecheck, tests, lint, whatever the repo defines. A "trivial" fix that broke something has to surface here, not in the author's next run. If something fails and the fix isn't immediately obvious, revert that finding and move it to the deferred list with the failure noted.
 
 ## 5. Record what you deferred
 
-**Skip this step under `--dry-run`** — a dry run writes nothing, `--plan` or not. Say in the report that the plan was left untouched, so nobody goes looking for entries that aren't there.
+**Skip this step under `--apply=none`** — it writes nothing, `--plan` or not. Say in the report that the plan was left untouched, so nobody goes looking for entries that aren't there.
 
 **Without `--plan`** — deferred findings stay in the report below. Nothing is written anywhere.
 
