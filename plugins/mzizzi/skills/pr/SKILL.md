@@ -88,6 +88,7 @@ Follow this process when creating a new pull request:
      - PR descriptions are for software engineers and should be tailored for that audience
      - Avoid bombarding potential reviewers with too much information
      - Include the relevant information for human code review
+     - Never include attribution to claude code, claude sessions, or anything anthropic related
    - Humans review PRs and their time is valuable - no extra or fabricated information
    - **Create as draft by default** unless the user explicitly specifies otherwise
    - If the prompt references a specific template format then use that instead of the **Default PR Template** below.
@@ -117,6 +118,8 @@ IMPORTANT: Less is more. Prefer omitting this section altogether if the guidelin
   * repeat information from other sections in the document
   * count things ("adds 5 parameters", "modifies 3 files"), enumerate lists of names
   * narrate the structure of the diff ("before X, adds a block that calls Y")
+ 
+NO ATTRIBUTION TO CLAUDE CODE, CLAUDE SESSIONS, OR ANYTHING ANTHROPIC RELATED.
 ```
 
 Keep each section concise. Omit a section if it adds no value (e.g. "Why" is obvious from the title, or "How" would just repeat the diff). The goal is to give reviewers enough context to review efficiently, not to document everything.
