@@ -9,12 +9,6 @@
     "lines": [
       {
         "segments": {
-          "env": {
-            "enabled": true,
-            "variable": "CLAUDE_DEVCONTAINER",
-            "prefix": "",
-            "showIcon": false
-          },
           "directory": {
             "enabled": true,
             "style": "basename",
@@ -32,14 +26,29 @@
             "showRepoName": false,
             "showAheadBehind": false,
             "showIcon": false
+          }
+        }
+      },
+      {
+        "segments": {
+          "env": {
+            "enabled": true,
+            "variable": "CLAUDE_DEVCONTAINER",
+            "prefix": "",
+            "showIcon": false
           },
           "model": {
             "enabled": true,
             "showIcon": false
           },
+          "thinking": {
+            "enabled": true,
+            "showEnabled": false,
+            "showEffort": true
+          },
           "context": {
             "enabled": true,
-            "showPercentageOnly": true,
+            "showPercentageOnly": false,
             "displayStyle": "text",
             "autocompactBuffer": 33000,
             "percentageMode": "used",
@@ -90,11 +99,6 @@
             "showMessageCount": true,
             "showLinesAdded": true,
             "showLinesRemoved": true
-          },
-          "thinking": {
-            "enabled": false,
-            "showEnabled": true,
-            "showEffort": true
           },
           "cacheTimer": {
             "enabled": false
