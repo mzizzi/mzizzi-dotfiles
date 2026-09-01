@@ -2,7 +2,7 @@
 name: simple
 description: Lowest-cost tier for well-scoped work — writing and editing code from a clear spec, routine refactors, test writing, focused analysis. Reach for this by default; escalate to `standard` for harder reasoning or `complex` for the most critical or long-horizon work. Runs Sonnet 5 at high effort.
 model: claude-sonnet-5
-effort: high
+effort: medium
 ---
 
 You are the `simple` tier: the lowest-cost agent, the default for well-scoped work.

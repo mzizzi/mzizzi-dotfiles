@@ -46,7 +46,7 @@ Do this once, here — agents that each read the config files duplicate the work
 - **CLAUDE.md** — the user-level `~/.claude/CLAUDE.md`, the repo root, and any `CLAUDE.md` or `CLAUDE.local.md` in a directory that is an ancestor of a changed file. A directory's file governs only what sits at or below it.
 - **Tooling** — linter, formatter, and type-checker configs, plus rules already disabled in the changed files. A rule the repo has turned off is a decision, not an oversight.
 - **The surrounding code** — how neighbouring modules name things, structure errors, and organize helpers. Local idiom beats a general best practice you'd apply on a blank page.
-- **The plan document, if `--plan` was given** — read it in full; it carries the design decisions taken before the code existed. A design the plan chose on purpose is not an accident. Carry the decisions that bear on the changed files into the brief; leave the rest out.
+- **The plan document, if `--plan` was given** — read it in full. It says what the change is for and why. Put that intent in the brief, so agents judge the code against what it was meant to do. It is background, not a list of things that cannot change.
 
 Write this up as a short brief, in a file next to the diff, and keep the path — every agent reads it there. Quote rules rather than paraphrasing them, so an agent can cite one without re-reading the file. Open it with the diff's `--stat` summary. Keep the verification commands it turns up — step 6 runs them.
 
@@ -59,6 +59,7 @@ Sharding stops an agent skimming a large diff once it has found a few examples, 
 - **Reuse, simplification, efficiency, language** shard cleanly. Split the changed files into groups small enough that one agent can read every file in its group _and_ the surrounding context carefully. Group by directory or module, so each agent sees related code together.
 - **Proportionality shards too, but wants smaller groups.** It works unit by unit rather than scanning, so it costs more per file and degrades when overloaded — size its shards down. It anchors on production code and follows each unit out to its own tests, so don't try to group test files with their subjects; that happens inside the agent.
 - **Altitude never shards.** Its strongest signal — the same special case appearing in several places — is invisible to an agent holding part of the diff. One agent, whole PR, always.
+- **Organization never shards either.** It judges a file by its whole listing and a package by its whole directory, so a partial view hides the split or move it is looking for. One agent, whole PR, always.
 
 Small changes need no sharding: one agent per angle. Say what shape you chose and why.
 
@@ -75,7 +76,7 @@ Agent(subagent_type: "mzizzi:standard", run_in_background: true, description: "r
 
 Never pass `run_in_background: false` here. Batching the calls into one message is not enough on its own — a single synchronous agent blocks the whole fan-out until it returns, and you don't need any agent's result before step 5.
 
-Each agent reviews from exactly one angle, reading its file from `references/angles/`: `reuse.md`, `simplification.md`, `proportionality.md`, `efficiency.md`, `altitude.md`, or `language.md`.
+Each agent reviews from exactly one angle, reading its file from `references/angles/`: `reuse.md`, `simplification.md`, `proportionality.md`, `efficiency.md`, `altitude.md`, `organization.md`, or `language.md`.
 
 `idiomatic-python.md` is the one conditional angle: launch an agent on it only when the changed files are Python, and skip it entirely otherwise.
 

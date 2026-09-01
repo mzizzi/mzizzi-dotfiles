@@ -2,12 +2,12 @@
 
 The hardest thing to specify, so here are the actual tells.
 
-The rule, from the feedback that produced this file: *"…to carry the remaining explanation for the restarts. The population it must explain" — no engineer speaks this way.*
+The rule, from the feedback that produced this file: _"…to carry the remaining explanation for the restarts. The population it must explain" — no engineer speaks this way._
 
 ## Before / after
 
 | Written | Should have been |
-|---|---|
+| --- | --- |
 | "to carry the remaining explanation for the restarts" | "this is the 'why did they restart' part" |
 | "The population it must explain:" | "What needs explaining:" |
 | "the locality will not resolve" | "we can't tell whether it's X or Y" |
@@ -18,9 +18,9 @@ The rule, from the feedback that produced this file: *"…to carry the remaining
 
 ## Two patterns to ban by name
 
-- **Aphoristic closers** — sentences built for rhythm rather than content. Examples in this register: *"A signature that reproduces itself with the zone swapped is a control, not a coincidence"*; *"Anti-correlation is not a weak positive; it is evidence…"*; *"A condition present in most hours of the fortnight cannot trigger a first-time fire"*. The X-not-Y construction and the balanced semicolon are the giveaways.
+- **Aphoristic closers** — sentences built for rhythm rather than content. Examples in this register: _"A signature that reproduces itself with the zone swapped is a control, not a coincidence"_; _"Anti-correlation is not a weak positive; it is evidence…"_; _"A condition present in most hours of the fortnight cannot trigger a first-time fire"_. The X-not-Y construction and the balanced semicolon are the giveaways.
 - **Elevated verbs for ordinary acts** — "carry", "inherit", "surface", "retire", "tilt". Say what happened.
 
 ## Framing
 
-Write it as a note to the next on-call, not as a report. Contractions are fine. Decide whether first person is allowed and say so explicitly — otherwise the register drifts between documents.
+Contractions are fine.

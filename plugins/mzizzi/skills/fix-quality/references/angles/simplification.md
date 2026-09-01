@@ -4,7 +4,7 @@ Find unnecessary complexity the diff adds, and name the simpler form that does t
 
 What to look for:
 
-- Redundant or derivable state: a field, flag, or variable that can always be computed from something else nearby. Two sources of truth for one fact will drift.
+- Redundant or derivable state: a field, flag, variable, or parameter that can always be computed from something else nearby. Two sources of truth for one fact will drift. A parameter passed alongside the object it came from may indicate that the signature or structure of the code is bad.
 - Copy-paste with slight variation — branches that differ in one value usually want a lookup or a parameter. Duplication against code _outside_ the diff belongs to the reuse angle.
 - Deep nesting — guard clauses and early returns usually flatten it. Propose a flatter form when the nesting obscures the control flow.
 - Nested ternaries and dense one-liners: a switch or if/else chain is readable and debuggable. Fewer lines is not the goal.

@@ -18,6 +18,8 @@ Read whatever you need to judge the change well: the enclosing function, the mod
 
 Every proposal must land on a line the diff adds or modifies, or on how the new code meets the code already there. Pre-existing problems the diff merely makes visible are out of scope. If one directly undermines a proposal you're making, name it as context inside that proposal rather than raising it as its own.
 
+The organization angle is the one exception. A file the diff adds to is in scope whole: a move, split, or rename of that file may name lines the diff did not touch, because the diff grew the file into the shape being questioned.
+
 ## Preserve behavior
 
 Propose changes to _how_ the code does something, never to _what_ it does. Trace the replacement rather than assuming it matches — "this is obviously equivalent" is where behavior-preserving refactors go wrong.

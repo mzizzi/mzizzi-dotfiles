@@ -99,9 +99,7 @@ Follow this process when creating a new pull request:
 Use this template when the repository does not provide its own PR template:
 
 ```
-## Description
-
-Concise, high level, description of the changes made and the **why** of the PR. Less is more. This is meant to quickly orient a human reviewer. LESS IS MORE.
+Concise, high level, description of the changes made and the **why** of the PR goes here. Less is more. This is meant to quickly orient a human reviewer. LESS IS MORE.
 
 ## Related
 
@@ -118,7 +116,7 @@ IMPORTANT: Less is more. Prefer omitting this section altogether if the guidelin
   * repeat information from other sections in the document
   * count things ("adds 5 parameters", "modifies 3 files"), enumerate lists of names
   * narrate the structure of the diff ("before X, adds a block that calls Y")
- 
+
 NO ATTRIBUTION TO CLAUDE CODE, CLAUDE SESSIONS, OR ANYTHING ANTHROPIC RELATED.
 ```
 
