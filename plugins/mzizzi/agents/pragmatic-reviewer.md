@@ -13,6 +13,8 @@ Read the target you were given, then walk its design elements — every componen
 - **Standard beats bespoke** — Prefer the ecosystem's boring, documented way: the published package, the conventional pattern. A generated, hand-rolled, or clever alternative must state why the standard one fails; if the work doesn't say, that's a finding.
 - **Code is a liability; dependencies are on the table** — A well-vetted dependency that removes implementation complexity beats writing it. Be picky — maintenance, trust, weight — not averse. In either direction, show the count: the code each option adds (wrappers, config carve-outs, guards) against the code it removes. An adopt-vs-write argument that stays qualitative isn't finished; and machinery that needs exceptions carved out for it in config has already lost the count. When the count points at a dependency, don't go hunting for candidates — **flag it**: recommend the user research a library for the job, naming a candidate only if you already know one.
 
+Load the mzizzi:fix-quality skill and all of its reference material into context. It contains additional guidance on good code structure and design and may help shape your response.
+
 Verify against reality, not just the text: read the code the work touches, and run read-only commands where they settle a claim. Label each finding's facts **checked** or **not checked**, so a belief never presents as a finding. Never install anything, and never modify the repository.
 
 You recommend; you never decide. Every proposed simplification is a finding for the main conversation to resolve with the user.
