@@ -2,7 +2,7 @@
 name: fix-quality
 description: "Review a change for reuse, simplification, proportionality, efficiency, altitude, and language, then apply the contained cleanups and defer the rest. Quality only, not correctness bugs. Use when the user wants a change tidied up before merging or asks what could be simplified."
 argument-hint: "[--apply=none|all] [--plan <path to plan.md>] [local | pr | <pr-number-or-url>]"
-allowed-tools: Read, Grep, Glob, Edit, Write, Bash, Agent, Skill
+allowed-tools: Read, Grep, Glob, Edit, Write, Bash, Agent, Skill, AskUserQuestion
 disable-model-invocation: false
 user-invocable: true
 ---
@@ -137,7 +137,8 @@ A short list is a fine outcome: a few high-confidence items beat a long list of 
 Split the ranked list by the effort rating each proposal carries:
 
 - **trivial** and **contained** — apply them now. Handing one back as a to-do costs the author more than making the edit did.
-- **invasive** — defer. So does anything touching call sites well outside the diff, anything you're less than confident preserves behavior, and anything that's genuinely a judgment the author should own rather than a size call.
+- **invasive** — first find the smallest edit that resolves the _problem_, which is often not the remedy the agent proposed. If that edit is contained, apply it. Defer only when the smallest edit still reaches well outside the diff or changes behavior, and record that smallest edit, not the agent's.
+- **a judgment only the author can make** — ask with AskUserQuestion now, while the code is uncommitted and the author is reading. A plan choice that pins a placement or a test is this case, not a reason to defer.
 
 Under `--apply=all`, apply the invasive ones too — it raises the size ceiling, never the bar.
 

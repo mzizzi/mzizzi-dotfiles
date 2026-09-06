@@ -39,7 +39,7 @@ The plan is the description of the work; the task list is a progress marker over
 
 **Tail items:** review passes, summarize. One item for the review passes, not three — Step 4 hands them to `fix-all`, which seeds its own tasks. Seeding the tail before any code exists is what protects it — finishing the implementation doesn't end the run.
 
-**Descriptions are pointers, not copies.** A file:line reference (`plan.md:517`) or half a line of gist. The plan holds the instructions and stays correct; restating it spends context saying the same thing twice.
+**Descriptions are pointers, not copies.** A file:line reference (`plan.md:517`) or half a line of gist. The plan holds the instructions and stays correct; restating it spends context saying the same thing twice. Don't put the `fix-all` arguments in the review-passes item — Step 4 is copied verbatim, and a trimmed description has been copied in its place before.
 
 **Chain them.** Each task blocked by the one before it: implementation items in plan order, then the tail in step order, with the review-passes item blocked by the last implementation item. All in one message:
 

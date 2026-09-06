@@ -26,7 +26,7 @@ Fill the four fields from what the caller gave you and from the plan you just re
 ### <short title>
 - **What:** the issue, in a sentence or two.
 - **Where:** file:line (or the area affected).
-- **Why deferred:** out of scope for this round / needs design decision / etc.
+- **Why deferred:** the fact you can't get, the decision only the user can make, or the separate change it belongs to. "Out of scope for this round" is not a reason.
 - **Suggested fix:** the direction the review proposed, if it holds up.
 ```
 
