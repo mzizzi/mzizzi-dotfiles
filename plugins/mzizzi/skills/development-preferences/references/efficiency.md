@@ -1,6 +1,6 @@
-# Angle: efficiency
+# Efficiency
 
-Find wasted work the diff introduces, and name the cheaper alternative.
+Code does no work it does not use, and the cheaper form wins when it is no harder to read.
 
 What to look for:
 

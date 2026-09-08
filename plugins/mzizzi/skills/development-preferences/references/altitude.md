@@ -1,6 +1,6 @@
-# Angle: altitude
+# Altitude
 
-Check that each change sits at the right depth in the system rather than patching a symptom where it surfaced.
+Each change sits at the right depth in the system rather than patching a symptom where it surfaced.
 
 Follow the call path: where the input comes from, and who else hits this code.
 

@@ -1,6 +1,6 @@
-# Angle: simplification
+# Simplification
 
-Find unnecessary complexity the diff adds, and name the simpler form that does the same job.
+Complexity has to pay for itself. The simpler form that does the same job is the right one.
 
 What to look for:
 

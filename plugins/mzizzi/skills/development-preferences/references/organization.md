@@ -1,8 +1,8 @@
-# Angle: organization
+# Organization
 
-Check that a reader who does not know this code can find what the diff adds by its name and its place. Altitude asks how deep a fix sits on the call path; this angle asks whether each module has one clear responsibility and whether the code is laid out the way a reader would look for it.
+Each module has one responsibility, and a reader who does not know the code can find it by its name and its place.
 
-Read the directory listing first, then each changed file whole, then its callers. Write one sentence for each module the diff touches: what it is responsible for. If the sentence needs "and", or the diff made the sentence longer, that is the finding.
+Read the directory listing first, then each module you touch whole, then its callers. Write one sentence per module: what it is responsible for. If the sentence needs "and", or your change makes it longer, the layout is wrong.
 
 Signals for the reader:
 

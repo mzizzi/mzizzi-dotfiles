@@ -50,6 +50,7 @@ Refer to the resolved destination as `<target file path>` in the steps below (e.
 
 - Spawn a **Plan-mode sub-agent** (`subagent_type: "Plan"`), passing `model` set to the planning model resolved in Step 1 (default `opus`). Pinning `model` matters because a Plan sub-agent otherwise inherits the session model — so the plan would silently run on whatever the main session happens to be on. Planning leans on deep reasoning, which is why it defaults to Opus; `sonnet` or `haiku` are there for a faster, cheaper draft on simpler work. The sub-agent should be prompted with the following:
   - The output format template from the "Plan Output Template" section at the bottom of this document
+  - An instruction to read every file in `${CLAUDE_PLUGIN_ROOT}/skills/development-preferences/references/` before designing, and to hold the design to them. The built-in Plan agent skips CLAUDE.md and rules, so this is the only way the user's standards reach it; `fix-quality` later reviews the implementation against the same files.
   - Be sure the sub-agent is briefed with the context gathered, any existing target-file or brainstorm.md documents, and any other information that would help the sub-agent
   - The sub-agent should split implementation into logical chunks where it makes sense to do so
   - Code sketches should show structure and signatures, with comments explaining non-obvious logic. The sub-agent is constructing a plan document, not a copy-paste implementation.

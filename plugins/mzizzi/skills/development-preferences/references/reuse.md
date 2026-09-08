@@ -1,6 +1,6 @@
-# Angle: reuse
+# Reuse
 
-Find new code that re-implements something the codebase already has.
+New code does not re-implement something the codebase already has.
 
 Go looking rather than waiting to notice. For each meaningful block the diff adds, grep the shared and utility modules, the files next to the change, and anywhere the repo keeps common helpers. Names are unreliable — the existing helper is often called something you wouldn't guess — so search by what the code _does_: the string it formats, the error it wraps, the retry it performs.
 

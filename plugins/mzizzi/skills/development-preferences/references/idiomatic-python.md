@@ -1,6 +1,6 @@
-# Angle: idiomatic python
+# Idiomatic Python
 
-Find places the diff hand-rolls something the standard library already has a type for, and name the replacement.
+Code uses the standard library type where one exists instead of hand-rolling it.
 
 What to look for:
 

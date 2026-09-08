@@ -1,6 +1,6 @@
-# Angle: proportionality
+# Proportionality
 
-For each unit the diff adds or rewrites, judge whether its complexity is proportionate to the problem it solves.
+The complexity of each unit is proportionate to the problem it solves.
 
 Scanning won't surface these; convoluted code looks like work in isolation. Work unit by unit:
 

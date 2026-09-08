@@ -1,6 +1,6 @@
-# Angle: language
+# Language
 
-Find prose the diff adds that is longer, vaguer, or less standard than it needs to be, and name the replacement.
+Prose is boring, plain, and literal, and no longer than it needs to be.
 
 Guidelines on good language. Good prose is:
 

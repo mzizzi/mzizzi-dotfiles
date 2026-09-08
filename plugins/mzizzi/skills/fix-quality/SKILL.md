@@ -76,7 +76,7 @@ Agent(subagent_type: "mzizzi:standard", run_in_background: true, description: "r
 
 Never pass `run_in_background: false` here. Batching the calls into one message is not enough on its own — a single synchronous agent blocks the whole fan-out until it returns, and you don't need any agent's result before step 5.
 
-Each agent reviews from exactly one angle, reading its file from `references/angles/`: `reuse.md`, `simplification.md`, `proportionality.md`, `efficiency.md`, `altitude.md`, `organization.md`, or `language.md`.
+Each agent reviews from exactly one angle, reading its file from the `development-preferences` skill's `references/` directory: `reuse.md`, `simplification.md`, `proportionality.md`, `efficiency.md`, `altitude.md`, `organization.md`, or `language.md`.
 
 `idiomatic-python.md` is the one conditional angle: launch an agent on it only when the changed files are Python, and skip it entirely otherwise.
 
@@ -85,7 +85,7 @@ Unsharded, that's one agent per angle. A sharded angle gets one agent per shard,
 Send each agent exactly this prompt, filling the bracketed slots and changing nothing else. It carries wiring only — which files to read, and the inputs; what to do with them lives entirely in those files:
 
 ```
-Read <skill-dir>/references/reviewer.md and <skill-dir>/references/angles/<angle-file>, then
+Read <skill-dir>/references/reviewer.md and <prefs-dir>/<angle-file>, then
 follow them.
 
 The diff is in: <diff-path>
@@ -96,6 +96,7 @@ Repo conventions: <brief-path>
 ```
 
 - `<skill-dir>` — the absolute path you resolved at the top of this file
+- `<prefs-dir>` — `${CLAUDE_PLUGIN_ROOT}/skills/development-preferences/references`, resolved to an absolute path
 - `<angle-file>` — the bare filename for this agent's angle, e.g. `reuse.md`
 - `<diff-path>` — the diff file from step 1
 - `<scope>` — `the whole change`, or the explicit list of files in this shard
