@@ -1,6 +1,6 @@
 ---
 name: development-preferences
-description: "Load development preferences into context. Use when designing, planning, or writing code."
+description: "Load development preferences into context. Ensure loaded prior to designing, planning, or writing code."
 disable-model-invocation: false
 user-invocable: true
 ---
