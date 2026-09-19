@@ -11,6 +11,7 @@ Other forms of duplication:
 - A near-copy of an existing helper with one small difference — usually the helper wants a parameter rather than a twin.
 - Hand-rolled versions of things the language's standard library or an already-imported dependency provides. Check what the file imports before proposing a new dependency, and don't propose adding one just to delete a few lines.
 - The same new logic appearing two or three times _within_ the diff itself, which is the moment it becomes worth extracting.
+- Something important has no name. Readers and callers handle it as a bare value.
 
 Do not propose against duplication that exists because the two copies are genuinely diverging, or because coupling them would tie together things that change for different reasons. Duplication is cheaper than the wrong abstraction, and the author may already have decided that.
 

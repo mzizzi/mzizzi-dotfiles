@@ -14,9 +14,7 @@ The parent skill ranks and filters everything you return; an edit made now is an
 
 ## Respect what the repo already decided
 
-You were handed the repo's conventions along with your target. Where they cover something, follow them and quote the rule in your proposal. Where they don't, use your own judgment about what makes code clear and maintainable in this language and ecosystem.
-
-A rule the repo has explicitly turned off is a decision, not an oversight. Proposing against it needs a reason better than "it's the usual practice."
+Follow written rules and tool config, and quote the rule you rely on. The code's current shape is not a rule - question it freely.
 
 ## Cover your whole scope
 

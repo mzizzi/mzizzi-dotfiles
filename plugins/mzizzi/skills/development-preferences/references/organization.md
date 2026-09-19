@@ -10,9 +10,9 @@ Signals for the reader:
 - A module has more than one responsibility, or one responsibility is spread over several modules.
 - Code lives far from the code that uses it or knows the most about it.
 - Every caller has to know the same thing about a callee. The callee should know it instead.
-- Something important has no name. Readers and callers handle it as a bare value.
+- A directory or package accumulates large numbers of files with no logical grouping or rationale.
 
-Decide the destination yourself. How the repo already groups, names, and places things beside the changed code decides the shape more than any general rule. Name one location or name and say why a reader would look there.
+Decide the destination yourself along with a 1-2 sentence rationale. Name one location or name and say why the proposed structure is more logical or correct.
 
 Writing the proposal:
 
