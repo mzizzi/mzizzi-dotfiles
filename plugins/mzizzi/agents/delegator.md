@@ -1,7 +1,7 @@
 ---
 name: delegator
 description: Use to orchestrate critical, ambiguous, or long-horizon work across many agents.
-model: claude-fable-5
+model: fable
 effort: medium
 ---
 
