@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Regression checks for run_review.mjs: --files must scope the review input to those paths, an
-// unusable --files must stop rather than fall back to the whole tree, and an empty report must
-// retry once before failing.
+// unusable --files must stop rather than fall back to the whole tree, --model and --effort must
+// reach the Codex turn, and an empty report must retry once before failing.
 //
 // Usage: node test_run_review.mjs     (exits non-zero if any case fails)
 
@@ -23,8 +23,8 @@ const write = (file, body) => {
   fs.writeFileSync(file, body, "utf8");
 };
 
-// Stubs standing in for the codex plugin's lib modules. runAppServerTurn records the prompt it
-// was handed, which is what the scoping assertions read.
+// Stubs standing in for the codex plugin's lib modules. runAppServerTurn records the prompt,
+// model and effort it was handed, which is what the assertions read.
 write(
   path.join(plugin, "scripts", "lib", "git.mjs"),
   `export function ensureGitRepository() {}
@@ -41,7 +41,10 @@ write(
   `import fs from "node:fs";
 export function readOutputSchema() { return {}; }
 export async function runAppServerTurn(cwd, options) {
-  fs.appendFileSync(process.env.TEST_PROMPT_LOG, options.prompt + "\\n=====\\n");
+  fs.appendFileSync(
+    process.env.TEST_PROMPT_LOG,
+    options.prompt + "MODEL=" + options.model + " EFFORT=" + options.effort + "\\n=====\\n"
+  );
   return { finalMessage: process.env.TEST_EMPTY ? "" : '{"verdict":"approve"}', status: "ok" };
 }
 export function parseStructuredOutput(raw) {
@@ -63,7 +66,7 @@ write(
   path.join(plugin, "scripts", "lib", "render.mjs"),
   `export function renderReviewResult(parsed, meta) { return "RENDERED " + meta.targetLabel + "\\n"; }\n`
 );
-write(path.join(plugin, "prompts", "adversarial-review.md"), "INPUT={{REVIEW_INPUT}}\n");
+write(path.join(plugin, "prompts", "adversarial-review.md"), "FOCUS={{USER_FOCUS}}\nINPUT={{REVIEW_INPUT}}\n");
 write(path.join(plugin, "schemas", "review-output.schema.json"), "{}\n");
 write(
   path.join(home, ".claude", "plugins", "installed_plugins.json"),
@@ -116,6 +119,21 @@ const cases = [
     }
   ],
   ["--files naming a missing path exits 2", () => run(["--files", "nope.md"]).status === 2],
+  [
+    "--model and --effort reach the turn and stay out of the focus text",
+    () => {
+      const r = run(["--model", "some-model", "focus", "--effort", "high", "words"]);
+      return (
+        r.status === 0 &&
+        r.prompts.includes("FOCUS=focus words\n") &&
+        r.prompts.includes("MODEL=some-model EFFORT=high\n")
+      );
+    }
+  ],
+  [
+    "no --model or --effort leaves both to codex",
+    () => run(["focus"]).prompts.includes("MODEL=undefined EFFORT=undefined\n")
+  ],
   [
     "an empty report retries once, then fails",
     () => {

@@ -2,12 +2,15 @@
 // Run a Codex adversarial review, optionally scoped to specific files.
 //
 // Usage: node run_review.mjs [--files <path[,path...]>] [--scope <auto|working-tree|branch>]
-//                            [--base <ref>] [focus text]
+//                            [--base <ref>] [--model <id>] [--effort <level>] [focus text]
 //
 // Without --files this reproduces what `codex-companion.mjs adversarial-review` does. With
 // --files it swaps in a review input built from those paths only, which the companion has no
 // way to express: its collectors run `git diff` with no pathspec, so every review otherwise
 // receives the whole working tree or the whole branch.
+//
+// --model and --effort go to Codex as given. Without them Codex uses its own configured model
+// and reasoning effort.
 //
 // See ../SKILL.md for the exit codes.
 
@@ -61,13 +64,15 @@ try {
   process.exit(2);
 }
 
+const VALUE_FLAGS = ["--files", "--scope", "--base", "--model", "--effort"];
+
 const argv = process.argv.slice(2);
 const options = { files: [] };
 const focusWords = [];
 
 for (let i = 0; i < argv.length; i += 1) {
   const token = argv[i];
-  if (token === "--files" || token === "--scope" || token === "--base") {
+  if (VALUE_FLAGS.includes(token)) {
     const value = argv[i + 1];
     if (value === undefined) {
       process.stderr.write(`Missing value for ${token}.\n`);
@@ -161,7 +166,9 @@ for (let attempt = 0; attempt < 2; attempt += 1) {
   const result = await codex.runAppServerTurn(context.repoRoot, {
     prompt,
     sandbox: "read-only",
-    outputSchema
+    outputSchema,
+    model: options.model,
+    effort: options.effort
   });
 
   parsed = codex.parseStructuredOutput(result.finalMessage, {

@@ -64,7 +64,7 @@ Two reviewers challenge the draft, each with its own grain: Codex looks for what
 
 Its report is findings only, highest severity first (or `No material findings.`) — read it as prose and hold it for the incorporation step.
 
-Then invoke the Codex adversarial review skill to get a cross-model challenge of the draft plan from Codex (using whichever GPT model the user has configured):
+Then invoke the Codex adversarial review skill to get a cross-model challenge of the draft plan from Codex:
 
     Skill(skill: "codex-adversarial-review", args: "--files <target file path> focus on feasibility, completeness, missing risks, and questionable assumptions. Right-size each recommendation to the problem — KISS/YAGNI/DRY balanced against the complexity the plan actually warrants; no scope or machinery the plan's stated problem does not require.")
 

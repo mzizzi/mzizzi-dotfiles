@@ -13,13 +13,15 @@ Run a Codex adversarial review by calling the codex plugin's underlying script d
 
 ## How to run it
 
-Run the bundled script. `--files` scopes the review to specific paths; anything else is focus text:
+Run the bundled script. `--files` scopes the review to specific paths; `--model` and `--effort` pick the Codex model and reasoning effort; anything else is focus text:
 
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/skills/codex-adversarial-review/scripts/run_review.mjs" --files plans/20260615-token-refresh/plan.md "focus on feasibility, completeness, missing risks, and questionable assumptions"
+node "${CLAUDE_PLUGIN_ROOT}/skills/codex-adversarial-review/scripts/run_review.mjs" --model gpt-6-astra --effort high --files plans/20260615-token-refresh/plan.md "focus on feasibility, completeness, missing risks, and questionable assumptions"
 ```
 
 Run it without backgrounding (no `run_in_background: true`) and with a generous timeout — the script has no internal cap on how long a Codex review can take, so give it the maximum (600000ms). The call must complete before you have a result to act on.
+
+**Model.** Pass `--model` and `--effort` as shown on every run. Without them the review uses the Codex CLI's configured default.
 
 **Scope.** Prefer `--files`: it sends those paths' staged diff, unstaged diff, and current contents, and nothing else. Without it the review falls back to the codex plugin's own targeting — `--scope auto|working-tree|branch`, or `--base <ref>` — which sends the **entire** working-tree diff when the tree is dirty and the entire branch diff when it's clean. Naming a file in focus text alone does not limit anything, so an unscoped review carries whatever unrelated work you have pending. Committing first does not narrow it; it flips `auto` to a branch diff, which is usually wider.
 
