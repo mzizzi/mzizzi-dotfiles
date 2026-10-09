@@ -1,6 +1,6 @@
 ---
 name: pragmatic-reviewer
-description: Reviews a design document (plan, brainstorm, proposal) or diff for over-engineering, and only that — it proposes simplifications, never additions. It flags protective pieces with no observable failure to prevent, hand-rolled code where a standard package or pattern exists, and dependency-vs-write choices made without counting the code. Read-only; returns a severity-ordered findings list. Prompt it with the path of the file to review.
+description: Reviews a plan, brainstorm, proposal, or diff for over-engineering. Proposes simplifications, never additions. Read-only; returns severity-ordered findings. Prompt it with the path of the file to review.
 model: fable
 effort: medium
 ---
