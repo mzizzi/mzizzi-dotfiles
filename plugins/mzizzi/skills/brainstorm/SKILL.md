@@ -96,9 +96,11 @@ If the user chose **Save & Exit**, report the saved path and sign off per _Signi
 
 Run a pragmatic review of the document and wait for the result:
 
-    Agent(subagent_type: "mzizzi:pragmatic-reviewer", prompt: "Review the brainstorm at <path to the document>.", run_in_background: false)
+    Agent(subagent_type: "mzizzi:pragmatic-reviewer", prompt: "Review the brainstorm at <path to the document>. Settled by the user, do not re-raise: <decisions>.", run_in_background: false)
 
-Then go back to Step 1 and keep brainstorming if the review reported findings, or if the document still has an `## Open questions` section or a decision that never really settled — a brainstorm shouldn't finish here with loose ends. Seed that pass with the findings and the open threads, and say briefly what's still open before diving back in. A decision the review overturns gets re-logged per the merge rules above, and the next save rewrites the same file.
+`<decisions>` lists what the user chose in the interview — a structure they asked for, an option they picked, a constraint they stated — so the reviewer does not argue against them as if the document had made them. Leave the sentence out when there are none.
+
+Then go back to Step 1 and keep brainstorming if the review reported findings, or if the document still has an `## Open questions` section or a decision that never really settled — a brainstorm shouldn't finish here with loose ends. Seed that pass with the findings and the open threads, and say briefly what's still open before diving back in. A finding against something the user chose goes back to them as a question; it is never applied on the reviewer's word. A decision the review overturns gets re-logged per the merge rules above, and the next save rewrites the same file.
 
 Otherwise — clean review, nothing open — report the saved path and ask via AskUserQuestion **"Any more questions or ideas?"** with these three choices:
 
