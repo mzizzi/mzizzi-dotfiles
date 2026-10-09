@@ -60,9 +60,7 @@ Refer to the resolved destination as `<target file path>` in the steps below (e.
 
 Two reviewers challenge the draft, each with its own grain: Codex looks for what's missing, the pragmatic reviewer for what's excess. Spawn the pragmatic reviewer first — it runs in the background while the blocking Codex call absorbs its runtime:
 
-    Agent(subagent_type: "mzizzi:pragmatic-reviewer", prompt: "Review the plan at <target file path>. Settled by the user, do not re-raise: <decisions>.")
-
-`<decisions>` lists what the user chose in this conversation or the source brainstorm records as theirs — a structure they asked for, an option they picked, a constraint they stated. The reviewer sees only the file, so without the list it argues against those choices as if the plan had made them. Leave the sentence out when there are none.
+    Agent(subagent_type: "mzizzi:pragmatic-reviewer", prompt: "Review the plan at <target file path>.")
 
 Its report is findings only, highest severity first (or `No material findings.`) — read it as prose and hold it for the incorporation step.
 
@@ -92,7 +90,7 @@ Process the findings from both reviews and revise the draft plan. This step runs
 - **Medium severity:** Often surfaces unconsidered tradeoffs or dismissed alternatives. If the fix is clear, apply it. If it requires a user decision, add it to `## Open Questions` with its source prefix (`[Codex]` or `[Pragmatism]`).
 - **Low severity:** Apply trivially fixable suggestions (clarity, organization). Discard the rest unless they add genuine value.
 
-**Findings run in both directions.** When a finding proposes removing or simplifying an element — the pragmatic reviewer's whole mandate — the resolution is the simplification: delete the element and its supporting text from the plan rather than strengthening its justification. If keeping it is genuinely the user's call, make it an open question. It always is when the user asked for the element — a seam, a module, a hook, a data shape they named: such a finding becomes a `[Pragmatism]` open question carrying the reviewer's tradeoff, never a silent delete. When the two reviews collide on the same element — one wants it hardened, the other removed — always put it to the user as an open question rather than resolving it silently in either direction: a wrong call here surfaces post-implementation, at many times the price.
+**Findings run in both directions.** When a finding proposes removing or simplifying an element — the pragmatic reviewer's whole mandate — the resolution is the simplification: delete the element and its supporting text from the plan rather than strengthening its justification. If keeping it is genuinely the user's call, make it an open question. When the two reviews collide on the same element — one wants it hardened, the other removed — always put it to the user as an open question rather than resolving it silently in either direction: a wrong call here surfaces post-implementation, at many times the price.
 
 **For `next_steps` from Codex:** Scan for actionable items. Those that map to user decisions become `[Codex]` open questions. Those that are purely technical and clearly correct get applied directly.
 
