@@ -27,8 +27,10 @@ The same string names the worktree, when the branch already lives in one.
 Run the bundled script with the plan directory (a path to `plan.md` works too — it resolves to the parent directory):
 
 ```bash
-bash "${CLAUDE_PLUGIN_ROOT}/skills/prepare-feature-branch/scripts/inspect_branch_state.sh" plans/20260713-oauth-token-refresh
+bash "<skill-dir>/scripts/inspect_branch_state.sh" plans/20260713-oauth-token-refresh
 ```
+
+`<skill-dir>` is the directory this `SKILL.md` was loaded from.
 
 It derives the branch name, gathers the git state, and prints `KEY=value` lines ending in a recommended `ACTION`. It only reports — it never switches, creates, or commits, because entering a worktree is a harness tool call rather than a shell command, and because a script that both decides and acts is harder to override when its recommendation is wrong.
 

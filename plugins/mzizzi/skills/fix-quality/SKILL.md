@@ -96,7 +96,7 @@ Repo conventions: <brief-path>
 ```
 
 - `<skill-dir>` — the absolute path you resolved at the top of this file
-- `<prefs-dir>` — `${CLAUDE_PLUGIN_ROOT}/skills/development-preferences/references`, resolved to an absolute path
+- `<prefs-dir>` — `<skill-dir>/../development-preferences/references`, resolved to an absolute path
 - `<angle-file>` — the bare filename for this agent's angle, e.g. `reuse.md`
 - `<diff-path>` — the diff file from step 1
 - `<scope>` — `the whole change`, or the explicit list of files in this shard

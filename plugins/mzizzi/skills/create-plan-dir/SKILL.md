@@ -28,8 +28,10 @@ Example: a plan about refreshing OAuth tokens → `<repo-root>/plans/20260615-to
 Run the bundled script, passing a short description of the topic. The script slugifies the text and stamps today's date, so you can pass natural phrasing — pick a concise summary rather than the user's whole sentence (e.g. pass `"OAuth token refresh"`, not `"I want to plan how we refresh OAuth tokens before they expire"`).
 
 ```bash
-bash "${CLAUDE_PLUGIN_ROOT}/skills/create-plan-dir/scripts/create_plan_dir.sh" "OAuth token refresh"
+bash "<skill-dir>/scripts/create_plan_dir.sh" "OAuth token refresh"
 ```
+
+`<skill-dir>` is the directory this `SKILL.md` was loaded from.
 
 The script prints an **absolute** path to stdout and creates the directory with `mkdir -p`, so re-running is harmless and the caller never has to resolve the result against a working directory. Use the printed path as-is for whatever comes next — typically writing `plan.md` inside it. It errors out if run outside a git repository, since the base is resolved against the repo root.
 

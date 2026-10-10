@@ -16,8 +16,10 @@ Run a Codex adversarial review by calling the codex plugin's underlying script d
 Run the bundled script. `--files` scopes the review to specific paths; `--model` and `--effort` pick the Codex model and reasoning effort; anything else is focus text:
 
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/skills/codex-adversarial-review/scripts/run_review.mjs" --model gpt-6-astra --effort high --files plans/20260615-token-refresh/plan.md "focus on feasibility, completeness, missing risks, and questionable assumptions"
+node "<skill-dir>/scripts/run_review.mjs" --model gpt-6-astra --effort high --files plans/20260615-token-refresh/plan.md "focus on feasibility, completeness, missing risks, and questionable assumptions"
 ```
+
+`<skill-dir>` is the directory this `SKILL.md` was loaded from.
 
 Run it without backgrounding (no `run_in_background: true`) and with a generous timeout — the script has no internal cap on how long a Codex review can take, so give it the maximum (600000ms). The call must complete before you have a result to act on.
 
