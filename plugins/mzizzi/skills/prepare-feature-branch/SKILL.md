@@ -38,6 +38,10 @@ Uncommitted changes are classified in the script, not here: the plan directory t
 
 `ACTION` is one of `stay`, `enter-worktree`, `switch`, `judge-current-branch-then-create`, or `create`. On failure it prints an `ERROR=` line instead (not a git repository, no such path, no configured `user.email`) — report that to the user rather than working around it.
 
+When the fetch fails, the script prints git's error after the `KEY=value` lines. `TRUNK_BEHIND` is then counted against an old remote ref, so tell the user the count may be stale and why.
+
+If a git command here or in the steps below fails with "Read-only file system" or "Permission denied" under `.git`, or with "dubious ownership", rerun the same command with elevated permissions and say why. Do not try other workarounds.
+
 ## Step 2: Settle any pending edits
 
 Skip this entirely when `OTHER_DIRTY=no`, which is the common case — and also when `ACTION=enter-worktree`, since the edits stay behind in this working tree and the worktree's diff is clean either way.

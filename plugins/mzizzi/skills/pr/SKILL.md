@@ -28,6 +28,8 @@ user-invocable: true
 
 You can use the GitHub CLI (`gh`) and Git commands to access repository information.
 
+If a git command fails with "Read-only file system" or "Permission denied" under `.git`, or with "dubious ownership", rerun the same command with elevated permissions and say why. Do not try other workarounds.
+
 ## IMPORTANT: Safety rules that must always be respected
 
 **NEVER push directly to master or main branches without explicit user permission.**

@@ -16,6 +16,8 @@ Safe to re-run any time, including after moving or re-cloning the repo -- it sel
 
 It also symlinks `~/.claude/CLAUDE.md` -- the user-level instructions Claude Code loads in every project -- to `config/CLAUDE.md` here, so those preferences are version-controlled rather than living only in the home directory. Any file already at that path is kept as `CLAUDE.md.pre-dotfiles`. Windows only permits unprivileged symlink creation with Developer Mode on, so without it the script raises a UAC prompt for that one operation; decline it and the existing file is put back untouched. Only the first run prompts -- afterwards the link is already correct and the step is a no-op.
 
+The script links the Codex home's `config.toml` to `config/codex/config.toml` the same way, with the same backup and the same UAC prompt. That file is the whole user-level Codex config; its comments say why each non-obvious setting is there. Codex and its desktop app rewrite parts of the same file (project trust, plugin entries and the like), which shows up here as uncommitted edits.
+
 ## Markdown formatting
 
 Markdown here is stored one logical line per paragraph -- editors soft-wrap it, so a one-word edit no longer reshuffles a paragraph's wrap points into a multi-line diff. Prettier does the reflowing and `.prettierrc` is the contract, read by the git hook and by any editor Prettier plugin alike. The hook is authoritative: it pins its own Prettier version, while an editor plugin uses whatever version it ships with, so the two can still disagree on output the pin has changed. If format-on-save keeps producing edits the hook then rewrites, match your editor's Prettier to the version pinned in `.pre-commit-config.yaml`.

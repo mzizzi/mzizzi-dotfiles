@@ -1,0 +1,45 @@
+# User-level Codex config. scripts/windows/install.ps1 links the Codex home's
+# config.toml to this file. Codex and its desktop app rewrite parts of it
+# themselves (project trust, plugin and marketplace entries, hook hashes, the
+# notify command, the node_repl MCP server), so expect local edits here.
+
+model = "gpt-6.1-sol"
+model_reasoning_effort = "medium"
+sandbox_mode = "workspace-write"
+approval_policy = "on-request"
+approvals_reviewer = "auto_review"
+
+# The workspace sandbox denies writes under .git, so add, commit, switch -c and
+# worktree add fail. workspace-git, defined below, adds write on .git.
+default_permissions = "workspace-git"
+
+[projects.'c:\users\matt\code\simracing']
+trust_level = "trusted"
+
+[projects.'c:\users\matt\code\mzizzi-dotfiles']
+trust_level = "trusted"
+
+[windows]
+sandbox = "elevated"
+
+[permissions.workspace-git]
+description = "Workspace writes including the git directory."
+extends = ":workspace"
+
+[permissions.workspace-git.filesystem.":workspace_roots"]
+".git" = "write"
+
+# On Windows the sandbox runs commands as a separate user, and git refuses a
+# repository that another user owns ("dubious ownership"). GIT_CONFIG_* passes
+# git config through the environment, and git honours safe.directory from there.
+[shell_environment_policy.set]
+GIT_CONFIG_COUNT = "1"
+GIT_CONFIG_KEY_0 = "safe.directory"
+GIT_CONFIG_VALUE_0 = "*"
+
+[marketplaces.mzizzi]
+source_type = "local"
+source = '\\?\C:\Users\Matt\code\mzizzi-dotfiles'
+
+[plugins."mzizzi@mzizzi"]
+enabled = true

@@ -2,8 +2,9 @@
 .SYNOPSIS
     Wires the local claude CLI to always load this repo's plugins/mzizzi
     plugin via --plugin-dir, without installing it from a Claude Code
-    marketplace, and links ~/.claude/CLAUDE.md to this repo's
-    config/CLAUDE.md. Safe to re-run any time.
+    marketplace, and links ~/.claude/CLAUDE.md and the Codex home's
+    config.toml to the files under this repo's config/. Safe to re-run
+    any time.
 .EXAMPLE
     .\install.ps1
 .EXAMPLE
@@ -26,8 +27,13 @@ $CodexMarketplaceName   = 'openai-codex'
 $CodexMarketplaceSource = 'openai/codex-plugin-cc'
 $CodexPluginId          = 'codex@openai-codex'
 
-$GlobalClaudeMdSource = Join-Path $RepoRoot 'config\CLAUDE.md'
-$GlobalClaudeMdLink   = Join-Path $env:USERPROFILE '.claude\CLAUDE.md'
+# User-level config files that live in this repo. Each Link is replaced by a
+# symlink to its Source, so the tool reads the tracked file.
+$CodexHome   = if ($env:CODEX_HOME) { $env:CODEX_HOME } else { Join-Path $env:USERPROFILE '.codex' }
+$ConfigLinks = @(
+    @{ Link = Join-Path $env:USERPROFILE '.claude\CLAUDE.md'; Source = Join-Path $RepoRoot 'config\CLAUDE.md' }
+    @{ Link = Join-Path $CodexHome 'config.toml';             Source = Join-Path $RepoRoot 'config\codex\config.toml' }
+)
 
 function Fail([string]$Message) {
     Write-Error $Message
@@ -84,18 +90,18 @@ function Get-LinkTarget([string]$Path) {
     return $null
 }
 
-function New-GlobalClaudeMdLink {
+function New-ConfigLink([string]$Link, [string]$Source) {
     # Unprivileged symlink creation only works with Developer Mode on, so try it
     # directly and fall back to asking for elevation for this one operation --
     # cheaper for the user than changing a system-wide setting by hand.
     try {
-        New-Item -ItemType SymbolicLink -Path $GlobalClaudeMdLink -Target $GlobalClaudeMdSource -ErrorAction Stop | Out-Null
+        New-Item -ItemType SymbolicLink -Path $Link -Target $Source -ErrorAction Stop | Out-Null
         return $true
     } catch {
         Write-Host "Creating the symlink needs elevation -- accept the UAC prompt to link it."
     }
 
-    $command = "New-Item -ItemType SymbolicLink -Path '{0}' -Target '{1}' -Force | Out-Null" -f $GlobalClaudeMdLink, $GlobalClaudeMdSource
+    $command = "New-Item -ItemType SymbolicLink -Path '{0}' -Target '{1}' -Force | Out-Null" -f $Link, $Source
     try {
         Start-Process -FilePath 'powershell.exe' -Verb RunAs -Wait -WindowStyle Hidden `
             -ArgumentList '-NoProfile', '-Command', $command -ErrorAction Stop
@@ -103,17 +109,17 @@ function New-GlobalClaudeMdLink {
         return $false
     }
 
-    return [bool](Get-LinkTarget $GlobalClaudeMdLink)
+    return [bool](Get-LinkTarget $Link)
 }
 
-function Install-GlobalClaudeMd {
-    $target = Get-LinkTarget $GlobalClaudeMdLink
-    if ($target -and ([System.IO.Path]::GetFullPath($target) -eq $GlobalClaudeMdSource)) {
-        Write-Host "~/.claude/CLAUDE.md already points at config\CLAUDE.md."
+function Install-ConfigLink([string]$Link, [string]$Source) {
+    $target = Get-LinkTarget $Link
+    if ($target -and ([System.IO.Path]::GetFullPath($target) -eq $Source)) {
+        Write-Host "$Link already points at $Source."
         return
     }
 
-    $linkDir = Split-Path -Parent $GlobalClaudeMdLink
+    $linkDir = Split-Path -Parent $Link
     if (-not (Test-Path -LiteralPath $linkDir)) {
         New-Item -ItemType Directory -Path $linkDir -Force | Out-Null
     }
@@ -122,22 +128,22 @@ function Install-GlobalClaudeMd {
     # aside rather than overwriting: the file being replaced is hand-written config
     # with no other copy.
     $backup = $null
-    if (Test-Path -LiteralPath $GlobalClaudeMdLink) {
-        $backup = '{0}.pre-dotfiles' -f $GlobalClaudeMdLink
-        Move-Item -LiteralPath $GlobalClaudeMdLink -Destination $backup -Force
+    if (Test-Path -LiteralPath $Link) {
+        $backup = '{0}.pre-dotfiles' -f $Link
+        Move-Item -LiteralPath $Link -Destination $backup -Force
     }
 
-    if (New-GlobalClaudeMdLink) {
-        Write-Host "Linked ~/.claude/CLAUDE.md -> $GlobalClaudeMdSource"
+    if (New-ConfigLink $Link $Source) {
+        Write-Host "Linked $Link -> $Source"
         if ($backup) { Write-Host "The file that was there is kept at $backup" }
         return
     }
 
-    # Declining the UAC prompt must not cost the user their global instructions.
+    # Declining the UAC prompt must not cost the user their existing config.
     if ($backup) {
-        Move-Item -LiteralPath $backup -Destination $GlobalClaudeMdLink -Force
+        Move-Item -LiteralPath $backup -Destination $Link -Force
     }
-    Write-Warning "Could not create the ~/.claude/CLAUDE.md symlink; the existing file was left as-is. Enable Developer Mode (Settings > System > For developers) or re-run this script from an elevated PowerShell."
+    Write-Warning "Could not create the $Link symlink; the existing file was left as-is. Enable Developer Mode (Settings > System > For developers) or re-run this script from an elevated PowerShell."
 }
 
 if ($Uninstall) {
@@ -151,10 +157,12 @@ if ($Uninstall) {
         Write-Host "No claude-shim.ps1 line found in $PROFILE (nothing to remove)"
     }
 
-    $linkTarget = Get-LinkTarget $GlobalClaudeMdLink
-    if ($linkTarget -and ([System.IO.Path]::GetFullPath($linkTarget) -eq $GlobalClaudeMdSource)) {
-        Remove-Item -LiteralPath $GlobalClaudeMdLink -Force
-        Write-Host "Removed the ~/.claude/CLAUDE.md symlink (config\CLAUDE.md itself is a tracked repo file and stays)."
+    foreach ($config in $ConfigLinks) {
+        $linkTarget = Get-LinkTarget $config.Link
+        if ($linkTarget -and ([System.IO.Path]::GetFullPath($linkTarget) -eq $config.Source)) {
+            Remove-Item -LiteralPath $config.Link -Force
+            Write-Host "Removed the $($config.Link) symlink ($($config.Source) is a tracked repo file and stays)."
+        }
     }
 
     Write-Host "Uninstall complete. Open a new PowerShell window for the change to take effect."
@@ -174,12 +182,16 @@ if (-not (Test-Path -LiteralPath $PluginManifest)) {
 if (-not (Test-Path -LiteralPath $ShimPath)) {
     Fail "claude-shim.ps1 not found at '$ShimPath'. The repo checkout may be incomplete."
 }
-if (-not (Test-Path -LiteralPath $GlobalClaudeMdSource)) {
-    Fail "config\CLAUDE.md not found at '$GlobalClaudeMdSource'. The repo checkout may be incomplete."
+foreach ($config in $ConfigLinks) {
+    if (-not (Test-Path -LiteralPath $config.Source)) {
+        Fail "'$($config.Source)' not found. The repo checkout may be incomplete."
+    }
 }
 
 Ensure-CodexDependency
-Install-GlobalClaudeMd
+foreach ($config in $ConfigLinks) {
+    Install-ConfigLink $config.Link $config.Source
+}
 
 $existingLines  = Get-ProfileLines
 $remainingLines = @($existingLines | Where-Object { $_ -notmatch $ShimPattern })
