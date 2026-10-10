@@ -61,7 +61,10 @@ The chain puts the run's order in the list while changing it is still free.
 
 Take the Step 2 items in chain order — plans order files so that later ones can import earlier ones.
 
-- Treat the plan's design and code sketches as intent, not gospel. If reality diverges — an API signature differs, a sketch won't compile, a better approach is obvious — do the right thing and note the deviation for Step 5.
+- Delegate to mzizzi:standard sub-agents for implementation
+  - At least one sub-agent per plan phase (multiple)
+  - Instruct sub-agents to hand off work to a new agent when >250k is used
+- Treat the plan's design and code sketches as intent, not rigid. If a better approach is obvious or the plan was incorrect then do the right thing and note the deviation for Step 5.
 - Match the surrounding codebase's conventions, not the plan's illustrative style.
 - Verify as you go, after meaningful chunks rather than all at the end; a failure caught early is cheaper to locate. Write any tests the plan named.
 
