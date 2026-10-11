@@ -64,6 +64,17 @@ pi
 
 Claude loads the local plugin from the sandbox's working copy. Codex uses the subscription provider configured by the kit. Pi is installed but remains unconfigured; set it up manually when you are ready. Configuration and sessions persist while the sandbox exists. The host's Windows-specific dotfiles installer is not run.
 
+## Network access
+
+From host PowerShell, allow all outbound TCP destinations or restore the existing allowlist:
+
+```powershell
+.\sandbox\agent-lab\bin\network-open.ps1
+.\sandbox\agent-lab\bin\network-restrict.ps1
+```
+
+Both scripts default to `agent-lab`; pass `-Sandbox <name>` for another sandbox. Changes take effect immediately without restarting. Explicit deny rules still apply when access is open. Restricting access removes only the wildcard allowance; other allowed destinations remain accessible.
+
 ## Resume and review
 
 From the host:
