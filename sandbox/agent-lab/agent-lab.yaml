@@ -1,0 +1,115 @@
+# syntax=docker/sandbox-kit:3
+schemaVersion: "3"
+kind: workload
+displayName: Agent configuration lab
+description: Claude Code and Codex with subscription authentication, plus an unconfigured Pi CLI
+
+args:
+  claudeVersion:
+    default: "2.1.296"
+    pattern: '^[0-9]+\.[0-9]+\.[0-9]+$'
+    buildArg: CLAUDE_VERSION
+  codexVersion:
+    default: "0.162.1"
+    pattern: '^[0-9]+\.[0-9]+\.[0-9]+$'
+    buildArg: CODEX_VERSION
+  piVersion:
+    default: "1.1.0"
+    pattern: '^[0-9]+\.[0-9]+\.[0-9]+$'
+    buildArg: PI_VERSION
+
+provides:
+  - "claude@${{ kit.args.claudeVersion }}"
+  - "codex@${{ kit.args.codexVersion }}"
+  - "pi@${{ kit.args.piVersion }}"
+
+capabilities:
+  - type: com.docker.sandbox/sbx@1
+  - type: com.docker.sandbox/resources@1
+    config:
+      cpu: 4
+      memory: 8g
+  - type: com.docker.sandbox/network-policy@1
+    config:
+      runtime:
+        allow:
+          - api.anthropic.com:443
+          - platform.claude.com:443
+          - claude.ai:443
+          - claude.com:443
+          - console.anthropic.com:443
+          - code.claude.com:443
+          - downloads.claude.ai:443
+          - auth.openai.com:443
+          - chatgpt.com:443
+          - api.openai.com:443
+          - registry.npmjs.org:443
+          - pi.dev:443
+          - github.com:443
+          - api.github.com:443
+          - raw.githubusercontent.com:443
+          - codeload.github.com:443
+          - release-assets.githubusercontent.com:443
+          - archive.ubuntu.com:80
+          - security.ubuntu.com:80
+          - download.docker.com:443
+          - dhi.io:443
+  # sbx 0.47 selects the first credential as the primary OAuth service.
+  - type: com.docker.sandbox/credential@1
+    optional: true
+    description: ChatGPT subscription login managed by the Sandbox proxy
+    config:
+      service: openai
+      phase: runtime
+      oauth:
+        tokenEndpoint:
+          host: auth.openai.com
+          path: /oauth/token
+        resourceHosts:
+          - chatgpt.com
+        sentinels:
+          accessToken: oai-oat01-proxy-managed
+          refreshToken: oai-ort01-proxy-managed
+  - type: com.docker.sandbox/credential@1
+    optional: true
+    description: Claude subscription login managed by the Sandbox proxy
+    config:
+      service: anthropic
+      phase: runtime
+      oauth:
+        tokenEndpoint:
+          host: platform.claude.com
+          path: /v1/oauth/token
+        resourceHosts:
+          - api.anthropic.com
+        sentinels:
+          accessToken: sk-ant-oat01-proxy-managed
+          refreshToken: sk-ant-ort01-proxy-managed
+        credentialFile:
+          path: ~/.claude/.credentials.json
+          structure:
+            claudeAiOauth:
+              accessToken: "{{.AccessToken}}"
+              refreshToken: "{{.RefreshToken}}"
+              expiresAt: "{{.ExpiresAt}}"
+              scopes: "{{.Scopes}}"
+  - type: com.docker.sandbox/lifecycle@1
+    config:
+      install:
+        - command: 'if [ -n "${HTTP_PROXY:-}" ]; then npm config set proxy="$HTTP_PROXY" https-proxy="${HTTPS_PROXY:-$HTTP_PROXY}"; fi'
+          user: agent
+          env: [HTTP_PROXY, HTTPS_PROXY]
+          description: Configure npm for package installs through the Sandbox proxy
+      files:
+        - path: /home/agent/.codex/config.toml
+          overwrite: false
+          content: |
+            # Docker's proxy supplies the real ChatGPT subscription token.
+            model_provider = "sandboxd"
+
+            [model_providers.sandboxd]
+            name = "Sandbox Proxy"
+            base_url = "https://chatgpt.com/backend-api/codex"
+            experimental_bearer_token = "oai-oat01-proxy-managed"
+            requires_openai_auth = false
+          mode: "0600"

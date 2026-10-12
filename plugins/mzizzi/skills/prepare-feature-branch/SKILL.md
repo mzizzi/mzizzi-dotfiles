@@ -27,14 +27,20 @@ The same string names the worktree, when the branch already lives in one.
 Run the bundled script with the plan directory (a path to `plan.md` works too — it resolves to the parent directory):
 
 ```bash
-bash "${CLAUDE_PLUGIN_ROOT}/skills/prepare-feature-branch/scripts/inspect_branch_state.sh" plans/20260713-oauth-token-refresh
+bash "<skill-dir>/scripts/inspect_branch_state.sh" plans/20260713-oauth-token-refresh
 ```
+
+`<skill-dir>` is the directory this `SKILL.md` was loaded from.
 
 It derives the branch name, gathers the git state, and prints `KEY=value` lines ending in a recommended `ACTION`. It only reports — it never switches, creates, or commits, because entering a worktree is a harness tool call rather than a shell command, and because a script that both decides and acts is harder to override when its recommendation is wrong.
 
 Uncommitted changes are classified in the script, not here: the plan directory this run is about is reported as `PLAN_DIR_DIRTY`, everything else as `OTHER_DIRTY` with a count and the porcelain lines, so there is no judgment call left for you at this step. `ACTION` covers only where the branch comes from; pending edits are separate state that Step 2 settles.
 
 `ACTION` is one of `stay`, `enter-worktree`, `switch`, `judge-current-branch-then-create`, or `create`. On failure it prints an `ERROR=` line instead (not a git repository, no such path, no configured `user.email`) — report that to the user rather than working around it.
+
+When the fetch fails, the script prints git's error after the `KEY=value` lines. `TRUNK_BEHIND` is then counted against an old remote ref, so tell the user the count may be stale and why.
+
+If a git command here or in the steps below fails with "Read-only file system" or "Permission denied" under `.git`, or with "dubious ownership", rerun the same command with elevated permissions and say why. Do not try other workarounds.
 
 ## Step 2: Settle any pending edits
 

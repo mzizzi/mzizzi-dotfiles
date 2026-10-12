@@ -128,10 +128,16 @@ fi
 # fetch it costs — is confined to the two actions that can end in one. This user
 # pushes at session end, so a local trunk behind its remote is the normal state.
 trunk_behind=0
+fetch_error=""
 case "$action" in
   create | judge-current-branch-then-create)
     if [ -n "$remote" ]; then
-      git fetch --quiet "$remote" "$trunk" 2>/dev/null
+      # A failed fetch is reported rather than discarded: TRUNK_BEHIND is then
+      # counted against whatever the remote-tracking ref last held. A sandbox that
+      # mounts .git read-only fails here before the fetch reaches the network.
+      if ! fetch_output="$(git fetch --quiet "$remote" "$trunk" 2>&1)"; then
+        fetch_error="$fetch_output"
+      fi
       trunk_behind="$(git rev-list --count "refs/heads/${trunk}..${remote}/${trunk}" 2>/dev/null || echo 0)"
     fi
     ;;
@@ -152,6 +158,11 @@ BRANCH_EXISTS=${branch_exists}
 WORKTREE_PATH=${worktree_path}
 ACTION=${action}
 EOF
+
+if [ -n "$fetch_error" ]; then
+  echo "--- git fetch ${remote} ${trunk} failed; TRUNK_BEHIND may be stale ---"
+  printf '%s\n' "$fetch_error"
+fi
 
 if [ "$other_dirt" = "yes" ]; then
   echo "--- pending edits outside the plan directory ---"

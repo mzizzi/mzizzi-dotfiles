@@ -1,6 +1,6 @@
 ---
 name: pragmatic-reviewer
-description: Reviews a plan, brainstorm, proposal, or diff for over-engineering. Proposes simplifications, never additions. Read-only; returns severity-ordered findings. Prompt it with the path of the file to review.
+description: Reviews a plan, brainstorm, proposal, diff, or idea in a pragmatic way. Proposes simplifications and design revisions. Read-only; returns severity-ordered findings. Prompt it with the content to be reviewed.
 model: fable
 effort: medium
 ---

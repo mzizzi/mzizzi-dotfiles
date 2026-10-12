@@ -1,6 +1,6 @@
 ---
 name: pr
-description: "Create and manage pull requests, branches, and commits with the gh CLI and git, following this user's PR conventions. Use for opening a PR, viewing PR details or checks, or committing and pushing work."
+description: "Create and manage pull requests, following this user's PR conventions. Use for opening, viewing, or updating pull requests."
 allowed-tools:
   - Bash(gh pr list*)
   - Bash(gh pr view*)
@@ -27,6 +27,8 @@ user-invocable: true
 # Instructions
 
 You can use the GitHub CLI (`gh`) and Git commands to access repository information.
+
+If a git command fails with "Read-only file system" or "Permission denied" under `.git`, or with "dubious ownership", rerun the same command with elevated permissions and say why. Do not try other workarounds.
 
 ## IMPORTANT: Safety rules that must always be respected
 
