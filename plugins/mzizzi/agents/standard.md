@@ -1,6 +1,6 @@
 ---
 name: standard
-description: Mid tier for work that needs stronger reasoning than the default — system and architecture design, technology tradeoffs, subtle multi-file debugging, security-sensitive review, and the review/verify checkpoint over `simple`'s output. Step up to `complex` for the most critical or long-horizon work. Runs the current Opus at high effort.
+description: Default coding agent. Good at reasoning, debugging, coding, and orchestration. Step up to `complex` for the most critical or long-horizon work.
 model: opus
 effort: medium
 ---
