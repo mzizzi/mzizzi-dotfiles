@@ -2,7 +2,7 @@
 schemaVersion: "3"
 kind: workload
 displayName: Agent configuration lab
-description: Claude Code and Codex with subscription authentication, plus an unconfigured Pi CLI
+description: Claude Code, Codex, and deepagents-code (dcode) with subscription authentication, plus an unconfigured Pi CLI
 
 args:
   claudeVersion:
@@ -17,11 +17,16 @@ args:
     default: "1.1.0"
     pattern: '^[0-9]+\.[0-9]+\.[0-9]+$'
     buildArg: PI_VERSION
+  dcodeVersion:
+    default: "0.1.85"
+    pattern: '^[0-9]+\.[0-9]+\.[0-9]+$'
+    buildArg: DCODE_VERSION
 
 provides:
   - "claude@${{ kit.args.claudeVersion }}"
   - "codex@${{ kit.args.codexVersion }}"
   - "pi@${{ kit.args.piVersion }}"
+  - "dcode@${{ kit.args.dcodeVersion }}"
 
 capabilities:
   - type: com.docker.sandbox/sbx@1
@@ -54,6 +59,7 @@ capabilities:
           - security.ubuntu.com:80
           - download.docker.com:443
           - dhi.io:443
+          - docs.langchain.com:443
   # sbx 0.47 selects the first credential as the primary OAuth service.
   - type: com.docker.sandbox/credential@1
     optional: true
@@ -113,3 +119,31 @@ capabilities:
             experimental_bearer_token = "oai-oat01-proxy-managed"
             requires_openai_auth = false
           mode: "0600"
+        # The proxy replaces these placeholder tokens; the far-future expiry stops dcode from refreshing.
+        - path: /home/agent/.deepagents/.state/chatgpt-auth.json
+          overwrite: false
+          content: |
+            {"access_token": "oai-oat01-proxy-managed", "refresh_token": "oai-ort01-proxy-managed", "expires_at": "2099-01-01T00:00:00+00:00"}
+          mode: "0600"
+        - path: /home/agent/.deepagents/config.toml
+          overwrite: false
+          content: |
+            [models]
+            default = "openai_codex:gpt-6.1-sol"
+
+            # No Tavily key is configured, so dcode runs without web search.
+            [warnings]
+            suppress = ["tavily"]
+
+            # The kit pins dcode's version; setting auto_update explicitly also skips the first-run notice.
+            [update]
+            auto_update = false
+            check = false
+        # Skips the first-run name and model prompts; the default model is set above.
+        - path: /home/agent/.deepagents/.state/onboarding_complete
+          overwrite: false
+          content: "1"
+        - path: /home/agent/.deepagents/.mcp.json
+          overwrite: false
+          content: |
+            {"mcpServers": {"langchain-docs": {"type": "http", "url": "https://docs.langchain.com/mcp"}}}
