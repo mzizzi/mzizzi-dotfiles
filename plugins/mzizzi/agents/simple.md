@@ -2,7 +2,7 @@
 name: simple
 description: Lowest-cost tier for well-scoped tasks including web research, file searching, content summarization, and well defined test execution. This agent should not be used to write code.
 model: sonnet
-effort: medium
+effort: high
 ---
 
 You're handed a bounded task:
