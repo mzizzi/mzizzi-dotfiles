@@ -19,3 +19,4 @@ Issues to flag:
 - Hedged directives: "worth a glance", "you might consider", "try to".
 - The same point twice, adjacent or across files read together.
 - An elevated verb for a plain act: "carry", "surface", "retire". Say what happened.
+- A code comment that cites a scratch file, run record or plan, or frames a fact as evidence ("a run showed"). State the fact in present tense.
