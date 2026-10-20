@@ -1,8 +1,8 @@
 ---
 name: create-plan
 description: "Write a technical plan document in plans/. Use when the user wants to plan a feature, design a system, or think an approach through before coding. If they cite an existing plan dir or brainstorm.md, reuse that directory instead of creating a new one."
-argument-hint: <plan directory or target .md file> <topic or feature description> [--model opus|sonnet|haiku]
-allowed-tools: Read, Grep, Glob, Agent, AskUserQuestion, Write, Skill
+argument-hint: <plan directory or target .md file> <topic or feature description> [--non-interactive]
+allowed-tools: Read, Grep, Glob, Agent, AskUserQuestion, Write, Edit, Skill
 disable-model-invocation: false
 user-invocable: true
 ---
@@ -11,139 +11,76 @@ user-invocable: true
 
 Generate a technical plan document (`plan.md` by default, or a filename the user names) or update an existing one by extensively researching the codebase and interviewing the user.
 
+IMPORTANT: Write only to the plan directory. Research is read-only: never edit code, config, or other docs, and never run a command that changes state outside the plan directory.
+
+`--non-interactive` means no user is present: never call AskUserQuestion, and Step 5 hands decisions to an agent instead.
+
 ## Instructions
 
-### Step 1: Understand the request
+### Step 1: Understand the request and resolve `<target file path>`
 
-Parse the user's input to extract:
+Read the files the user cites, and, in a plan directory they gave, its `brainstorm.md` and target file if they exist.
 
-- If the user provided one, read every document in the plan directory
-- **What:** they want to build or change
-- **Why:**: the motivation or problem being solved (if stated)
-- **Where:** it fits in the codebase (if obvious from context)
-- **Planning model:** which model the Step 4 planning sub-agent should run on. If the user named one (e.g. `--model sonnet`, or "plan this on haiku"), use it; otherwise default to `opus`. Accept the aliases `opus`, `sonnet`, and `haiku`.
+Then resolve where the plan goes. Use the plan directory the user gave (or the parent of a `.md` path they gave); otherwise create one with the /create-plan-dir skill, named for the topic as you now understand it. The target file is the `.md` filename they named, else `plan.md`.
 
-### Step 2: Resolve the plan directory and target file
+### Step 2: Draft the plan
 
-The plan is written to `<plan directory>/<target file>`. Resolve both from the user's input.
+Research and write the draft yourself.
 
-**Target file** — the filename to write, defaulting to `plan.md`:
+- Load the `development-preferences` skill and hold the design to it.
+- Hand broad searches to a `mzizzi:simple` agent that returns conclusions, not file contents.
+- Write the draft to `<target file path>` using the "Plan Output Template" below.
+- Code sketches show structure and signatures, not a copy-paste implementation.
+- List each decision the research could not settle under `## Open Questions`, with your recommendation.
 
-- If the user named a target file (any argument ending in `.md`, e.g. `design.md`, or a full path like `plans/20260615-token-refresh/design.md`), use that filename.
-- Otherwise use `plan.md`.
+### Step 3: Adversarial reviews
 
-**Plan directory:**
+Codex looks for what's missing, the pragmatic reviewer for what's excess. Start the pragmatic reviewer in the background, then run Codex:
 
-- If the user gave a full path to the target file (it includes a directory component), that parent directory is the plan directory.
-- Otherwise, if the user provided a plan directory, use it.
-- Otherwise, leave it unresolved — Step 3 settles the topic first, and the directory gets created at the end of that step.
+    Agent(subagent_type: "mzizzi:pragmatic-reviewer", prompt: "Review the plan at <target file path>. Also answer each item under its ## Open Questions: the option you would pick and why.")
+    Skill(skill: "codex-adversarial-review", args: "--model gpt-6-astra --effort high --files <target file path> focus on feasibility, completeness, missing risks, and questionable assumptions. Right-size each recommendation to the problem — KISS/YAGNI/DRY balanced against the complexity the plan actually warrants; no scope or machinery the plan's stated problem does not require. Answer each item under Open Questions with the option you would pick and why.")
 
-Refer to the resolved destination as `<target file path>` in the steps below (e.g. `plans/20260615-token-refresh/plan.md`, or `plans/20260615-token-refresh/design.md` if the user named `design.md`).
+Hold both reports for Step 4. If a review is unavailable, tell the user which one and why, and continue with the other; if both are, skip to Step 5.
 
-### Step 3: Grill the user
+### Step 4: Incorporate review feedback
 
-- Use the /grill skill to gather additional context and requirements for the desired change
-- If the target file already exists, or there is a brainstorm.md in the plan directory, use that as a starting point instead of re-asking
-- If Step 2 left the plan directory unresolved, create it now with the /create-plan-dir skill, using the topic as the interview settled it. Naming it beforehand fixes the slug at the point of least information, and a slug the interview invalidates has to be moved by hand.
+Incorporate the feedback from the reviews into the plan document using your best judgment.
 
-### Step 4: Create a draft plan
+- **The plan is missing something or rests on a wrong assumption:** change the plan to fix it.
+- **The plan includes something it doesn't need:** remove it.
+- **The finding is wrong or not worth acting on:** skip it.
+- **Only the user can decide it** (scope, product direction): add it to `## Open Questions`, tagged `[Codex]` or `[Pragmatism]`.
+- **The reviews disagree** (one wants something strengthened, the other wants it removed): add it to `## Open Questions` with both positions.
 
-- Spawn a **Plan-mode sub-agent** (`subagent_type: "Plan"`), passing `model` set to the planning model resolved in Step 1 (default `opus`). Pinning `model` matters because a Plan sub-agent otherwise inherits the session model — so the plan would silently run on whatever the main session happens to be on. Planning leans on deep reasoning, which is why it defaults to Opus; `sonnet` or `haiku` are there for a faster, cheaper draft on simpler work. The sub-agent should be prompted with the following:
-  - The output format template from the "Plan Output Template" section at the bottom of this document
-  - An instruction to read every file in `<skill-dir>/../development-preferences/references/` (as an absolute path; `<skill-dir>` is the directory this `SKILL.md` was loaded from) before designing, and to hold the design to them. The built-in Plan agent skips CLAUDE.md and rules, so this is the only way the user's standards reach it; `fix-quality` later reviews the implementation against the same files.
-  - Be sure the sub-agent is briefed with the context gathered, any existing target-file or brainstorm.md documents, and any other information that would help the sub-agent
-  - The sub-agent should split implementation into logical chunks where it makes sense to do so
-  - Code sketches should show structure and signatures, with comments explaining non-obvious logic. The sub-agent is constructing a plan document, not a copy-paste implementation.
-- Update or create the target file at `<target file path>` (from step 2) with the sub-agent's output
+Weigh the reviewers' answers and settle the open questions you can.
 
-### Step 5: Adversarial reviews
+### Step 5: Resolve open questions
 
-Two reviewers challenge the draft, each with its own grain: Codex looks for what's missing, the pragmatic reviewer for what's excess. Spawn the pragmatic reviewer first — it runs in the background while the blocking Codex call absorbs its runtime:
+Loop until `## Open Questions` is empty, at most 3 rounds:
 
-    Agent(subagent_type: "mzizzi:pragmatic-reviewer", prompt: "Review the plan at <target file path>.")
+1. Settle the questions the research clearly answers, and tell the user what you decided and why.
+2. Put the rest to the decider in one batch, each question with 2–4 concrete options and your recommendation:
+   - By default, ask the user with AskUserQuestion.
+   - With `--non-interactive`, send them to one `mzizzi:complex` agent along with `<target file path>`. Its answers are the decisions.
+3. Write each decision into the plan where its question arose. Add any new questions a decision raises; check facts with a targeted lookup, not a new research pass.
 
-Its report is findings only, highest severity first (or `No material findings.`) — read it as prose and hold it for the incorporation step.
+Delete the section once it is empty. Questions still open after 3 rounds stay in the plan: they are genuinely unresolved and may block implementation.
 
-Then invoke the Codex adversarial review skill to get a cross-model challenge of the draft plan from Codex:
+### Step 6: Consistency check
 
-    Skill(skill: "codex-adversarial-review", args: "--files <target file path> focus on feasibility, completeness, missing risks, and questionable assumptions. Right-size each recommendation to the problem — KISS/YAGNI/DRY balanced against the complexity the plan actually warrants; no scope or machinery the plan's stated problem does not require.")
+Each round of revision can leave stale text behind. Re-read the plan end to end and fix contradictions: statements a review or decision invalidated, code sketches that disagree with the Design section, and estimates that no longer match the final parameters.
 
-Where `<target file path>` is the path written in Step 4 (e.g., `plans/20260615-token-refresh/plan.md`). `--files` is what confines the review to the plan — without it Codex receives the whole working-tree diff, so unrelated pending work would be reviewed alongside the plan and can surface in the findings. The focus text steers it toward plan-quality concerns rather than code-quality concerns.
+### Step 7: Present to the user
 
-On success, the output is a plain-text review report — not JSON, read it as prose:
-
-- A `Verdict:` line with the overall assessment, followed by a brief narrative summary.
-- A `Findings:` list — each entry starts with `- [severity] title (file:line-range)`, followed by the finding's full body text and, if present, a `Recommendation:` line.
-- A `Next steps:` list of suggested follow-up actions.
-
-Hold the full response for the incorporation step.
-
-**If a review is unavailable** (for Codex: plugin not installed, authentication error, CLI unavailable, or another runtime failure — the skill returns a failure reason instead of the report; for the pragmatic reviewer: the agent fails or returns nothing usable), tell the user which review was missing and why, and continue to Step 6 with the report you have. Only if both reviews failed, skip Step 6 and continue directly to Step 7 (open questions loop).
-
-### Step 6: Incorporate review feedback
-
-Process the findings from both reviews and revise the draft plan. This step runs in the main conversation — no sub-agents.
-
-**For each finding, by severity:**
-
-- **Critical or high severity:** The plan has a significant gap or questionable assumption. Directly revise the relevant section (Design, Implementation, or Testing) to address the concern. Don't just acknowledge it — strengthen the plan text so the concern is resolved. If the finding identifies something genuinely missing (error handling strategy, performance risk, dependency issue), add it.
-- **Medium severity:** Often surfaces unconsidered tradeoffs or dismissed alternatives. If the fix is clear, apply it. If it requires a user decision, add it to `## Open Questions` with its source prefix (`[Codex]` or `[Pragmatism]`).
-- **Low severity:** Apply trivially fixable suggestions (clarity, organization). Discard the rest unless they add genuine value.
-
-**Findings run in both directions.** When a finding proposes removing or simplifying an element — the pragmatic reviewer's whole mandate — the resolution is the simplification: delete the element and its supporting text from the plan rather than strengthening its justification. If keeping it is genuinely the user's call, make it an open question. When the two reviews collide on the same element — one wants it hardened, the other removed — always put it to the user as an open question rather than resolving it silently in either direction: a wrong call here surfaces post-implementation, at many times the price.
-
-**For `next_steps` from Codex:** Scan for actionable items. Those that map to user decisions become `[Codex]` open questions. Those that are purely technical and clearly correct get applied directly.
-
-**Provenance:** When adding or revising content based on review findings, tag new open questions by source — `[Codex]` or `[Pragmatism]` — so the user knows their origin during the interview loop. Individual edits to plan sections don't need tagging.
-
-Apply revisions to `<target file path>` as you go. The file already exists from Step 4, so edit it in place rather than holding a revised copy in context.
-
-### Step 7: Resolve open questions (loop)
-
-Resolve all open questions through a user interview loop. The goal is to produce a plan that needs minimal modification after the write. This loop runs in the main conversation — no sub-agents. The Step 4 sub-agent already did the deep codebase research; this step is about resolving decisions and their implications.
-
-**For each iteration:**
-
-1. Parse the `## Open Questions` section from `<target file path>`.
-2. If there are no open questions, delete the `## Open Questions` section, then exit the loop and proceed to Step 8.
-3. For questions that are purely technical and the research clearly points to one answer, auto-resolve them — update the plan draft and note to the user what you resolved and why, so they can object if needed.
-4. Present remaining open questions to the user using AskUserQuestion. For each question:
-   - State the question clearly
-   - Offer a few concrete choices (typically 2–4)
-   - Recommend one choice and briefly explain why — draw on what you learned during research
-5. After the user answers, incorporate their decisions into the plan draft. Reason about whether the chosen direction introduces new open questions. If a specific answer requires verifying something in the codebase, do a targeted lookup (Grep/Read) rather than a full research pass.
-6. Update the `## Open Questions` section — remove resolved questions, add any new ones — and loop back to (1).
-
-**Guidelines:**
-
-- Batch related questions into a single AskUserQuestion call rather than asking one at a time.
-- Don't loop more than 3 iterations. If questions keep spawning, leave the remaining ones in `## Open Questions` and move on — these are genuinely unresolved and may block implementation, so they are the one reason that section survives into the finished plan.
-
-### Step 8: Consistency check
-
-Re-read the final plan end-to-end and verify there are no internal contradictions or stale text. Specifically check:
-
-- Statements from the original draft that were invalidated by Codex feedback or user decisions but not updated (e.g., "in-memory only" surviving after a decision to persist to DB).
-- Code sketches that use APIs, types, or function signatures inconsistent with the Design section (e.g., `time.monotonic()` in code when the design says `time.time()`).
-- Throughput estimates or performance claims that don't match the final parameters
-
-Fix any issues found. This step exists because plans undergo multiple rounds of revision (draft → Codex incorporation → user decisions) and each round can leave stale text behind.
-
-### Step 9: Present to the user
-
-Report, in this order:
+Report, in this order, without reciting the plan:
 
 - Where the plan was saved.
-- **A per-phase manifest**: one bullet per implementation phase, 1–2 sentences each, in plan order. This is the deliverable of this step — the user's next decision is which phases to implement and in what order, and they cannot make it from a decisions summary. Asking for this list by hand is the most common next message after a plan lands.
-- One line covering whether the adversarial reviews ran and what they surfaced (e.g. "Codex flagged 2 risks and the pragmatic reviewer 1 simplification, all incorporated into the Design section"), plus any questions left unresolved.
+- One bullet per implementation phase, 1–2 sentences each, in plan order. The user's next decision is which phases to implement.
+- One line on what the reviews surfaced, plus any questions left open.
 
-Don't recite the plan's contents beyond the manifest — they can read the file.
-
-Then, as the **very last line** of your output — after everything else — emit a copyable command to hand the plan off to implementation. It must be the final line, alone, with nothing after it, so the user can double- or triple-click to select and copy it:
+End with this command alone on the last line, using the absolute path, with no backticks or punctuation, so it can be copied:
 
     /mzizzi:implement-plan <target file path>
-
-Use the **absolute path** to `<target file path>` (e.g. `/mzizzi:implement-plan C:\Users\Matt\code\mzizzi-dotfiles\plans\20260615-token-refresh\plan.md`). Emit it as a bare line — no surrounding prose, backticks, or trailing punctuation.
 
 ## Plan Output Template
 
@@ -158,8 +95,8 @@ This section helps future readers understand the motivation without the original
 ## Design
 The core technical approach. Include:
 * Data models with field-level detail (dataclasses, Pydantic models, SQL schemas)
-* Algorithms or workflows described step by step
-* Key decisions with rationale and any alternatives that were considered
+* Algorithms or workflows
+* Key decisions and rationale
     
 ## Implementation
 
