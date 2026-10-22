@@ -130,6 +130,7 @@ capabilities:
           content: |
             [models]
             default = "openai_codex:gpt-6.1-sol"
+            auto_classifier = "openai_codex:gpt-6.1-sol"
 
             # No Tavily key is configured, so dcode runs without web search.
             [warnings]

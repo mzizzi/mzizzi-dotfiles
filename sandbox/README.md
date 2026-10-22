@@ -9,7 +9,7 @@ On the host, from the repo root:
 ```powershell
 sbx login                                       # once
 sbx secret set openai --oauth                   # once: ChatGPT login for Codex and dcode
-sbx run --clone --skills off --name agent-lab ./sandbox/agent-lab . $env:USERPROFILE\.sandbox-state\agent-lab
+bash sandbox/agent-lab/bin/rebuild.sh           # (re)create with open network
 sbx run --name agent-lab                        # resume
 sbx exec -it agent-lab bash                     # second shell
 .\sandbox\agent-lab\bin\network-open.ps1        # allow all outbound
@@ -28,7 +28,7 @@ codex
 dcode
 ```
 
-The clone starts from the committed ref; uncommitted files are readable at `/run/sandbox/source`. Bash history is kept on the host in `%USERPROFILE%\.sandbox-state\agent-lab`; create that folder before the first run. Codex and dcode use the host ChatGPT login through Docker's credential proxy, so don't use dcode's own `/auth`.
+The clone starts from the committed ref; uncommitted files are readable at `/run/sandbox/source`. Bash history, Claude sessions and login, and dcode threads are kept on the host in `%USERPROFILE%\.sandbox-state\agent-lab`, which `rebuild.sh` mounts. Codex and dcode use the host ChatGPT login through Docker's credential proxy, so don't use dcode's own `/auth`.
 
 ## Traps
 
