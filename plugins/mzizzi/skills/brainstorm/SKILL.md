@@ -1,68 +1,66 @@
 ---
 name: brainstorm
-description: "Stress-test an idea, design, or plan through a relentless looping interview, then persist the decisions as brainstorm.md in a plan directory; pointed at an existing brainstorm.md or plan dir, it resumes from what is logged there. Use when the user wants to brainstorm or think an idea through before building. Prefer over grill when the session should be persisted, and over create-plan when exploring rather than committing to an implementation plan."
+description: "Stress-test an idea, design, or plan through a looping interview, then persist the decisions as brainstorm.md in a plan directory; pointed at an existing brainstorm.md or plan dir, it resumes from what is logged there. Use when the user wants to brainstorm or think an idea through before building. Prefer over create-plan when exploring rather than committing to an implementation plan."
 argument-hint: "[existing brainstorm.md or plan dir] <idea, design, or plan to brainstorm>"
-allowed-tools: Read, Grep, Glob, Bash, AskUserQuestion, Write, Skill, Agent, WebFetch, WebSearch
+allowed-tools: Read, Grep, Glob, Bash, AskUserQuestion, Write, Skill, Agent
 disable-model-invocation: false
 user-invocable: true
 ---
 
 # Brainstorm
 
-Brainstorm is a thin wrapper that turns a [[grill]] session into a durable artifact — the shared understanding a grilling builds evaporates when the conversation ends, so this captures it as a decision log in a date-stamped plan directory, exactly where `create-plan` later looks. The flow is: **interview (loop) → save → review → loop again if anything's still open, otherwise exit or hand off to planning.** A brainstorm can also be _resumed_: point the skill at a document an earlier session wrote and it continues that conversation instead of starting a new one.
+Interview the user to stress-test an idea, then save the decisions as a decision log that `create-plan` builds on. The flow: **interview (loop) → save → review → back to the interview on findings, otherwise exit or hand off to planning.**
 
 ## Step 0: New brainstorm or continuation?
 
-Look at the first argument. It's a **continuation** if it resolves to an existing brainstorm document:
+The first argument may be a path:
 
-- a path to an existing `.md` file (e.g. `plans/20260625-oauth-token-refresh/brainstorm.md`), or
-- a path to an existing directory that contains a brainstorm document — use `brainstorm.md` if present, otherwise the single `.md` file in it. If the directory holds several candidates and none is `brainstorm.md`, ask the user which one to continue.
+- **A file whose name contains `brainstorm`, or a directory holding one:** continue that file. If a directory holds several and none is `brainstorm.md`, ask which.
+- **Any other path:** a new brainstorm. A new `.md` path is the target file. A seed or notes file puts `brainstorm.md` beside it. A directory gets `brainstorm.md` inside it.
+- **No path:** a new brainstorm in a new plan directory. Once you know the idea, create it with `Skill(skill: "create-plan-dir", args: "<short topic summary>")`. The target is `brainstorm.md` inside it.
 
-Anything else — no argument, a topic description, a path that doesn't exist — is a **new brainstorm**. Don't guess a path into existence: if the user clearly meant to continue a saved brainstorm but the path doesn't resolve, say so and ask rather than silently starting fresh under a new directory.
+If the user meant a saved brainstorm and the path doesn't resolve, say so and ask.
 
-**For a continuation:** read the document, and read any sibling documents in its directory (a `plan.md`, notes) for context. Load its `## Decisions` entries into your running record as already-settled and its `## Open questions` as the live threads — those are where the interview should pick up. Remember the resolved path; Step 3 rewrites _that_ file rather than minting a new directory. Any text the user passed after the path is the thread they want to explore next — seed Step 1 with it.
+Read the other documents in the target directory for context. When continuing, the file's `## Decisions` are settled, and its `## Open questions` are where the interview picks up. Text after the path is the first thread, or the idea for a new brainstorm. With no idea and no seed, ask what to brainstorm.
 
-**For a new brainstorm:** the argument is the idea to explore — if there's no argument at all, ask what they'd like to brainstorm first. Then run the flow as written below.
+## Step 1: Interview
 
-## Step 1: Grill the user
+Read `references/recommendation-guidelines.md` (relative to this skill's directory) once at the start.
 
-Invoke the **grill** skill and run its interview as written — one question at a time, each through AskUserQuestion, each with a researched recommendation:
+Walk down each branch of the design tree, resolving dependencies between decisions one by one, until you and the user share an understanding of the idea. Research each fork, then state the call with its reason, or ask when the guidelines say the fork deserves a question:
 
-    Skill(skill: "grill", args: "<the idea/design/plan the user wants to brainstorm>")
+- Ask one question at a time, through the harness's interactive user-question tool (e.g. `AskUserQuestion` in Claude Code) if it has one. Otherwise, write the question as numbered options and stop.
+- Put the recommended option first, with "(Recommended)" on its label and the rationale in its description.
+- A reply that isn't an option pick can be an answer, a question, or "you decide". Take an answer as the decision. Answer a question, then state your call with its reason; don't re-ask the same question with new framing. Make the call yourself on "you decide".
 
-Grill is the single source of truth for _how_ to interview; don't reinvent it here. Your only added responsibility is to **keep a running record as you go** — each decision, the option chosen, and the _why_ — plus the overall framing and any threads that surface unresolved. You'll write this into the log in Step 3.
+Keep a running record as you go: each decision, stated or answered, with the option chosen and the why, plus the framing. Step 3 writes it.
 
-The deliverable is **clearly-scoped chunks of work** — what each chunk delivers and why it's worth doing — not a commitment about how much to build. Never frame a question as "how much should this commit to building?" or ask the user to fix scope for a first phase; that's planning, a separate step with its own skill. Keep the questions on approach, tradeoffs, phase boundaries, and the what/why of each chunk.
+The deliverable is clearly-scoped chunks of work: what each delivers and why. How much to build, or what a first phase covers, is planning; don't ask it. When a branch grows past the user's stated goal, say so and ask whether it belongs before you explore it.
 
-This step repeats (see Step 2). On a second or later pass, **continue the same interview** — build on what's already settled in your running record instead of re-asking it. If the user volunteered a specific new thread when choosing to keep going, start there.
-
-When resuming a saved brainstorm, the first pass is already a "second pass" — and if the document is thin on a decision's _why_, probe that by confirming the decision rather than reopening it.
+On a later pass, or when resuming, build on the settled record instead of re-asking it. If a resumed document is thin on a decision's why, probe it by confirming the decision, not reopening it.
 
 ## Step 2: Ask what's next
 
-When a grill pass reaches a natural stopping point — the branches currently in view are resolved — check whether there's more to explore. Use AskUserQuestion with the question **"Any more questions or ideas?"** and exactly these three choices:
+When the branches in view are resolved, ask **"Any more questions or ideas?"** with one of these option sets, in this order:
 
-- **Continue brainstorming** → there's still ground to cover. Since AskUserQuestion options can't capture free text, follow the selection with an open-ended prompt ("What would you like to dig into next?") and seed the next grill pass with whatever thread they give; if they have nothing specific, resume walking the still-open branches yourself.
-- **Save & Review** → go to Step 3, write the document, and review it. If the review has findings, or any decisions or open questions are still unsettled, come back to Step 1 and keep brainstorming.
-- **Save & Exit** → go to Step 3, write the document, skip the review, and stop.
+- after an interview pass: **Continue brainstorming**, **Save & Review**, **Save & Exit**
+- after a clean review (Step 4): **Continue brainstorming**, **Exit**, **Create implementation plan**
 
-Keep the options in this order every pass, `Continue brainstorming` first. Treat an "Other" answer with a topic as _Continue brainstorming_ already seeded with it, skipping the follow-up prompt.
+- **Continue brainstorming**: ask in plain text "What should we brainstorm next?" and wait. The user's question or topic starts the next pass of Step 1.
+- **Save & Review**: Step 3, then Step 4.
+- **Save & Exit**: Step 3, then sign off.
+- **Exit**: the document is already saved and reviewed. Sign off.
+- **Create implementation plan**: Step 5.
 
-Loop Step 1 ↔ Step 2 until the user picks **Save & Exit**, or picks **Save & Review** and the review comes back clean — that's the only path to Step 4's exit question.
+A free-form answer to the menu is **Continue brainstorming** with that question or topic; don't ask again.
 
 ## Step 3: Save the brainstorm
 
-Both finish options land here. First resolve where the document goes.
+**Continuation**: rewrite the file from Step 0 in place. Keep its path even if the topic drifted; other files may point at it.
 
-**Continuation** — you already have the path from Step 0. Rewrite that same file in place; don't create a new directory, and don't rename the existing one even if the topic drifted. Keeping the path stable matters because a `plan.md`, a branch, or the user's own notes may already point at it.
+**New brainstorm**: write to the target from Step 0.
 
-**New brainstorm** — mint the destination directory with the **create-plan-dir** skill, passing a short topic summary:
-
-    Skill(skill: "create-plan-dir", args: "<short topic summary>")
-
-It stamps today's date and returns a path like `plans/20260625-oauth-token-refresh/`. Creating it _now_ — after the looping — means the directory name reflects what the conversation actually settled on. The document is `brainstorm.md` inside it.
-
-Then write your running record to that path as a **decision log** — structured so `create-plan` can lift the settled decisions straight into the plan and only re-litigate what's genuinely open. Use this structure:
+Write the running record as a decision log:
 
 <!-- prettier-ignore -->
 ```markdown
@@ -82,42 +80,35 @@ One entry per settled decision, in the order they were resolved:
 - **Why:** the reasoning — the user's rationale and/or the research behind the recommendation
 
 ## Open questions
-Threads that came up but weren't resolved — things to settle during planning or
-implementation. Omit this section entirely if everything got resolved.
+This section should almost never be filled out. Add an entry only for a decision you
+searched for extensively (code, measurements, the user) and still could not settle.
+Each entry names what you tried and the fact that would settle it. Otherwise omit the
+section.
 ```
 
-Keep the **Why** lines substantive: the rationale is the most valuable thing to preserve, since a bare decision without its reasoning invites someone to second-guess it later. A Why carries the decision's _weight_, not just its direction: the evidence behind it (**checked** facts kept as stated, **not checked** ones named as such) and the tradeoff actually weighed — what the choice adds vs. removes, and what it deliberately declines to defend. If a decision was trivial, a one-line note is fine — don't pad it.
+A **Why** carries the decision's _weight_, not just its direction, so nobody second-guesses it later: the evidence behind it, with its checked / not checked labels, and the tradeoff weighed (what the choice adds vs. removes, and what it deliberately declines to defend). A trivial decision gets a one-line note.
 
-On a continuation, the rewrite is a **merge, not a replacement**: carry the original decisions forward and append this session's, rebuilding _Open questions_ from what's still live. A decision this session overturned stays in the log, its entry revised to record the new choice and why — deleting it loses the history that makes the reversal legible.
+On a continuation, **merge, don't replace**: carry the original decisions forward, append this session's, and rebuild _Open questions_ from what is still unsettled. A decision this session overturned stays in the log, revised to record the new choice and why.
 
-If the user chose **Save & Exit**, report the saved path and sign off per _Signing off_ below. Done.
+## Step 4: Review
 
-## Step 4: Review (Save & Review only)
-
-Run a pragmatic review of the document and wait for the result:
+Run a pragmatic review of the document:
 
     Agent(subagent_type: "mzizzi:pragmatic-reviewer", prompt: "Review the brainstorm at <path to the document>.", run_in_background: false)
 
-Then go back to Step 1 and keep brainstorming if the review reported findings, or if the document still has an `## Open questions` section or a decision that never really settled — a brainstorm shouldn't finish here with loose ends. Seed that pass with the findings and the open threads, and say briefly what's still open before diving back in. A finding against something the user chose goes back to them as a question; it is never applied on the reviewer's word. A decision the review overturns gets re-logged per the merge rules above, and the next save rewrites the same file.
+If the review has findings, say briefly what they are and go back to Step 1, starting from them. A finding against something the user chose goes back to them as a question; never apply it on the reviewer's word. A decision the review overturns is re-logged per the merge rule, and the next save rewrites the same file.
 
-Otherwise — clean review, nothing open — report the saved path and ask via AskUserQuestion **"Any more questions or ideas?"** with these three choices:
-
-- **Continue brainstorming** → same as in Step 2: prompt for a thread and go back to Step 1.
-- **Exit** → the document is already saved and reviewed; sign off per _Signing off_ below. Done.
-- **Create implementation plan** → go to Step 5.
+Otherwise, report the saved path and any `## Open questions`, then ask the Step 2 question with the post-review options.
 
 ## Step 5: Hand off to planning
 
-Only when the user chose **Create implementation plan**. Invoke `create-plan` on the directory from Step 3 so it reuses the folder and builds `plan.md` on top of the brainstorm instead of starting cold:
+Only after **Create implementation plan**:
 
-    Skill(skill: "create-plan", args: "<plan dir path> — flesh out <brainstorm file name> there into a full implementation plan")
-
-Where `<brainstorm file name>` is the document written in Step 3 — `brainstorm.md` for a new brainstorm, or whatever the continuation's file is named. If that directory already holds a `plan.md` from an earlier session, say so when handing off, so `create-plan` updates it rather than treating the plan as new work. `create-plan` owns the output from here; _Signing off_ doesn't apply.
+    Skill(skill: "create-plan", args: "<plan dir path> — build plan.md from <brainstorm file path>")
 
 ## Signing off
 
-Whenever the skill exits _without_ handing off to planning, the **very last line** of your final message is a copy/pastable command to turn the brainstorm into a plan, on its own, with the real directory filled in and nothing after it:
+Whenever the skill exits without handing off to planning, end your final message with this message and nothing after it:
 
-    /create-plan plans/20260625-oauth-token-refresh/
-
-No trailing commentary, no closing question — the command is the last thing the user sees.
+    Brainstorm written: <brainstorm file path>
+    Create a plan with: /mzizzi:create-plan <brainstorm file path>

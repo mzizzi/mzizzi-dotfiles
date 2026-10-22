@@ -4,7 +4,7 @@ Personal Claude Code plugin marketplace and dotfiles.
 
 ## Plugins
 
-- `plugins/mzizzi` — planning and review workflow skills (grill, brainstorm, create-plan, create-plan-dir, retro). Published via `.claude-plugin/marketplace.json` for anyone installing it the normal way through a Claude Code marketplace.
+- `plugins/mzizzi` — planning and review workflow skills (brainstorm, create-plan, create-plan-dir, retro). Published via `.claude-plugin/marketplace.json` for anyone installing it the normal way through a Claude Code marketplace.
 - `plugins/mzizzi-claude` — tools for maintaining Claude Code setups (audit-skills). Depends on `mzizzi` for its agent tiers and `create-plan-dir`.
 
 ## Windows setup

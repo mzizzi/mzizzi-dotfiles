@@ -1,6 +1,6 @@
 {
   "name": "mzizzi",
-  "description": "An end-to-end planning workflow: grill and brainstorm an idea, turn it into a phased plan, implement it a phase at a time, and review the result with Codex. Also ships the simple/standard/complex subagent tiers.",
+  "description": "An end-to-end planning workflow: brainstorm an idea, turn it into a phased plan, implement it a phase at a time, and review the result with Codex. Also ships the simple/standard/complex subagent tiers.",
   "dependencies": [
     { "name": "codex", "marketplace": "openai-codex" },
     { "name": "skill-creator", "marketplace": "claude-plugins-official" }
