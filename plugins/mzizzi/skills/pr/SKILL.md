@@ -1,25 +1,6 @@
 ---
 name: pr
 description: "Create and manage pull requests, following this user's PR conventions. Use for opening, viewing, or updating pull requests."
-allowed-tools:
-  - Bash(gh pr list*)
-  - Bash(gh pr view*)
-  - Bash(gh pr status*)
-  - Bash(gh pr diff*)
-  - Bash(gh pr checks*)
-  - Bash(gh pr create*)
-  - Bash(gh issue list*)
-  - Bash(gh issue view*)
-  - Bash(gh repo view*)
-  - Bash(git log*)
-  - Bash(git status*)
-  - Bash(git branch*)
-  - Bash(git fetch*)
-  - Bash(git remote*)
-  - Bash(git checkout -b*)
-  - Bash(git add*)
-  - Bash(git commit*)
-  - Bash(git push*)
 disable-model-invocation: false
 user-invocable: true
 ---
