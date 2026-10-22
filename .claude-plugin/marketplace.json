@@ -12,6 +12,11 @@
       "description": "An end-to-end planning workflow: grill and brainstorm an idea, turn it into a phased plan, implement it a phase at a time, and review the result with Codex. Also ships the simple/standard/complex subagent tiers and a prose de-slopping skill."
     },
     {
+      "name": "mzizzi-claude",
+      "source": "./plugins/mzizzi-claude",
+      "description": "Tools for maintaining Claude Code setups: audit skills against real session transcripts."
+    },
+    {
       "name": "mzizzi-ty-lsp",
       "source": "./plugins/mzizzi-ty-lsp",
       "description": "Python language server (ty) for type checking and code intelligence.",

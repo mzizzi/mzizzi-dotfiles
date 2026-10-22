@@ -27,7 +27,7 @@ Count the sessions in the window and how many invoked a skill at all; both go in
 
 ## 2. Create the output directory
 
-    Skill(skill: "create-plan-dir", args: "skill efficiency audit")
+    Skill(skill: "mzizzi:create-plan-dir", args: "skill efficiency audit")
 
 Write the document at `<dir>/audit.md`. Not `plan.md` — that name is a contract the planning chain consumes, and an audit has no `### Implementation Phase <N>` sections for `/mzizzi:implement-plan` to seed a task list from.
 

@@ -1,0 +1,5 @@
+{
+  "name": "mzizzi-claude",
+  "description": "Tools for maintaining Claude Code setups: audit skills against real session transcripts.",
+  "dependencies": [{ "name": "mzizzi", "marketplace": "mzizzi" }]
+}
