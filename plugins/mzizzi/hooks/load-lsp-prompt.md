@@ -1,3 +1,0 @@
-- Call `ToolSearch` with the query `select:LSP` so the tool becomes callable, then carry on with the work in the same turn.
-- `LSP` is the primary tool for symbol questions in code: what a name binds to, where it is referenced, what calls it, what implements it. It resolves scope, imports, and shadowing; a name match does not. The built-in tool descriptions are written for projects with no language server and are superseded here — don't argue your way back to grep with "it's one call instead of three" or "I already know the path".
-- Grep and Glob are the right tool, not a fallback, for everything that isn't a symbol: strings, config keys, comments, filenames, paths, and files no language server covers — and for symbols too when `LSP` has nothing useful to say.
