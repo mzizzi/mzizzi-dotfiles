@@ -1,7 +1,7 @@
 ---
 name: auto-brainstorm
-description: "Run a brainstorm with no human in the loop: one long-lived `mzizzi:complex` agent answers the interview questions in the user's place, and the decisions are saved as brainstorm.md. Use when the user asks for an auto-brainstorm, an unattended brainstorm, or to brainstorm against a reviewer agent instead of answering the questions themselves."
-argument-hint: "[--max-reviews=<n>] [existing brainstorm.md or plan dir] <idea, design, or plan to brainstorm>"
+description: "Run a brainstorm with no human in the loop: one long-lived agent, `mzizzi:complex` by default, answers the interview questions in the user's place, and the decisions are saved as brainstorm.md. Use when the user asks for an auto-brainstorm, an unattended brainstorm, or to brainstorm against a reviewer agent instead of answering the questions themselves."
+argument-hint: "[--agent=<name>] [--max-reviews=<n>] [existing brainstorm.md or plan dir] <idea, design, or plan to brainstorm>"
 disable-model-invocation: false
 user-invocable: true
 ---
@@ -10,7 +10,9 @@ user-invocable: true
 
 Run the `mzizzi:brainstorm` skill with an agent answering in the user's place. Where this skill and brainstorm differ, this skill wins: questions go to the interviewee agent, never to the user or the harness's user-question tool, and you pick brainstorm's menu options yourself (see Ending). Load it with:
 
-    Skill(skill: "brainstorm", args: "<the arguments this skill was given, without --max-reviews>")
+    Skill(skill: "brainstorm", args: "<the arguments this skill was given, without --agent or --max-reviews>")
+
+`--agent=<name>` is the agent type of the interviewee. It defaults to `mzizzi:complex`.
 
 `--max-reviews=<n>` is the **review limit**: the most `mzizzi:pragmatic-reviewer` reviews the saved document gets. It defaults to 2.
 
@@ -18,7 +20,7 @@ Everything below is what changes when no human answers.
 
 ## The interviewee
 
-Every question brainstorm asks the user goes to a single `mzizzi:complex` agent instead. Spawn it once, with a briefing and the first question. Send each later question to that same agent with SendMessage, so every answer builds on what it has already read and decided.
+Every question brainstorm asks the user goes to a single `--agent` agent instead. Spawn it once, with a briefing and the first question. Send each later question to that same agent with SendMessage, so every answer builds on what it has already read and decided.
 
 Before the first question, read the code the idea touches. The briefing passes on what you found as facts with `file:line`, and says:
 
