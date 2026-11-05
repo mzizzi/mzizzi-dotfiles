@@ -1,7 +1,5 @@
 #!/usr/bin/env node
-// Regression checks for run_review.mjs: --files must scope the review input to those paths, an
-// unusable --files must stop rather than fall back to the whole tree, --model and --effort must
-// reach the Codex turn, and an empty report must retry once before failing.
+// Regression checks for run_review.mjs.
 //
 // Usage: node test_run_review.mjs     (exits non-zero if any case fails)
 
@@ -28,13 +26,7 @@ const write = (file, body) => {
 write(
   path.join(plugin, "scripts", "lib", "git.mjs"),
   `export function ensureGitRepository() {}
-export function getRepoRoot() { return process.env.TEST_REPO; }
-export function getCurrentBranch() { return "main"; }
-export function resolveReviewTarget() { return { mode: "working-tree", label: "working tree diff" }; }
-export function collectReviewContext() {
-  return { repoRoot: process.env.TEST_REPO, branch: "main", target: { label: "working tree diff" },
-           collectionGuidance: "guidance", content: "WHOLE_TREE_MARKER" };
-}\n`
+export function getRepoRoot() { return process.env.TEST_REPO; }\n`
 );
 write(
   path.join(plugin, "scripts", "lib", "codex.mjs"),
@@ -45,7 +37,10 @@ export async function runAppServerTurn(cwd, options) {
     process.env.TEST_PROMPT_LOG,
     options.prompt + "MODEL=" + options.model + " EFFORT=" + options.effort + "\\n=====\\n"
   );
-  return { finalMessage: process.env.TEST_EMPTY ? "" : '{"verdict":"approve"}', status: "ok" };
+  if (process.env.TEST_FAIL !== undefined) {
+    return { finalMessage: process.env.TEST_FAIL, status: 1, error: { message: "FAIL_MARKER" } };
+  }
+  return { finalMessage: process.env.TEST_EMPTY ? "" : '{"verdict":"approve"}', status: 0 };
 }
 export function parseStructuredOutput(raw) {
   return raw ? { parsed: JSON.parse(raw), rawOutput: raw } : { parsed: null, rawOutput: "" };
@@ -66,7 +61,7 @@ write(
   path.join(plugin, "scripts", "lib", "render.mjs"),
   `export function renderReviewResult(parsed, meta) { return "RENDERED " + meta.targetLabel + "\\n"; }\n`
 );
-write(path.join(plugin, "prompts", "adversarial-review.md"), "FOCUS={{USER_FOCUS}}\nINPUT={{REVIEW_INPUT}}\n");
+write(path.join(plugin, "prompts", "adversarial-review.md"), "FOCUS={{USER_FOCUS}}\nGUIDANCE={{REVIEW_COLLECTION_GUIDANCE}}\nINPUT={{REVIEW_INPUT}}\n");
 write(path.join(plugin, "schemas", "review-output.schema.json"), "{}\n");
 write(
   path.join(home, ".claude", "plugins", "installed_plugins.json"),
@@ -77,19 +72,61 @@ write(path.join(repo, "target.md"), "TARGET_MARKER\n");
 write(path.join(repo, "other.md"), "OTHER_MARKER\n");
 spawnSync("git", ["init", "-q"], { cwd: repo });
 
-function run(args, { empty = false, noPlugin = false } = {}) {
+// feature (checked out) and main fork after base.txt, then commit committed.txt and upstream.txt.
+function branchRepo(name, extra = () => {}) {
+  const dir = path.join(tmp, name);
+  const g = (...args) =>
+    spawnSync("git", ["-c", "user.name=t", "-c", "user.email=t@t", ...args], { cwd: dir });
+  write(path.join(dir, "base.txt"), "BASE\n");
+  g("init", "-q", "-b", "main");
+  g("add", ".");
+  g("commit", "-qm", "base");
+  g("checkout", "-qb", "feature");
+  write(path.join(dir, "committed.txt"), "COMMITTED_MARKER\n");
+  g("add", ".");
+  g("commit", "-qm", "feature");
+  g("checkout", "-q", "main");
+  write(path.join(dir, "upstream.txt"), "UPSTREAM_MARKER\n");
+  g("add", ".");
+  g("commit", "-qm", "upstream");
+  g("checkout", "-q", "feature");
+  extra(dir, g);
+  return dir;
+}
+
+// Edits base.txt, stages a new staged.txt, and leaves untracked.txt untracked.
+function dirtyTree(dir, g) {
+  write(path.join(dir, "base.txt"), "BASE\nUNSTAGED\n");
+  write(path.join(dir, "staged.txt"), "STAGED\n");
+  g("add", "staged.txt");
+  write(path.join(dir, "untracked.txt"), "UNTRACKED\n");
+}
+
+const git = (cwd, ...args) => spawnSync("git", args, { cwd, encoding: "utf8" }).stdout.trim();
+const headOf = (cwd) => git(cwd, "rev-parse", "HEAD");
+
+// The prompt carries no diff, so it has to name the merge base and the command that reads it.
+const namesDiffCommand = (prompt, sha) =>
+  /^[0-9a-f]{40}$/.test(sha) &&
+  prompt.includes(`## Merge Base\n\n${sha}\n`) &&
+  prompt.includes(`\`git diff ${sha}\``);
+
+// fail: the finalMessage a failed (status 1) turn returns.
+function run(args, { empty = false, fail, noPlugin = false, cwd = repo } = {}) {
   fs.writeFileSync(promptLog, "");
   const env = {
     ...process.env,
     HOME: noPlugin ? path.join(tmp, "nohome") : home,
     USERPROFILE: noPlugin ? path.join(tmp, "nohome") : home,
-    TEST_REPO: repo,
+    TEST_REPO: cwd,
     TEST_PROMPT_LOG: promptLog
   };
   if (empty) env.TEST_EMPTY = "1";
   else delete env.TEST_EMPTY;
+  if (fail !== undefined) env.TEST_FAIL = fail;
+  else delete env.TEST_FAIL;
 
-  const result = spawnSync(process.execPath, [script, ...args], { cwd: repo, encoding: "utf8", env });
+  const result = spawnSync(process.execPath, [script, ...args], { cwd, encoding: "utf8", env });
   return { ...result, prompts: fs.readFileSync(promptLog, "utf8") };
 }
 
@@ -101,28 +138,39 @@ const cases = [
       return (
         r.status === 0 &&
         r.stdout.includes("RENDERED files: target.md") &&
+        r.stderr === "" &&
         r.prompts.includes("TARGET_MARKER") &&
-        !r.prompts.includes("OTHER_MARKER") &&
-        !r.prompts.includes("WHOLE_TREE_MARKER")
+        !r.prompts.includes("OTHER_MARKER")
       );
     }
   ],
   [
-    "no --files falls back to the plugin's own collector",
-    () => run(["focus"]).prompts.includes("WHOLE_TREE_MARKER")
+    "no --base lists staged, unstaged and untracked files against HEAD",
+    () => {
+      const cwd = branchRepo("nobase", dirtyTree);
+      const r = run(["focus"], { cwd });
+      return (
+        r.status === 0 &&
+        ["base.txt", "staged.txt", "untracked.txt"].every((f) => r.prompts.includes(f)) &&
+        !r.prompts.includes("committed.txt") &&
+        namesDiffCommand(r.prompts, headOf(cwd))
+      );
+    }
   ],
   [
     "--files resolving to nothing stops instead of widening",
     () => {
       const r = run(["--files", " , ", "focus"]);
-      return r.status === 2 && !r.prompts.includes("WHOLE_TREE_MARKER");
+      return r.status === 2 && r.prompts === "";
     }
   ],
   ["--files naming a missing path exits 2", () => run(["--files", "nope.md"]).status === 2],
   [
     "--model and --effort reach the turn and stay out of the focus text",
     () => {
-      const r = run(["--model", "some-model", "focus", "--effort", "high", "words"]);
+      const r = run([
+        "--files", "target.md", "--model", "some-model", "focus", "--effort", "high", "words"
+      ]);
       return (
         r.status === 0 &&
         r.prompts.includes("FOCUS=focus words\n") &&
@@ -132,17 +180,63 @@ const cases = [
   ],
   [
     "no --model or --effort leaves both to codex",
-    () => run(["focus"]).prompts.includes("MODEL=undefined EFFORT=undefined\n")
+    () =>
+      run(["--files", "target.md", "focus"]).prompts.includes("MODEL=undefined EFFORT=undefined\n")
   ],
   [
-    "an empty report retries once, then fails",
+    "a failed turn exits 1 with codex's message after one turn, with or without a report",
+    () =>
+      ["", '{"verdict":"approve"}'].every((finalMessage) => {
+        const r = run(["--files", "target.md"], { fail: finalMessage });
+        return (
+          r.status === 1 &&
+          r.stderr.includes("FAIL_MARKER") &&
+          r.prompts.split("=====").length - 1 === 1
+        );
+      })
+  ],
+  [
+    "an empty report exits 1 with an error after one turn",
     () => {
       const r = run(["--files", "target.md"], { empty: true });
       return (
         r.status === 1 &&
-        r.stderr.includes("CODEX_EMPTY_REPORT") &&
-        r.prompts.split("=====").length - 1 === 2
+        r.stderr.trim() !== "" &&
+        r.prompts.split("=====").length - 1 === 1
       );
+    }
+  ],
+  [
+    "--base lists commits, staged, unstaged and untracked files since the merge base, not upstream",
+    () => {
+      const cwd = branchRepo("dirty", dirtyTree);
+      const r = run(["--base", "main"], { cwd });
+      const mergeBase = git(cwd, "merge-base", "HEAD", "main");
+      return (
+        r.status === 0 &&
+        ["committed.txt", "base.txt", "staged.txt", "untracked.txt"].every((f) =>
+          r.prompts.includes(f)
+        ) &&
+        !r.prompts.includes("upstream.txt") &&
+        namesDiffCommand(r.prompts, mergeBase)
+      );
+    }
+  ],
+  [
+    "--base on a branch with no commits of its own reviews the dirty tree",
+    () => {
+      const cwd = branchRepo("nocommits", (dir, g) => {
+        g("checkout", "-q", "-b", "fresh", "main");
+        write(path.join(dir, "base.txt"), "BASE\nUNSTAGED_MARKER\n");
+      });
+      return run(["--base", "main"], { cwd }).prompts.includes("base.txt");
+    }
+  ],
+  [
+    "--base with an unknown ref exits 2 before any turn",
+    () => {
+      const r = run(["--base", "nope"], { cwd: branchRepo("badref") });
+      return r.status === 2 && r.stderr.includes("nope") && r.prompts === "";
     }
   ],
   [

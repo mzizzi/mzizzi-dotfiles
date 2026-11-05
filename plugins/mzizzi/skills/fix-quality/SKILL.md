@@ -1,7 +1,7 @@
 ---
 name: fix-quality
 description: "Review a change for reuse, simplification, proportionality, efficiency, altitude, and language, then apply the contained cleanups and defer the rest. Quality only, not correctness bugs. Use when the user wants a change tidied up before merging or asks what could be simplified."
-argument-hint: "[--apply=none|all] [--plan <path to plan.md>] [local | pr | <pr-number-or-url>]"
+argument-hint: "[--apply=none|all] [--plan <path to plan.md>] [--base <ref>]"
 allowed-tools: Read, Grep, Glob, Edit, Write, Bash, Agent, Skill, AskUserQuestion
 disable-model-invocation: false
 user-invocable: true
@@ -17,27 +17,17 @@ Steps 3 onward pass file paths to sub-agents. Resolve the absolute path of this 
 
 ## 1. Resolve the target and read its changes
 
-Parse `--plan` and `--apply` out of the arguments first; the **target** is the bare value left over, and there may not be one. Resolve it, state what you resolved, then get the diff:
+Parse `--base`, `--plan` and `--apply`. State the resolved target, then get the diff. The target is `git diff --merge-base <ref>` plus untracked files (`git ls-files --others --exclude-standard`; a new file's whole content counts as added). `<ref>` is `HEAD` when `--base` is omitted.
 
-- _(omitted — default)_ or `local` — uncommitted changes (`git diff HEAD`) plus untracked files (`git ls-files --others --exclude-standard`); treat a new file's whole content as added.
-- `pr` — the current branch's PR: `gh pr diff`. If there's no open PR or `gh` is unavailable, fall back to the branch's own changes (`git diff <base>...HEAD`, inferring the base from the upstream tracking branch or the repo's default branch) and say that's what you reviewed.
-- a **PR number or URL** — that PR: `gh pr diff <number-or-url>`.
+If the diff is empty, say so and stop.
 
-Unrecognized value → say so and fall back to local.
-
-Use the three-dot form for branch diffs. Two dots drags in base-branch commits the author never wrote.
-
-Uncommitted changes aren't part of a PR — leave them out of a PR-target review and note the exclusion in one line at the end. If the target has no changes, say so and stop rather than widening scope to find work.
-
-**`--plan <path>`** is optional and independent of the target. Given one, step 2 reads it and step 7 writes deferred findings into it instead of leaving them in the report.
+**`--plan <path>`** is optional. Given one, step 2 reads it and step 7 writes deferred findings into it instead of leaving them in the report.
 
 **`--apply=all`** makes step 6 apply the invasive proposals too, instead of deferring them.
 
-**This is a read-only run** when either `--apply=none` was passed or the target is a PR you don't have checked out. Steps 6 and 7 are skipped: nothing is applied, nothing is written — including to `--plan` — and everything surviving step 5 is reported as deferred. Say once which condition applied.
+**`--apply=none`** skips steps 6 and 7: nothing is written, including to `--plan`, and everything surviving step 5 is reported as deferred.
 
 Write the diff to a file in a temp directory outside the repo — never the working tree, where it would land in the very diff under review — and keep the path. Sub-agents read it there rather than receiving it through you.
-
-On a PR target, then read its title and body (`gh pr view`) — they carry the intent behind the change.
 
 ## 2. Learn what's already been decided
 
@@ -58,8 +48,8 @@ Sharding stops an agent skimming a large diff once it has found a few examples, 
 
 - **Reuse, simplification, efficiency, language** shard cleanly. Split the changed files into groups small enough that one agent can read every file in its group _and_ the surrounding context carefully. Group by directory or module, so each agent sees related code together.
 - **Proportionality shards too, but wants smaller groups.** It works unit by unit rather than scanning, so it costs more per file and degrades when overloaded — size its shards down. It anchors on production code and follows each unit out to its own tests, so don't try to group test files with their subjects; that happens inside the agent.
-- **Altitude never shards.** Its strongest signal — the same special case appearing in several places — is invisible to an agent holding part of the diff. One agent, whole PR, always.
-- **Organization never shards either.** It judges a file by its whole listing and a package by its whole directory, so a partial view hides the split or move it is looking for. One agent, whole PR, always.
+- **Altitude never shards.** Its strongest signal — the same special case appearing in several places — is invisible to an agent holding part of the diff. One agent, whole diff, always.
+- **Organization never shards either.** It judges a file by its whole listing and a package by its whole directory, so a partial view hides the split or move it is looking for. One agent, whole diff, always.
 
 Small changes need no sharding: one agent per angle. Say what shape you chose and why.
 
@@ -133,7 +123,7 @@ A short list is a fine outcome: a few high-confidence items beat a long list of 
 
 ## 6. Apply what's contained
 
-**Skip on a read-only run (`--apply=none`, or an unchecked-out PR target)**
+**Skip under `--apply=none`.**
 
 Split the ranked list by the effort rating each proposal carries:
 
@@ -149,7 +139,7 @@ Apply the edits, then run the verification the step 2 brief turned up — typech
 
 ## 7. Record what you deferred
 
-**Skip on a read-only run (`--apply=none`, or an unchecked-out PR target)**
+**Skip under `--apply=none`.**
 
 **Without `--plan`** — deferred proposals stay in the report below. Nothing is written anywhere.
 
@@ -183,4 +173,4 @@ Close with **Considered and rejected** — what the agents spotted but you dropp
 
 Write for someone who knows this code better than you and chose the current form on purpose until shown otherwise. If the change is already clean, say so and stop; an empty result is a real one.
 
-With `--plan`, close by naming the plan file and the follow-up titles `record-follow-ups` reported writing — or, on a read-only run, that the plan was left untouched.
+With `--plan`, close by naming the plan file and the follow-up titles `record-follow-ups` reported writing — or, under `--apply=none`, that the plan was left untouched.

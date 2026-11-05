@@ -1,7 +1,7 @@
 ---
 name: fix-comments
 description: "Cut narration, diff-history notes, and redundant comments from a change while preserving genuine \"why\" explanations. Use before committing or opening a PR, or when the user asks to review or clean up comment quality."
-argument-hint: "[--apply=none|all] [--strictness=high|low] [local | pr | <pr-number-or-url>]"
+argument-hint: "[--apply=none|all] [--strictness=high|low] [--base <ref>]"
 allowed-tools: Read, Grep, Glob, Bash, Edit
 disable-model-invocation: false
 user-invocable: true
@@ -13,13 +13,9 @@ Review the comments in a set of changes against the loaded guidelines, then appl
 
 ## 1. Resolve the target and read its changes
 
-The **target** is the last argument, a bare value (no flag) naming which diff is in scope. Resolve it, state the resolved target, then read the full diff:
+Parse `--base`, `--strictness` and `--apply`. State the resolved target, then read the full diff. The target is `git diff --merge-base <ref>` plus untracked files (`git ls-files --others --exclude-standard`; a new file's whole content counts as added). `<ref>` is `HEAD` when `--base` is omitted. `--apply=none` is **dry-run**: report what would change, edit nothing. Otherwise **fix**: apply the changes (`--apply=all` is the same; comment fixes have no size tier).
 
-- _(omitted — default)_ or `local` — uncommitted changes (`git diff HEAD`), plus any new untracked files (`git ls-files --others --exclude-standard`) — treat a new file's whole content as added.
-- `pr` — the current branch's PR (`gh pr diff`; if no open PR, say so and fall back to local).
-- a **PR number or URL** — that specific PR (`gh pr diff <number-or-url>`).
-
-Unrecognized value → say so and fall back to `local`. If the resolved target has no changes at all, say there's nothing to review and stop — don't load references or invent work.
+If the diff is empty, say so and stop.
 
 ## 2. Load references (strictness)
 
@@ -30,13 +26,7 @@ Then the `--strictness` argument (default `high`; unrecognized → `high`) selec
 - `high` _(default)_ — `references/strictness-low.md` **and** `references/strictness-high.md` (high layers extra rules for long block comments and file/module headers on top of the base set).
 - `low` — `references/strictness-low.md`.
 
-## 3. Determine the mode
-
-**Fix** is the default — the fixes get applied. `--apply=none` → **dry-run** mode: report what would change and edit nothing. `--apply=all` behaves as the default; comment fixes have no size tier.
-
-Fix mode edits the working tree, so it needs the target's code checked out locally. `local` and `pr` always are — `pr` resolves to this branch's own PR. A **number or URL** might not be, so check: `gh pr view <number-or-url> --json headRefOid` against `git rev-parse HEAD`. If they differ, fall back to dry-run mode and say why. Comparing commits rather than branch names is what catches a fork reusing the branch name, or a local branch sitting behind the PR head — either would otherwise apply someone else's diff to your files.
-
-## 4. Process each comment
+## 3. Process each comment
 
 Only comments **added in the target diff** are in scope — comments on added or modified lines, not pre-existing comments that merely appear as unchanged context. Reviewing untouched code erodes trust and buries the comments that actually need attention. One exception: a pre-existing comment whose _subject_ the diff changed is in scope, because the diff created the drift even though the comment line itself is unchanged.
 

@@ -1,7 +1,7 @@
 ---
 name: fix-correctness
 description: "Review a change for correctness only — bugs, edge cases, error handling — then apply the trivial in-scope fixes and defer the rest as follow-ups. Use when a change needs a bug review acted on rather than just reported, e.g. \"review this for bugs and fix them\"."
-argument-hint: "[--plan <path to plan.md>] [--apply=none|all]"
+argument-hint: "[--plan <path to plan.md>] [--apply=none|all] [--base <ref>]"
 allowed-tools: Read, Grep, Glob, Edit, Write, Bash, AskUserQuestion, Skill
 disable-model-invocation: false
 user-invocable: true
@@ -13,7 +13,9 @@ Run a cross-model adversarial review of a change, then act on what it finds: app
 
 ## 1. Resolve the arguments
 
-The target is always the **working-tree diff** — uncommitted changes on the current branch. Check there are some (`git status --short`); if the tree is clean, say so and stop rather than widening scope to find work.
+Parse `--base`, `--plan` and `--apply`. State the resolved target. The target is `git diff --merge-base <ref>` plus untracked files (`git ls-files --others --exclude-standard`). `<ref>` is `HEAD` when `--base` is omitted.
+
+If `git diff --stat --merge-base <ref>` and the untracked list are both empty, say there's nothing to review and stop.
 
 **`--plan <path>`** is optional. Given one, step 2 steers the review toward fidelity to that plan, and step 5 writes deferred findings into it. Without it, deferred findings stay in the report.
 
@@ -21,9 +23,9 @@ The target is always the **working-tree diff** — uncommitted changes on the cu
 
 ## 2. Run the review
 
-    Skill(skill: "codex-adversarial-review", args: "--scope auto focus on correctness, edge cases, error handling. Right-size each recommendation to the problem — KISS/YAGNI/DRY balanced against the complexity the change actually warrants; no guards, retries, or abstraction for failures this diff does not exhibit.")
+    Skill(skill: "codex-adversarial-review", args: "--base <ref> focus on correctness, edge cases, error handling. Right-size each recommendation to the problem — KISS/YAGNI/DRY balanced against the complexity the change actually warrants; no guards, retries, or abstraction for failures this diff does not exhibit.")
 
-With `--plan`, append `, and whether the implementation faithfully follows the plan at <plan path>` to that focus text. `--scope auto` picks up the working-tree diff.
+With `--plan`, append `, and whether the implementation faithfully follows the plan at <plan path>` to that focus text.
 
 On success the output is prose, not JSON: a `Verdict:` line and summary, a `Findings:` list (`- [severity] title (file:line-range)`, body, optional `Recommendation:`), and `Next steps:`. Hold it for step 3.
 

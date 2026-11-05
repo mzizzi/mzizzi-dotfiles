@@ -72,9 +72,9 @@ Leave the changes uncommitted on the Step 1 branch. All three passes ahead read 
 
 ## Step 4: Review passes
 
-    Skill(skill: "fix-all", args: "local --plan <plan document path> --strictness=high --apply=all")
+    Skill(skill: "fix-all", args: "--plan <plan document path> --strictness=high --apply=all")
 
-`<plan document path>` is the file from Step 0. `local` is the right target — the implementation is still uncommitted. `--strictness=high` covers the long block comments and module headers fresh implementation work tends to produce. `--apply=all` fixes the large findings now rather than deferring them: the code is fresh and uncommitted, so an invasive edit is cheapest here.
+`<plan document path>` is the file from Step 0. No `--base`: the implementation is still uncommitted. `--strictness=high` covers the long block comments and module headers fresh implementation work tends to produce. `--apply=all` fixes the large findings now rather than deferring them: the code is fresh and uncommitted, so an invasive edit is cheapest here.
 
 That skill runs the correctness, quality, and comment passes in order over the working-tree diff, steers the first two toward plan fidelity, applies every valid fix, writes anything still deferred into the plan's `## Follow-ups`, and verifies afterwards. Read its per-pass report and carry each outcome into Step 5 separately.
 

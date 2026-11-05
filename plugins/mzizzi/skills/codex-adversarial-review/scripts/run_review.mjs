@@ -1,13 +1,17 @@
 #!/usr/bin/env node
-// Run a Codex adversarial review, optionally scoped to specific files.
+// Run a Codex adversarial review over specific files, or everything since a merge base
+// (uncommitted work by default).
 //
-// Usage: node run_review.mjs [--files <path[,path...]>] [--scope <auto|working-tree|branch>]
-//                            [--base <ref>] [--model <id>] [--effort <level>] [focus text]
+// Usage: node run_review.mjs [--files <path[,path...]> | --base <ref>] [--model <id>]
+//                            [--effort <level>] [focus text]
 //
-// Without --files this reproduces what `codex-companion.mjs adversarial-review` does. With
-// --files it swaps in a review input built from those paths only, which the companion has no
-// way to express: its collectors run `git diff` with no pathspec, so every review otherwise
-// receives the whole working tree or the whole branch.
+// `/codex:adversarial-review` sets `disable-model-invocation: true`, and a local edit lifting it
+// would live in the versioned plugin cache, which each plugin update replaces. So this script
+// finds the plugin through installed_plugins.json and calls its libraries directly.
+//
+// `codex-companion.mjs adversarial-review` can't express either target: its collectors run
+// `git diff` with no pathspec, and its branch mode diffs merge-base..HEAD, skipping uncommitted
+// work.
 //
 // --model and --effort go to Codex as given. Without them Codex uses its own configured model
 // and reasoning effort.
@@ -64,7 +68,7 @@ try {
   process.exit(2);
 }
 
-const VALUE_FLAGS = ["--files", "--scope", "--base", "--model", "--effort"];
+const VALUE_FLAGS = ["--files", "--base", "--model", "--effort"];
 
 const argv = process.argv.slice(2);
 const options = { files: [] };
@@ -127,8 +131,7 @@ function collectFileContext(files) {
 
   return {
     repoRoot,
-    branch: git.getCurrentBranch(repoRoot),
-    target: { mode: "files", label: `files: ${files.join(", ")}`, explicit: true },
+    target: { label: `files: ${files.join(", ")}` },
     collectionGuidance:
       "The files below are the entire review target. You may read related files read-only for " +
       "context, but every finding must land on one of these files.",
@@ -141,12 +144,40 @@ function collectFileContext(files) {
   };
 }
 
+// The target is the working tree against the merge base, not HEAD: a fix-mode sweep reviews
+// edits an earlier pass hasn't committed. Codex reads the diff and untracked files itself, so the
+// prompt stays small whatever the change size.
+function collectBaseContext(ref) {
+  const mergeBase = spawnSync("git", ["merge-base", "HEAD", ref], {
+    cwd: repoRoot,
+    encoding: "utf8"
+  });
+  if (mergeBase.status !== 0) {
+    process.stderr.write(`No merge base between HEAD and ${ref}: ${mergeBase.stderr.trim()}\n`);
+    process.exit(2);
+  }
+  const base = mergeBase.stdout.trim();
+
+  return {
+    repoRoot,
+    target: { label: `changes since the merge base with ${ref}, committed or not` },
+    collectionGuidance:
+      `The review target is the working tree against merge base ${base}: commits since it, ` +
+      `uncommitted edits, and the untracked files listed below, which are new. Nothing is ` +
+      `inlined. Before finalizing findings, run \`git diff ${base}\` (working tree vs that ` +
+      `commit, not \`${base}..HEAD\`) and read each untracked file. Read-only git commands and ` +
+      `file reads are allowed.`,
+    content: [
+      section("Merge Base", base),
+      section("Changed Files", runGit(["diff", "--stat", base])),
+      section("Untracked Files", runGit(["ls-files", "--others", "--exclude-standard"]))
+    ].join("\n")
+  };
+}
+
 const context = options.files.length
   ? collectFileContext(options.files)
-  : git.collectReviewContext(
-      cwd,
-      git.resolveReviewTarget(cwd, { scope: options.scope, base: options.base })
-    );
+  : collectBaseContext(options.base ?? "HEAD");
 
 const template = prompts.loadPromptTemplate(pluginRoot, "adversarial-review");
 const prompt = prompts.interpolateTemplate(template, {
@@ -161,34 +192,24 @@ const outputSchema = codex.readOutputSchema(
   path.join(pluginRoot, "schemas", "review-output.schema.json")
 );
 
-let parsed;
-for (let attempt = 0; attempt < 2; attempt += 1) {
-  const result = await codex.runAppServerTurn(context.repoRoot, {
-    prompt,
-    sandbox: "read-only",
-    outputSchema,
-    model: options.model,
-    effort: options.effort
-  });
+const result = await codex.runAppServerTurn(context.repoRoot, {
+  prompt,
+  sandbox: "read-only",
+  outputSchema,
+  model: options.model,
+  effort: options.effort
+});
 
-  parsed = codex.parseStructuredOutput(result.finalMessage, {
-    status: result.status,
-    failureMessage: result.error?.message ?? result.stderr
-  });
-
-  // A clean run that produced neither structured output nor raw text is the companion losing the
-  // report, not a review that found nothing — a caller can't tell those apart, so retry rather
-  // than hand back a silence that reads as a clean bill of health.
-  if (parsed.parsed || parsed.rawOutput) {
-    process.stdout.write(
-      render.renderReviewResult(parsed, {
-        reviewLabel: "Adversarial Review",
-        targetLabel: context.target.label
-      })
-    );
-    process.exit(0);
-  }
+if (result.status !== 0 || !result.finalMessage) {
+  const reason = result.error?.message || result.stderr || "Codex returned no report.";
+  process.stderr.write(`${reason}\n`);
+  process.exit(1);
 }
 
-process.stderr.write("CODEX_EMPTY_REPORT: codex returned no report, twice.\n");
-process.exit(1);
+process.stdout.write(
+  render.renderReviewResult(codex.parseStructuredOutput(result.finalMessage), {
+    reviewLabel: "Adversarial Review",
+    targetLabel: context.target.label
+  })
+);
+process.exit(0);

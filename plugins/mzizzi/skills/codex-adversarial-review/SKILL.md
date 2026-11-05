@@ -9,11 +9,16 @@ user-invocable: true
 
 # Codex Adversarial Review
 
-Run a Codex adversarial review by calling the codex plugin's underlying script directly, instead of going through `/codex:adversarial-review`. That command ships with `disable-model-invocation: true`, and any local edit to lift the restriction lives inside a versioned plugin cache directory that gets replaced wholesale on every plugin update, so it silently reverts. This skill sidesteps the gate entirely: it resolves wherever the codex plugin currently lives via Claude Code's own `installed_plugins.json` (kept up to date across updates) and invokes `codex-companion.mjs` the same way the command itself does.
+Run a Codex adversarial review with the bundled script. `/codex:adversarial-review` sets `disable-model-invocation: true`, so a model can't call it.
 
 ## How to run it
 
-Run the bundled script. `--files` scopes the review to specific paths; `--model` and `--effort` pick the Codex model and reasoning effort; anything else is focus text:
+Run the bundled script with one review target:
+
+- `--files <paths>` — only those files: their staged diff, unstaged diff, and current contents.
+- `--base <ref>` — default `HEAD`: uncommitted changes and untracked files. With another ref, also the commits since the merge base with `<ref>`.
+
+`--model` and `--effort` pick the Codex model and reasoning effort; anything else is focus text:
 
 ```bash
 node "<skill-dir>/scripts/run_review.mjs" --model gpt-6-astra --effort high --files plans/20260615-token-refresh/plan.md "focus on feasibility, completeness, missing risks, and questionable assumptions"
@@ -21,17 +26,15 @@ node "<skill-dir>/scripts/run_review.mjs" --model gpt-6-astra --effort high --fi
 
 `<skill-dir>` is the directory this `SKILL.md` was loaded from.
 
-Run it without backgrounding (no `run_in_background: true`) and with a generous timeout — the script has no internal cap on how long a Codex review can take, so give it the maximum (600000ms). The call must complete before you have a result to act on.
+Run it without backgrounding (no `run_in_background: true`) and with a generous timeout — the script has no internal cap on how long a Codex review can take, so give it the maximum (600000ms).
 
 **Model.** Pass `--model` and `--effort` as shown on every run. Without them the review uses the Codex CLI's configured default.
-
-**Scope.** Prefer `--files`: it sends those paths' staged diff, unstaged diff, and current contents, and nothing else. Without it the review falls back to the codex plugin's own targeting — `--scope auto|working-tree|branch`, or `--base <ref>` — which sends the **entire** working-tree diff when the tree is dirty and the entire branch diff when it's clean. Naming a file in focus text alone does not limit anything, so an unscoped review carries whatever unrelated work you have pending. Committing first does not narrow it; it flips `auto` to a branch diff, which is usually wider.
 
 ## Reading the result
 
 - **Success:** stdout is the same markdown-formatted review report `/codex:adversarial-review` would print for a human — a `Verdict:`, a summary, a `Findings:` list (each with severity, title, file:line, body, and recommendation), and a `Next steps:` list.
 - **Failure:** stdout is empty; the reason is on stderr and the exit code distinguishes why:
-  - **Exit 2** — the review never started. `CODEX_NOT_INSTALLED:` means no `codex@openai-codex` entry in `installed_plugins.json` or no libraries at the resolved install path; `CODEX_CONTRACT_CHANGED:` means the plugin updated and no longer exposes the modules this script imports; anything else is a bad argument (an unknown `--files` path, or `--files` resolving to nothing).
-  - **Exit 1** — the codex plugin is installed but the review itself failed (Codex CLI not authenticated, not inside a git repository, timeout, etc.). Usually the underlying script's own error text, passed through unchanged — it often names the specific fix (e.g. pointing at `/codex:setup`). The one exception is `CODEX_EMPTY_REPORT:`, raised by this script when the companion exits cleanly but hands back no report on two consecutive attempts.
+  - **Exit 2** — the review never started: the codex plugin is missing or no longer exposes what the script imports, or an argument was bad.
+  - **Exit 1** — the codex plugin is installed but the review itself failed (Codex CLI not authenticated, not inside a git repository, timeout, etc.). The stderr text is Codex's own error, passed through unchanged — it often names the specific fix (e.g. pointing at `/codex:setup`) — or `Codex returned no report.` when the turn gave neither an error nor a report.
 
-  Either way, treat this as "the review is unavailable right now" and surface the stderr text as the reason to whatever workflow called this skill — don't treat it as a fatal error.
+  Either way the review is unavailable: report the stderr text as the reason to the caller and stop. It is not a fatal error.
