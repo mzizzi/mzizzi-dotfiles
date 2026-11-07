@@ -1,0 +1,40 @@
+# The agent-lab sandbox: `sbx env run sandbox` from the repo root creates it from this file.
+# sbx applies this file only at create: an edit here or in agent-lab/ needs a recreate.
+# Host paths are absolute because sbx does not expand ~. Guest paths mirror them:
+# sbx mounts C:/x at /c/x.
+schemaVersion: "1"
+name: agent-lab
+# sbx requires the agent to match the kit directory's basename.
+agent: agent-lab
+kits:
+  - ./agent-lab
+workspace:
+  path: ..
+  clone: true
+additionalWorkspaces:
+  # Bash history, Claude and pi sessions, the Claude login, and dcode threads; see the kit's .bashrc block.
+  - path: C:/Users/Matt/.sandbox-state/agent-lab
+  # The output style pi/setup.sh appends to pi's system prompt.
+  - path: C:/Users/Matt/code/attention-control
+    readOnly: true
+sandboxOptions:
+  skills: "off"
+# Approves the proxy's use of the host's stored logins (`sbx secret set
+# anthropic|openai --oauth`) at the token endpoint and resource hosts that the kit's
+# credential@1 entries name. sbx merges these into %APPDATA%/sbx/credentials.yaml.
+bindings:
+  openai:
+    oauth:
+      domains:
+        - auth.openai.com
+        - chatgpt.com
+  anthropic:
+    oauth:
+      domains:
+        - platform.claude.com
+        - api.anthropic.com
+# The network starts open; agent-lab/bin/network-restrict.ps1 limits it to the kit allowlist.
+lifecycle:
+  postCreate:
+    - name: open-network
+      command: powershell -NoProfile -ExecutionPolicy Bypass -File ${{ env.fileDir }}/agent-lab/bin/network-open.ps1

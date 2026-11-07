@@ -16,6 +16,8 @@ RUN npm install -g "@anthropic-ai/claude-code@${CLAUDE_VERSION}" "@openai/codex@
     && codex --version \
     && pi --version
 
+COPY pi/ /opt/pi-setup/
+
 ARG DCODE_VERSION
 # Matches the official installer: a stable release may pin a pre-release
 # dependency, and the system Python is too new for prebuilt wheels of some
@@ -25,8 +27,8 @@ RUN uv tool install --no-cache --python 3.13 --prerelease allow "deepagents-code
 
 RUN mkdir -p /home/agent/.claude /home/agent/.codex /home/agent/.pi/agent /home/agent/.deepagents/.state
 
-# Keep Bash history and Claude and dcode sessions on the host when
-# %USERPROFILE%\.sandbox-state\agent-lab is passed as an extra workspace; sbx
+# Keep Bash history, Claude, dcode and pi sessions, and the Claude login on the host
+# when %USERPROFILE%\.sandbox-state\agent-lab is passed as an extra workspace; sbx
 # mounts it at the host-mirrored path. Without the mount, the defaults apply.
 RUN cat >> /home/agent/.bashrc <<'EOF'
 
@@ -45,9 +47,20 @@ for state_dir in /*/Users/*/.sandbox-state/agent-lab; do
         db="$state_dir/deepagents/sessions.db"
         [ -e "$db" ] || python3 -c 'import sqlite3, sys; sqlite3.connect(sys.argv[1]).execute("PRAGMA journal_mode=WAL")' "$db"
         ln -sfn "$db" /home/agent/.deepagents/.state/sessions.db
+
+        # Only pi's sessions move; the kit manages the rest of its agent dir.
+        # A symlink rather than PI_CODING_AGENT_SESSION_DIR, which drops pi's per-directory
+        # session layout and the sessions path pi-subagents trusts.
+        pi_dir=/home/agent/.pi/agent
+        mkdir -p "$state_dir/pi/sessions"
+        # A real sessions dir means pi ran before this block; keep what it wrote.
+        if [ -d "$pi_dir/sessions" ] && [ ! -L "$pi_dir/sessions" ]; then
+            cp -a "$pi_dir/sessions/." "$state_dir/pi/sessions/" && rm -rf "$pi_dir/sessions"
+        fi
+        ln -sfn "$state_dir/pi/sessions" "$pi_dir/sessions"
     fi
 done
-unset state_dir db
+unset state_dir db pi_dir
 shopt -s histappend
 PROMPT_COMMAND="history -a${PROMPT_COMMAND:+; $PROMPT_COMMAND}"
 EOF

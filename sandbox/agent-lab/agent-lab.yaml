@@ -2,7 +2,7 @@
 schemaVersion: "3"
 kind: workload
 displayName: Agent configuration lab
-description: Claude Code, Codex, and deepagents-code (dcode) with subscription authentication, plus an unconfigured Pi CLI
+description: Claude Code, Codex, and deepagents-code (dcode) with subscription authentication, plus Pi
 
 args:
   claudeVersion:
@@ -14,7 +14,7 @@ args:
     pattern: '^[0-9]+\.[0-9]+\.[0-9]+$'
     buildArg: CODEX_VERSION
   piVersion:
-    default: "1.1.0"
+    default: "1.5.0"
     pattern: '^[0-9]+\.[0-9]+\.[0-9]+$'
     buildArg: PI_VERSION
   dcodeVersion:
@@ -106,6 +106,10 @@ capabilities:
           user: agent
           env: [HTTP_PROXY, HTTPS_PROXY]
           description: Configure npm for package installs through the Sandbox proxy
+        # sbxenv.yaml mounts the attention-control checkout read-only at its host-mirrored path.
+        - command: 'bash /opt/pi-setup/setup.sh /*/Users/*/code/attention-control/output-styles/attention-control.md'
+          user: agent
+          description: Install pi packages and append the attention-control output style
       files:
         - path: /home/agent/.codex/config.toml
           overwrite: false
@@ -148,3 +152,47 @@ capabilities:
           overwrite: false
           content: |
             {"mcpServers": {"langchain-docs": {"type": "http", "url": "https://docs.langchain.com/mcp"}}}
+        # Pi's ChatGPT provider, keyed with the proxy's placeholder token like Codex above. Pi's
+        # built-in openai-codex provider reads the account ID from a JWT access token, so it
+        # rejects the placeholder. With no other provider logged in, plain `pi` starts on the
+        # first model listed. Limits, thinking levels and compat copy pi's openai-codex catalog.
+        - path: /home/agent/.pi/agent/models.json
+          overwrite: false
+          content: |
+            {
+              "providers": {
+                "chatgpt": {
+                  "name": "ChatGPT",
+                  "baseUrl": "https://chatgpt.com/backend-api/codex",
+                  "api": "openai-responses",
+                  "apiKey": "oai-oat01-proxy-managed",
+                  "compat": {
+                    "supportsOpenAIGrammarTools": true,
+                    "supportsAdditionalTools": true,
+                    "supportsToolSearch": true,
+                    "supportsMidConvoSystemMessages": true
+                  },
+                  "models": [
+                    {
+                      "id": "gpt-6.1-sol",
+                      "name": "GPT-6.1 Sol",
+                      "reasoning": true,
+                      "thinkingLevelMap": {"off": null, "minimal": "low", "low": "low", "medium": "medium", "high": "high", "xhigh": "xhigh", "max": "max"},
+                      "input": ["text", "image"],
+                      "contextWindow": 500000,
+                      "maxTokens": 128000
+                    },
+                    {
+                      "id": "gpt-6.1-terra",
+                      "name": "GPT-6.1 Terra",
+                      "reasoning": true,
+                      "thinkingLevelMap": {"off": "none", "minimal": "low", "low": "low", "medium": "medium", "high": "high", "xhigh": "xhigh", "max": "max"},
+                      "input": ["text", "image"],
+                      "contextWindow": 500000,
+                      "maxTokens": 128000
+                    }
+                  ]
+                }
+              }
+            }
+          mode: "0600"
