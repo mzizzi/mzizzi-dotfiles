@@ -9,6 +9,7 @@ On the host, from the repo root:
 ```powershell
 sbx login                                       # once
 sbx secret set openai --oauth                   # once: ChatGPT login for Codex, dcode, and Pi
+gh auth status                                  # GitHub login on the host; run gh auth login if needed
 sbx env run sandbox                             # create (network open) if missing, attach
 sbx env exec -it sandbox -- bash                # second shell
 .\sandbox\agent-lab\bin\network-restrict.ps1    # limit outbound to the kit allowlist
@@ -26,9 +27,12 @@ claude --plugin-dir "$WORKSPACE_DIR/plugins/mzizzi"
 codex
 dcode
 pi
+gh api user --jq .login                         # verify GitHub proxy authentication
 ```
 
 The clone starts from the committed ref; uncommitted files are readable at `/run/sandbox/source`. Bash history, Claude and pi sessions, the Claude login, and dcode threads are kept on the host in `%USERPROFILE%\.sandbox-state\agent-lab`, which `sbxenv.yaml` mounts. Codex, dcode, and Pi use the host ChatGPT login through Docker's credential proxy, so don't use dcode's own `/auth` or Pi's `/login`. Pi reaches it through the kit's `chatgpt` provider in `~/.pi/agent/models.json`.
+
+`sbxenv.yaml` reads the host's `gh auth token` when creating the sandbox. The kit gives `gh` a proxy-managed `GH_TOKEN` and configures it as Git's HTTPS credential helper. The real token stays on the host. `gh auth login` inside the sandbox is unnecessary; `GH_TOKEN` takes precedence over stored GitHub CLI logins. To refresh the host login, run `gh auth login` on the host and then `sbx secret set github --sandbox agent-lab --command 'gh auth token'` to update the existing sandbox without rebuilding it.
 
 `pi/setup.sh` installs `pi/settings.json` as Pi's whole settings file, installs the web-access and sub-agent packages it pins, and appends the attention-control output style to Pi's system prompt. The kit runs it at creation against `%USERPROFILE%\code\attention-control`, which `sbxenv.yaml` mounts read-only; the SimRacing devcontainer runs the same script.
 

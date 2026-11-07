@@ -102,6 +102,22 @@ capabilities:
               refreshToken: "{{.RefreshToken}}"
               expiresAt: "{{.ExpiresAt}}"
               scopes: "{{.Scopes}}"
+  - type: com.docker.sandbox/credential@1
+    optional: true
+    description: GitHub CLI and Git over HTTPS through the Sandbox proxy
+    config:
+      service: github
+      phase: runtime
+      apiKey:
+        name: GH_TOKEN
+        proxyManaged: true
+        inject:
+          - domain: api.github.com
+            header: Authorization
+            format: "Bearer %s"
+          - domain: github.com
+            scheme: basic
+            username: x-access-token
   - type: com.docker.sandbox/lifecycle@1
     config:
       install:
@@ -113,6 +129,9 @@ capabilities:
         - command: "bash /opt/pi-setup/setup.sh /*/Users/*/code/attention-control/output-styles/attention-control.md"
           user: agent
           description: Install pi packages and append the attention-control output style
+        - command: 'gh auth setup-git --hostname github.com --force'
+          user: agent
+          description: Configure Git to use GitHub CLI credentials
       startup:
         - command: 'bash "$WORKSPACE_DIR/sandbox/agent-lab/bin/setup-pre-commit.sh"'
           user: agent

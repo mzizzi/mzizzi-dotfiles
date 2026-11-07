@@ -19,8 +19,11 @@ additionalWorkspaces:
     readOnly: true
 sandboxOptions:
   skills: "off"
+secrets:
+  github:
+    command: gh auth token
 # Approves the proxy's use of the host's stored logins (`sbx secret set
-# anthropic|openai --oauth`) at the token endpoint and resource hosts that the kit's
+# anthropic|openai --oauth`) and GitHub CLI token at the hosts that the kit's
 # credential@1 entries name. sbx merges these into %APPDATA%/sbx/credentials.yaml.
 bindings:
   openai:
@@ -33,6 +36,11 @@ bindings:
       domains:
         - platform.claude.com
         - api.anthropic.com
+  github:
+    apiKey:
+      domains:
+        - api.github.com
+        - github.com
 # The network starts open; agent-lab/bin/network-restrict.ps1 limits it to the kit allowlist.
 lifecycle:
   postCreate:
