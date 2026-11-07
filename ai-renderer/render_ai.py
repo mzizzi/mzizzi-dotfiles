@@ -262,6 +262,8 @@ def render_target(source, resources, target):
             if path.is_dir():
                 continue
             relative = path.relative_to(resource.path.parent)
+            if relative.parts[0] == "_templates":
+                continue
             try:
                 mode = stat.S_IMODE(path.stat().st_mode)
                 if path.suffix == ".j2":

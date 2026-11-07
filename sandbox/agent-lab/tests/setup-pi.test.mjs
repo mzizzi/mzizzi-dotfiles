@@ -159,6 +159,12 @@ test("preserves the shared setup's external style and packages while adding remi
     "utf8",
   );
   assert.equal(readFileSync(join(agentDir, "settings.json"), "utf8"), settings);
+  const installedSettings = JSON.parse(
+    readFileSync(join(agentDir, "settings.json"), "utf8"),
+  );
+  assert.equal(installedSettings.defaultProvider, "chatgpt");
+  assert.equal(installedSettings.defaultModel, "gpt-6.1-sol");
+  assert.equal(installedSettings.defaultThinkingLevel, "high");
   assert.deepEqual(JSON.parse(readFileSync(subagentConfig, "utf8")), {
     globalConcurrencyLimit: 32,
     maxActiveAsyncRunsPerSession: 8,

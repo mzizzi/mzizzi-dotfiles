@@ -19,6 +19,7 @@ Run `python ai-renderer/render_ai.py --help` for options. Paths resolve from the
 
 - Skills: `ai/<namespace>/skills/<name>/SKILL.md.j2`, with supporting files beside it.
 - Agents: `ai/<namespace>/agents/<name>.md.j2`.
+- Skill-only template fragments: `_templates/` inside the skill directory. Jinja can include them; the renderer does not emit that directory.
 - Frontmatter: shared description plus explicit `claude` and `pi` blocks. `TARGET_FIELDS`, `AGENT_FIELDS`, and `AGENT_CHOICES` in `render_ai.py` define supported metadata.
 
 Use `Skill("name")` and `Agent("name")` for references; qualify another namespace as `"namespace:name"`. Helpers render names, not invocations or preloads. Templates receive `target` (`claude` or `pi`). Set a target block to `false` to omit that resource; references to omitted resources fail generation. The renderer renders `.j2` files and copies other skill resources unchanged. Unknown references, unsupported metadata, multiline frontmatter fields, collisions, and symlinks stop generation.

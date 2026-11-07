@@ -108,6 +108,22 @@ class RendererTests(unittest.TestCase):
         other_output = self.repo / "generated/claude/plugins/other/skills/other-example/SKILL.md"
         self.assertIn("the `mzizzi:renderer-example` skill", other_output.read_text())
 
+    def test_source_only_templates_render_without_becoming_resources(self):
+        templates = self.source / "_templates"
+        templates.mkdir()
+        (templates / "body.md.j2").write_text('For {{ target }}, load {{ Skill("renderer-example") }}.\n')
+        (templates / "notes.txt").write_text("Source notes, not a bundled resource.\n")
+        self.template.write_text(
+            '---\ndescription: Include example.\n---\n'
+            '{% include "mzizzi/skills/renderer-example/_templates/body.md.j2" %}\n'
+        )
+        build(self.repo)
+        for target in Target:
+            output = self.skill_output(target)
+            self.assertIn(f"For {target}, load the `", (output / "SKILL.md").read_text())
+            self.assertFalse((output / "_templates").exists())
+            self.assertTrue((output / "references/example.txt").is_file())
+
     def test_nested_skill_template_is_a_resource_not_an_entrypoint(self):
         nested = self.source / "references/SKILL.md.j2"
         nested.write_text('# Example skill document\n\nSee {{ Skill("renderer-example") }}.\n')
