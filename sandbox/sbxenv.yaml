@@ -46,3 +46,5 @@ lifecycle:
   postCreate:
     - name: open-network
       command: powershell -NoProfile -ExecutionPolicy Bypass -File ${{ env.fileDir }}/agent-lab/bin/network-open.ps1
+    - name: refresh-intellij-ssh-key
+      command: python "${{ env.fileDir }}/agent-lab/bin/setup-intellij-ssh.py"
