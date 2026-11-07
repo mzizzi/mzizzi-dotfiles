@@ -23,11 +23,17 @@ class RenderError(ValueError):
     pass
 
 
+class ResourceKind(StrEnum):
+    SKILL = "skills"
+    AGENT = "agents"
+
+
 @dataclass(frozen=True)
-class SkillSource:
+class ResourceSource:
     namespace: str  # Source package namespace.
-    name: str  # Local skill name from its directory.
-    directory: Path  # Source bundle, including supporting files.
+    name: str  # Local resource name from its path.
+    path: Path  # Entrypoint template; skill resources live beside it.
+    kind: ResourceKind  # Skill bundle or agent definition.
 
     @property
     def identity(self):
@@ -51,6 +57,21 @@ TARGET_FIELDS = {
         "allowed-tools": str,
     },
     Target.PI: {"disable-model-invocation": bool},
+}
+
+AGENT_FIELDS = {
+    Target.CLAUDE: {"model": str, "effort": str},
+    Target.PI: {
+        "model": str, "thinking": str,
+        "advertise": bool, "defaultContext": str, "systemPromptMode": str,
+        "inheritProjectContext": bool, "inheritGlobalContext": bool, "inheritSkills": bool,
+    },
+}
+AGENT_CHOICES = {
+    (Target.CLAUDE, "effort"): {"low", "medium", "high", "xhigh", "max"},
+    (Target.PI, "thinking"): {"off", "minimal", "low", "medium", "high", "xhigh", "max"},
+    (Target.PI, "defaultContext"): {"fresh", "fork"},
+    (Target.PI, "systemPromptMode"): {"replace", "append"},
 }
 
 
@@ -77,7 +98,7 @@ UniqueKeyLoader.add_constructor(
 
 def check_name(name):
     if len(name) > 64 or not NAME.fullmatch(name):
-        raise RenderError(f"invalid skill or namespace name {name!r}")
+        raise RenderError(f"invalid skill, agent, or namespace name {name!r}")
 
 
 def discover(source):
@@ -86,22 +107,40 @@ def discover(source):
     for path in source.rglob("*"):
         if path.is_symlink():
             raise RenderError(f"{path}: source symlinks are not supported")
-    skills = {}
-    for directory in sorted(source.glob("*/skills/*")):
-        if not directory.is_dir():
-            raise RenderError(f"{directory}: expected a skill directory")
-        namespace = directory.parent.parent.name
-        name = directory.name
-        check_name(namespace)
-        check_name(name)
-        if not (directory / "SKILL.md.j2").is_file():
-            raise RenderError(f"{directory}: missing SKILL.md.j2")
-        skill = SkillSource(namespace, name, directory)
-        skills[skill.identity] = skill
-    return skills
+    resources = {}
+    for kind in ResourceKind:
+        for path in sorted(source.glob(f"*/{kind}/*")):
+            namespace = path.parent.parent.name
+            if kind == ResourceKind.SKILL:
+                if not path.is_dir():
+                    raise RenderError(f"{path}: expected a skill directory")
+                name = path.name
+                path = path / "SKILL.md.j2"
+                if not path.is_file():
+                    raise RenderError(f"{path}: missing SKILL.md.j2")
+            else:
+                if not path.is_file() or not path.name.endswith(".md.j2"):
+                    raise RenderError(f"{path}: expected an agent .md.j2 file")
+                name = path.name.removesuffix(".md.j2")
+            check_name(namespace)
+            check_name(name)
+            resource = ResourceSource(namespace, name, path, kind)
+            resources[kind, resource.identity] = resource
+    return resources
 
 
-def parse_skill(text, skill, target):
+def render_frontmatter(metadata):
+    # Pi's agent parser ignores indented plain-scalar continuations.
+    text = yaml.safe_dump(metadata, sort_keys=False, allow_unicode=True, width=float("inf"))
+    lines = text.splitlines()
+    if len(lines) != len(metadata) or any(
+        not line.startswith(f"{key}:") for key, line in zip(metadata, lines)
+    ):
+        raise RenderError("generated frontmatter must use one physical line per field")
+    return text
+
+
+def parse_resource(text, resource, target):
     lines = text.splitlines(keepends=True)
     if not lines or lines[0].strip() != "---":
         raise RenderError("expected YAML frontmatter")
@@ -117,25 +156,33 @@ def parse_skill(text, skill, target):
     description = metadata.get("description")
     if not isinstance(description, str) or not description.strip() or len(description) > 1024:
         raise RenderError("description must be nonempty text of at most 1024 characters")
+    fields = TARGET_FIELDS if resource.kind == ResourceKind.SKILL else AGENT_FIELDS
     for metadata_target in Target:
         block = metadata.get(metadata_target, {})
         if not isinstance(block, dict):
             raise RenderError(f"{metadata_target} metadata must be a mapping")
         for key, value in block.items():
-            expected = TARGET_FIELDS[metadata_target].get(key)
+            expected = fields[metadata_target].get(key)
             if expected is None:
                 raise RenderError(f"unsupported {metadata_target} metadata: {key}")
             if type(value) is not expected:
                 raise RenderError(f"{metadata_target}.{key} must be {expected.__name__}")
-    name = skill.name
-    check_name(name)
-    output_metadata = {"name": name, "description": description, **metadata.get(target, {})}
-    frontmatter = yaml.safe_dump(output_metadata, sort_keys=False, allow_unicode=True)
+            if resource.kind == ResourceKind.AGENT:
+                choices = AGENT_CHOICES.get((metadata_target, key))
+                if choices is not None and value not in choices:
+                    raise RenderError(f"{metadata_target}.{key} must be one of {', '.join(sorted(choices))}")
+                if expected is str and not value.strip():
+                    raise RenderError(f"{metadata_target}.{key} must be nonempty text")
+    output_metadata = {"name": resource.name, "description": description}
+    if resource.kind == ResourceKind.AGENT and target == Target.PI:
+        output_metadata["package"] = resource.namespace
+    output_metadata.update(metadata.get(target, {}))
+    frontmatter = render_frontmatter(output_metadata)
     body = "".join(lines[end + 1:])
     return f"---\n{frontmatter}---\n{body}".rstrip("\n") + "\n"
 
 
-def render_target(source, skills, target):
+def render_target(source, resources, target):
     environment = Environment(
         loader=FileSystemLoader(source),
         undefined=StrictUndefined,
@@ -152,53 +199,69 @@ def render_target(source, skills, target):
             raise RenderError(f"file/directory output collision: {path}")
         artifacts[path] = artifact
 
-    for skill in skills.values():
-        name = skill.name
-        identity = skill.identity if target == Target.CLAUDE else name
-        if identity in names:
-            raise RenderError(f"{skill.directory}: {target}: output name collision: {name}")
-        names.add(identity)
-        if target == Target.CLAUDE:
-            package = Path("plugins") / skill.namespace
-        else:
-            package = Path("packages") / skill.namespace
-        destination = package / "skills" / name
+    for resource in resources.values():
+        kind = resource.kind
+        identity = resource.identity if target == Target.CLAUDE or kind == ResourceKind.AGENT else resource.name
+        if (kind, identity) in names:
+            raise RenderError(f"{resource.path}: {target}: output name collision: {resource.name}")
+        names.add((kind, identity))
+        package = Path("plugins" if target == Target.CLAUDE else "packages") / resource.namespace
+        destination = package / kind
+        if kind == ResourceKind.SKILL:
+            destination /= resource.name
 
-        def skill_reference(identity):
+        def reference(identity, reference_kind):
+            label = "skill" if reference_kind == ResourceKind.SKILL else "agent"
+            helper = "Skill" if reference_kind == ResourceKind.SKILL else "Agent"
             if not isinstance(identity, str):
-                raise RenderError("Skill() needs a string identity")
-            qualified = identity if ":" in identity else f"{skill.namespace}:{identity}"
-            referenced = skills.get(qualified)
+                raise RenderError(f"{helper}() needs a string identity")
+            qualified = identity if ":" in identity else f"{resource.namespace}:{identity}"
+            referenced = resources.get((reference_kind, qualified))
             if referenced is None:
-                raise RenderError(f"unknown skill {identity!r}")
-            reference = referenced.identity if target == Target.CLAUDE else referenced.name
-            return f"the `{reference}` skill"
+                raise RenderError(f"unknown {label} {identity!r}")
+            if target == Target.CLAUDE:
+                name = referenced.identity
+            elif reference_kind == ResourceKind.AGENT:
+                name = f"{referenced.namespace}.{referenced.name}"
+            else:
+                name = referenced.name
+            return f"the `{name}` {label}"
 
-        for path in sorted(skill.directory.rglob("*")):
+        paths = sorted(resource.path.parent.rglob("*")) if kind == ResourceKind.SKILL else [resource.path]
+        for path in paths:
             if path.is_dir():
                 continue
-            relative = path.relative_to(skill.directory)
+            relative = path.relative_to(resource.path.parent)
             try:
                 mode = stat.S_IMODE(path.stat().st_mode)
                 if path.suffix == ".j2":
                     relative = relative.with_suffix("")
                     template = environment.get_template(path.relative_to(source).as_posix())
-                    text = template.render(Skill=skill_reference)
-                    if path == skill.directory / "SKILL.md.j2":
-                        text = parse_skill(text, skill, target)
+                    text = template.render(
+                        Skill=lambda identity: reference(identity, ResourceKind.SKILL),
+                        Agent=lambda identity: reference(identity, ResourceKind.AGENT),
+                    )
+                    if path == resource.path:
+                        text = parse_resource(text, resource, target)
                     artifact = Artifact((text.rstrip("\n") + "\n").encode("utf-8"), mode)
                 else:
                     artifact = Artifact(path.read_bytes(), mode)
                 add(destination / relative, artifact)
             except (RenderError, TemplateError, yaml.YAMLError, UnicodeError) as error:
                 raise RenderError(f"{path}: {target}: {error}") from error
-    for namespace in sorted({skill.namespace for skill in skills.values()}):
+    for namespace in sorted({resource.namespace for resource in resources.values()}):
         if target == Target.CLAUDE:
             path = Path("plugins") / namespace / ".claude-plugin/plugin.json"
             manifest = {"name": namespace}
         else:
             path = Path("packages") / namespace / "package.json"
-            manifest = {"name": f"{namespace}-ai", "pi": {"skills": ["./skills"]}}
+            pi = {}
+            kinds = {resource.kind for resource in resources.values() if resource.namespace == namespace}
+            if ResourceKind.SKILL in kinds:
+                pi["skills"] = ["./skills"]
+            if ResourceKind.AGENT in kinds:
+                pi["subagents"] = {"agents": ["./agents"]}
+            manifest = {"name": f"{namespace}-ai", "pi": pi}
         add(path, Artifact((json.dumps(manifest, indent=2) + "\n").encode("utf-8")))
     return artifacts
 
@@ -273,8 +336,8 @@ def build(repo_root, targets=tuple(Target), check=False):
     output = repo_root / "generated"
     if output.is_symlink():
         raise RenderError(f"{output}: output symlinks are not supported")
-    skills = discover(source)
-    rendered = {target: render_target(source, skills, target) for target in targets}
+    resources = discover(source)
+    rendered = {target: render_target(source, resources, target) for target in targets}
     for target in targets:
         check_owned(output / target)
     if check:
@@ -290,7 +353,7 @@ def build(repo_root, targets=tuple(Target), check=False):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Render AI skills for Claude plugins and Pi packages.")
+    parser = argparse.ArgumentParser(description="Render AI skills and agents for Claude plugins and Pi packages.")
     parser.add_argument("--target", type=Target, choices=list(Target), help="Render only this target; otherwise render both.")
     parser.add_argument("--check", action="store_true", help="Report missing, changed, or stale output without writes.")
     args = parser.parse_args()
@@ -306,7 +369,7 @@ def main():
     if changes:
         print("\n".join(changes))
         return 1
-    print("AI output is current." if args.check else "Rendered AI skills.")
+    print("AI output is current." if args.check else "Rendered AI resources.")
     return 0
 
 

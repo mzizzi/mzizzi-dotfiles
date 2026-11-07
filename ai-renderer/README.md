@@ -1,68 +1,36 @@
 # AI resource renderer
 
-Keep adopted AI resource sources under `ai/`. Render them into Claude plugins and Pi packages without maintaining separate instructions for each harness.
-
-The current renderer handles skills only. `development-preferences` and `create-plan-dir` are pilot staging sources under `ai/mzizzi/skills/`. `renderer-example` is a loader fixture that references both pilots, not a production skill. Agents, shared rule deployment, and installation remain separate phases. Existing plugins and installed settings stay unchanged.
-
-## Pilot staging
-
-The active production copies remain under `plugins/mzizzi/skills/` until deployment establishes a single editable source. The pilot preserves their instruction bodies and supporting files. Claude output preserves the original metadata values; YAML formatting and key order can differ.
-
-The source paths supply skill names. Claude-specific metadata lives in each template's `claude` block. Pi retains the description and automatic-invocation setting, but has no equivalent for Claude's argument hint, user-invocation switch, or allowed-tools metadata. The pilot does not translate Claude's `allowed-tools` metadata into a Pi tool restriction. Unsupported metadata still stops generation rather than silently disappearing.
+Render shared skills and agents from `ai/` into Claude plugins and Pi packages. Generated files live under Git-ignored `generated/`. The pre-commit hook renders both targets before every commit.
 
 ## Run
 
-Use Python 3.11 or newer in a virtual environment:
+Use Python 3.11 or newer:
 
 ```bash
-python -m venv venv
-venv/bin/python -m pip install -r ai-renderer/requirements.txt
-venv/bin/python ai-renderer/render_ai.py
-venv/bin/python ai-renderer/render_ai.py --check
-venv/bin/python -m unittest discover -s ai-renderer/tests
+python -m pip install -r ai-renderer/requirements.txt
+python ai-renderer/render_ai.py
+python ai-renderer/render_ai.py --check
+python -m unittest discover -s ai-renderer/tests
 ```
 
-On Windows, use `venv\Scripts\python.exe` instead of `venv/bin/python`.
+Run `python ai-renderer/render_ai.py --help` for options. Paths resolve from the script, not the working directory.
 
-The `render-ai` pre-commit hook renders both targets before every commit, including commits without AI source changes. Pre-commit installs the renderer dependencies in its own Python environment. Rendering errors block the commit; generated output stays Git-ignored. Agent-lab installs hooks and their environments at startup. For other environments, see the [repository hook setup](../README.md).
+## Sources
 
-Run `python ai-renderer/render_ai.py --help` for CLI options. Generation resolves repository paths from the script, so it also works from another directory.
+- Skills: `ai/<namespace>/skills/<name>/SKILL.md.j2`, with supporting files beside it.
+- Agents: `ai/<namespace>/agents/<name>.md.j2`.
+- Frontmatter: shared description plus explicit `claude` and `pi` blocks. `TARGET_FIELDS`, `AGENT_FIELDS`, and `AGENT_CHOICES` in `render_ai.py` define supported metadata.
 
-Generated files live under `generated/claude/plugins/` and `generated/pi/packages/`. These directories are build artifacts, not editable sources. The renderer marks owned target trees and refuses to replace unrelated files. Template failures preserve previous output. Each selected target publishes separately; a filesystem failure during a later target does not roll back an earlier published target. Directory replacement is not a cross-platform atomic transaction.
-
-## Write a skill
-
-Create `ai/<namespace>/skills/<local-name>/SKILL.md.j2`. Paths define identities; do not repeat names in metadata or a registry.
-
-Use ordinary Markdown with YAML frontmatter. Shared metadata describes the skill. Target blocks hold fields whose meaning or support differs between harnesses. `TARGET_FIELDS` and `parse_skill` in `ai-renderer/render_ai.py` define the accepted metadata. Unsupported keys stop generation, including unsupported keys in an unselected target block.
-
-Use references inside prose:
-
-```jinja2
-Load {{ Skill("review") }} before changing the code.
-Load {{ Skill("other-package:review") }} for another package's review.
-```
-
-An unqualified reference stays within its source namespace. Claude references use plugin-qualified names; Pi references use local skill names without a namespace prefix. Unknown references and duplicate Pi skill names across namespaces stop generation. Helpers return Markdown reference phrases, not tool calls or invocation recipes.
-
-Only `.j2` files receive Jinja rendering. The renderer removes that suffix in output. Other resources remain byte-identical, including text that resembles Jinja syntax. Keep supporting file references relative to the loaded skill directory. Source symlinks and output collisions stop generation. Script permissions survive where the filesystem supports them.
-
-Templates use strict undefined variables and no HTML escaping. Source templates are trusted repository code, not an input sandbox.
+Use `Skill("name")` and `Agent("name")` for references; qualify another namespace as `"namespace:name"`. Helpers render names, not invocations or preloads. The renderer renders `.j2` files and copies other skill resources unchanged. Unknown references, unsupported metadata, multiline frontmatter fields, collisions, and symlinks stop generation.
 
 ## Check loaders
 
-Generate before a loader check. Use temporary home/configuration directories; do not install fixture packages into normal settings.
-
-For Claude, check the generated plugin with the installed CLI:
-
-```bash
-claude plugin validate generated/claude/plugins/mzizzi
-```
-
-For Pi, `ai-renderer/tests/check_ai_loaders.mjs` exercises its installed skill and package loaders. It also checks the Claude plugin inventory. Both harnesses must be installed:
+With Claude, Pi, and `pi-subagents` installed:
 
 ```bash
 node ai-renderer/tests/check_ai_loaders.mjs
 ```
 
-The minimal Claude manifest can produce advisory warnings for publication metadata. Loader checks make no model requests. Package discovery does not prove that a model follows the skill instructions.
+This checks discovery without model requests. Pi agents need `pi-subagents`; core Pi alone does not load them.
+
+The pilot sources are staging copies. Existing production plugins and installed settings stay unchanged. Read-only review remains a prompt instruction, not an enforced sandbox. Model policy: Claude Fable/medium maps to Pi Astra/medium; Claude Opus 5.5/medium maps to Pi Sol 6.1/high. Set these explicitly in each agent template.

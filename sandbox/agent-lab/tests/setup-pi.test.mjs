@@ -133,7 +133,10 @@ test("preserves the shared setup's external style and packages while adding remi
     style,
     "---\r\nname: Attention Control\r\n---\r\n" + body.replaceAll("\n", "\r\n"),
   );
-  const subagentConfig = join(home, ".pi/agent/extensions/subagent/config.json");
+  const subagentConfig = join(
+    home,
+    ".pi/agent/extensions/subagent/config.json",
+  );
   mkdirSync(dirname(subagentConfig), { recursive: true });
   writeFileSync(subagentConfig, '{"maxSubagentSpawnsPerRun":64}\n');
   const sharedSetup = join(repoRoot, "sandbox/agent-lab/pi/setup.sh");
@@ -182,6 +185,21 @@ test("preserves the shared setup's external style and packages while adding remi
     { getSystemPrompt: () => installedStyle },
   );
   assert.equal(result.messages.at(-1).customType, "attention-control-reminder");
+});
+
+test("does not inject Attention Control into background subagents", () => {
+  const previous = process.env.PI_SUBAGENT_CHILD;
+  process.env.PI_SUBAGENT_CHILD = "1";
+  try {
+    const handlers = new Map();
+    attentionControl({
+      on: (event, callback) => handlers.set(event, callback),
+    });
+    assert.equal(handlers.size, 0);
+  } finally {
+    if (previous === undefined) delete process.env.PI_SUBAGENT_CHILD;
+    else process.env.PI_SUBAGENT_CHILD = previous;
+  }
 });
 
 test("does not install a nested link inside an existing real directory", (t) => {

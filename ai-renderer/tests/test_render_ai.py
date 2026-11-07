@@ -50,10 +50,24 @@ class RendererTests(unittest.TestCase):
                 )
         pi_manifest = self.repo / "generated/pi/packages/mzizzi/package.json"
         self.assertEqual(json.loads(pi_manifest.read_text()), {
-            "name": "mzizzi-ai", "pi": {"skills": ["./skills"]},
+            "name": "mzizzi-ai", "pi": {"skills": ["./skills"], "subagents": {"agents": ["./agents"]}},
         })
         claude_manifest = self.repo / "generated/claude/plugins/mzizzi/.claude-plugin/plugin.json"
         self.assertEqual(json.loads(claude_manifest.read_text()), {"name": "mzizzi"})
+
+    def test_long_skill_and_agent_descriptions_stay_on_one_line(self):
+        description = "A long description for loader compatibility. " * 10
+        description = description.strip()
+        self.template.write_text(f'---\ndescription: {description}\n---\nSkill.\n')
+        agent = self.repo / "ai/mzizzi/agents/pragmatic-reviewer.md.j2"
+        agent.write_text(f'---\ndescription: {description}\n---\nAgent.\n')
+        build(self.repo)
+        for target in Target:
+            skill = self.skill_output(target)
+            agent = skill.parent.parent / "agents/pragmatic-reviewer.md"
+            for output in (skill / "SKILL.md", agent):
+                with self.subTest(target=target, output=output.name):
+                    self.assertIn(f"description: {description}", output.read_text().splitlines())
 
     def test_qualified_references_and_resource_templates(self):
         other = self.repo / "ai/other/skills/other-example"
@@ -104,6 +118,7 @@ class RendererTests(unittest.TestCase):
             ('---\n- not-a-mapping\n---\n', "must be a mapping"),
             ('---\ndescription: Example.\npi: null\n---\n', "must be a mapping"),
             ('---\ndescription: ""\n---\n', "description must"),
+            ('---\ndescription: |\n  First line.\n  Second line.\n---\n', "one physical line per field"),
             ('---\ndescription: Example.\n', "closing frontmatter"),
             ('No frontmatter.\n', "expected YAML"),
         )

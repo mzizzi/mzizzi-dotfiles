@@ -10,6 +10,8 @@ const REMINDER =
 
 /** @param {import("@earendil-works/pi-coding-agent").ExtensionAPI} pi */
 export default function attentionControl(pi) {
+  if (process.env.PI_SUBAGENT_CHILD === "1") return;
+
   pi.on("before_agent_start", (event) => {
     if (STYLE_HEADING.test(event.systemPrompt)) return;
 

@@ -1,7 +1,6 @@
 ---
 name: renderer-example
-description: Demonstrate generated skill references and bundled resources. Use only
-  to check the AI resource renderer.
+description: Demonstrate generated skill references and bundled resources. Use only to check the AI resource renderer.
 ---
 
 # Renderer example
@@ -11,3 +10,5 @@ This is the `renderer-example` skill.
 Read `references/example.txt` relative to this skill directory.
 
 Pilot references: the `development-preferences` skill and the `create-plan-dir` skill.
+
+Agent reference: the `mzizzi.pragmatic-reviewer` agent.
