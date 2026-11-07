@@ -1,6 +1,6 @@
 # Agent sandbox
 
-`agent-lab/` is a Docker Sandboxes kit with Claude Code, Codex, deepagents-code (`dcode`), and Pi. Versions, resources, and the network allowlist are in `agent-lab/agent-lab.yaml`. `sbxenv.yaml` declares the sandbox built from it: the workspace clone, host mounts, and credential bindings. On Windows, Docker Desktop must run on its WSL 2 engine.
+`agent-lab/` is a Docker Sandboxes kit with Claude Code, Codex, deepagents-code (`dcode`), and Pi with custom extensions. Versions, resources, and the network allowlist are in `agent-lab/agent-lab.yaml`. `sbxenv.yaml` declares the sandbox built from it: the workspace clone, host mounts, and credential bindings. On Windows, Docker Desktop must run on its WSL 2 engine.
 
 ## Usage
 
@@ -31,6 +31,12 @@ pi
 The clone starts from the committed ref; uncommitted files are readable at `/run/sandbox/source`. Bash history, Claude and pi sessions, the Claude login, and dcode threads are kept on the host in `%USERPROFILE%\.sandbox-state\agent-lab`, which `sbxenv.yaml` mounts. Codex, dcode, and Pi use the host ChatGPT login through Docker's credential proxy, so don't use dcode's own `/auth` or Pi's `/login`. Pi reaches it through the kit's `chatgpt` provider in `~/.pi/agent/models.json`.
 
 `pi/setup.sh` installs `pi/settings.json` as Pi's whole settings file, installs the web-access and sub-agent packages it pins, and appends the attention-control output style to Pi's system prompt. The kit runs it at creation against `%USERPROFILE%\code\attention-control`, which `sbxenv.yaml` mounts read-only; the SimRacing devcontainer runs the same script.
+
+On every boot, the kit also runs `agent-lab/bin/setup-pi.sh` to link custom extensions from `config/pi/extensions/` in the workspace into `~/.pi/agent/extensions/`. It supports `.js` files, `.ts` files, and extension directories. It leaves unrelated extensions and the shared setup's packages, settings, and `APPEND_SYSTEM.md` unchanged.
+
+Attention Control is one of those extensions. It uses the external style and adds a per-request reminder; its bundled style is a fallback when no style is already loaded. Extension code changes in the workspace take effect on `/reload`. After adding a new extension, run `bash sandbox/agent-lab/bin/setup-pi.sh` before `/reload` to create its link.
+
+Run the setup tests from the repo root with `node --test sandbox/agent-lab/tests/*.test.mjs`.
 
 ## Traps
 

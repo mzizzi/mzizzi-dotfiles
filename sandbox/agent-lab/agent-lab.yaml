@@ -2,7 +2,7 @@
 schemaVersion: "3"
 kind: workload
 displayName: Agent configuration lab
-description: Claude Code, Codex, and deepagents-code (dcode) with subscription authentication, plus Pi
+description: Claude Code, Codex, and deepagents-code (dcode) with subscription authentication, plus Pi with custom extensions
 
 args:
   claudeVersion:
@@ -107,9 +107,14 @@ capabilities:
           env: [HTTP_PROXY, HTTPS_PROXY]
           description: Configure npm for package installs through the Sandbox proxy
         # sbxenv.yaml mounts the attention-control checkout read-only at its host-mirrored path.
-        - command: 'bash /opt/pi-setup/setup.sh /*/Users/*/code/attention-control/output-styles/attention-control.md'
+        - command: "bash /opt/pi-setup/setup.sh /*/Users/*/code/attention-control/output-styles/attention-control.md"
           user: agent
           description: Install pi packages and append the attention-control output style
+      startup:
+        - command: 'bash "$WORKSPACE_DIR/sandbox/agent-lab/bin/setup-pi.sh"'
+          user: agent
+          env: [WORKSPACE_DIR]
+          description: Install custom Pi extensions from the workspace
       files:
         - path: /home/agent/.codex/config.toml
           overwrite: false
