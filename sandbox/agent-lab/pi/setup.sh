@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Configure pi for the current user: install pi/settings.json and append an output style to its
+# Configure pi for the current user: install Pi and subagent settings and append an output style to its
 # system prompt. Usage: setup.sh OUTPUT_STYLE_MD
 # Shared by the agent-lab kit and the SimRacing devcontainer.
 set -euo pipefail
@@ -14,6 +14,8 @@ mkdir -p "$agent_dir"
 # and `pi install` leaves the file unchanged for a source it already lists.
 settings="$(dirname "$0")/settings.json"
 cp "$settings" "$agent_dir/settings.json"
+mkdir -p "$agent_dir/extensions/subagent"
+cp "$(dirname "$0")/subagents.json" "$agent_dir/extensions/subagent/config.json"
 jq -r '.packages[]' "$settings" | xargs -n 1 pi install
 
 # pi's counterpart to a Claude output style: the style's body, without its frontmatter, appended

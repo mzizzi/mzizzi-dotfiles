@@ -133,6 +133,9 @@ test("preserves the shared setup's external style and packages while adding remi
     style,
     "---\r\nname: Attention Control\r\n---\r\n" + body.replaceAll("\n", "\r\n"),
   );
+  const subagentConfig = join(home, ".pi/agent/extensions/subagent/config.json");
+  mkdirSync(dirname(subagentConfig), { recursive: true });
+  writeFileSync(subagentConfig, '{"maxSubagentSpawnsPerRun":64}\n');
   const sharedSetup = join(repoRoot, "sandbox/agent-lab/pi/setup.sh");
   execFileSync("bash", [sharedSetup, style], {
     env: { ...process.env, HOME: home, PATH: `${bin}:${process.env.PATH}` },
@@ -153,6 +156,15 @@ test("preserves the shared setup's external style and packages while adding remi
     "utf8",
   );
   assert.equal(readFileSync(join(agentDir, "settings.json"), "utf8"), settings);
+  assert.deepEqual(JSON.parse(readFileSync(subagentConfig, "utf8")), {
+    globalConcurrencyLimit: 32,
+    maxActiveAsyncRunsPerSession: 8,
+    maxSubagentSpawnsPerRun: 8,
+  });
+  assert.equal(
+    readFileSync(subagentConfig, "utf8"),
+    readFileSync(join(repoRoot, "sandbox/agent-lab/pi/subagents.json"), "utf8"),
+  );
   assert.deepEqual(
     readFileSync(join(home, "pi-installs.log"), "utf8").trim().split("\n"),
     JSON.parse(settings).packages.map((source) => `install ${source}`),
