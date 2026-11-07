@@ -9,8 +9,9 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-REPO = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(REPO / "scripts"))
+RENDERER = Path(__file__).resolve().parent.parent
+REPO = RENDERER.parent
+sys.path.insert(0, str(RENDERER))
 from render_ai import MARKER, RenderError, Target, build
 
 
@@ -39,7 +40,7 @@ class RendererTests(unittest.TestCase):
         for target in Target:
             with self.subTest(target=target):
                 output = (self.skill_output(target) / "SKILL.md").read_text()
-                expected = (REPO / "tests/fixtures/expected" / target / "SKILL.md").read_text()
+                expected = (RENDERER / "tests/fixtures/expected" / target / "SKILL.md").read_text()
                 self.assertEqual(output, expected)
                 self.assertEqual(
                     (self.skill_output(target) / "references/example.txt").read_bytes(),
@@ -250,20 +251,20 @@ class RendererTests(unittest.TestCase):
         )
 
     def test_cli_resolves_repo_from_script_and_reports_check_status(self):
-        scripts = self.repo / "scripts"
-        scripts.mkdir()
-        shutil.copy2(REPO / "scripts/render_ai.py", scripts / "render_ai.py")
-        command = [sys.executable, str(scripts / "render_ai.py")]
-        missing = subprocess.run(command + ["--check"], cwd=scripts, capture_output=True, text=True)
+        renderer = self.repo / "ai-renderer"
+        renderer.mkdir()
+        shutil.copy2(RENDERER / "render_ai.py", renderer / "render_ai.py")
+        command = [sys.executable, str(renderer / "render_ai.py")]
+        missing = subprocess.run(command + ["--check"], cwd=renderer, capture_output=True, text=True)
         self.assertEqual(missing.returncode, 1)
         self.assertIn("missing:", missing.stdout)
-        first = subprocess.run(command, cwd=scripts, capture_output=True, text=True)
+        first = subprocess.run(command, cwd=renderer, capture_output=True, text=True)
         self.assertEqual(first.returncode, 0, first.stderr)
         before = self.snapshot()
-        second = subprocess.run(command, cwd=scripts, capture_output=True, text=True)
+        second = subprocess.run(command, cwd=renderer, capture_output=True, text=True)
         self.assertEqual(second.returncode, 0, second.stderr)
         self.assertEqual(self.snapshot(), before)
-        checked = subprocess.run(command + ["--check"], cwd=scripts, capture_output=True, text=True)
+        checked = subprocess.run(command + ["--check"], cwd=renderer, capture_output=True, text=True)
         self.assertEqual(checked.returncode, 0, checked.stderr)
 
 

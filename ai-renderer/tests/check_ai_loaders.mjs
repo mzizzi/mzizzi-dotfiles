@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL, fileURLToPath } from "node:url";
 
-const repo = fileURLToPath(new URL("../", import.meta.url));
+const repo = fileURLToPath(new URL("../../", import.meta.url));
 const temporary = mkdtempSync(join(tmpdir(), "ai-loader-check-"));
 try {
   const npmRoot = execFileSync("npm", ["root", "-g"], {
