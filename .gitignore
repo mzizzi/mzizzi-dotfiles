@@ -12,3 +12,4 @@
 .claude/hooks/allow-s*
 
 venv/
+generated/

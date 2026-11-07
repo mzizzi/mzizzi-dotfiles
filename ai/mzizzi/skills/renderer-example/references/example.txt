@@ -1,0 +1,1 @@
+This supporting resource is copied literally, including {{ example }}.
