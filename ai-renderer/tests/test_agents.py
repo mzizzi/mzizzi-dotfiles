@@ -66,16 +66,27 @@ class AgentTests(unittest.TestCase):
                     self.assertNotIn("experimental", metadata)
                     self.assertIs(metadata["allowNestedSubagents"], True)
                     self.assertEqual(metadata["thinking"], "high")
+                    self.assertIn("subject to stricter harness limits", body)
+                    self.assertIn("below 150k tokens", body)
+                    self.assertIn("not runtime-enforced caps", body)
                 else:
-                    original = (REPO / "plugins/mzizzi/agents/delegator.md").read_text().split("---", 2)[1]
+                    _, original, original_body = (REPO / "plugins/mzizzi/agents/delegator.md").read_text().split("---", 2)
                     self.assertEqual(metadata, yaml.safe_load(original))
                     self.assertNotIn("allowNestedSubagents", metadata)
+                    expected_body = original_body.replace(
+                        r"Reserve this root session for critical work and reasoning. Aggressively delegate work to mzizzi:\* sub-agents to preserve context in this session.",
+                        "Keep this session focused on critical decisions and reasoning. Delegate other work aggressively to agents from the mzizzi plugin to preserve context. Keep all delegated work within the user's requested scope.",
+                    ).replace("the mzizzi:development-preferences skill", "the `mzizzi:development-preferences` skill")
+                    for role, noun in (("standard", "subagents"), ("simple", "subagents"), ("complex", "agents")):
+                        expected_body = expected_body.replace(f"mzizzi:{role} {noun}", f"the `mzizzi:{role}` agent")
+                    self.assertEqual(body, expected_body)
                 for role in ("standard", "simple", "complex"):
                     separator = ":" if target == Target.CLAUDE else "."
                     self.assertIn(f"the `mzizzi{separator}{role}` agent", body)
+                container = "plugin" if target == Target.CLAUDE else "package"
+                self.assertIn(f"agents from the mzizzi {container} to preserve context", body)
+                self.assertIn("Keep all delegated work within the user's requested scope.", body)
                 self.assertIn("up to 10", body)
-                self.assertIn("below 150k tokens", body)
-                self.assertIn("not runtime-enforced caps", body)
 
     def test_agent_references_resolve_across_namespaces(self):
         folder = self.repo / "ai/other/agents"
