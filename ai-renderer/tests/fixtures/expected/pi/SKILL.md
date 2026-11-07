@@ -9,3 +9,5 @@ description: Demonstrate generated skill references and bundled resources. Use o
 This is the `renderer-example` skill.
 
 Read `references/example.txt` relative to this skill directory.
+
+Pilot references: the `development-preferences` skill and the `create-plan-dir` skill.

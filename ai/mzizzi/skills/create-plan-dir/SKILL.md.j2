@@ -1,0 +1,40 @@
+---
+description: "Create and return the path of a date-stamped yyyymmdd-short-description/ plan directory, under plans/ or .nocommit/plans/. Use when a plan document needs a destination folder."
+claude:
+  argument-hint: <topic or feature description>
+  allowed-tools: Bash
+  disable-model-invocation: false
+  user-invocable: true
+pi:
+  disable-model-invocation: false
+---
+
+# Create Plan Directory
+
+Create the destination directory for a plan document and return its path. This is the single source of truth for the plan-directory naming convention, so anything that writes a plan (the `create-plan` skill, or a direct request) gets a consistent, date-stamped folder.
+
+## Convention
+
+Plan documents live at:
+
+    <plans-base>/yyyymmdd-short-description/
+
+- `yyyymmdd` — today's date, stamped automatically so the date never drifts or gets typed wrong.
+- `short-description` — a short, kebab-case summary of the topic (lowercase, words joined by hyphens). Keep it to a few words that capture the essence.
+- `<plans-base>` — the nearest existing `plans/` at or above the current directory, stopping at the repo root; failing that, `<repo-root>/.nocommit/plans/` (gitignored) so plans don't get committed to a project that doesn't want them tracked. Resolving against the repo rather than the current directory is what stops a run from a subdirectory starting a second plans tree. The script decides; see its logic for the exact walk.
+
+Example: a plan about refreshing OAuth tokens → `<repo-root>/plans/20260615-token-refresh/`. The plan file (`plan.md` by default, or a name the caller chooses) is then written inside that directory.
+
+## How to create it
+
+Run the bundled script, passing a short description of the topic. The script slugifies the text and stamps today's date, so you can pass natural phrasing — pick a concise summary rather than the user's whole sentence (e.g. pass `"OAuth token refresh"`, not `"I want to plan how we refresh OAuth tokens before they expire"`).
+
+```bash
+bash "<skill-dir>/scripts/create_plan_dir.sh" "OAuth token refresh"
+```
+
+`<skill-dir>` is the directory this `SKILL.md` was loaded from.
+
+The script prints an **absolute** path to stdout and creates the directory with `mkdir -p`, so re-running is harmless and the caller never has to resolve the result against a working directory. Use the printed path as-is for whatever comes next — typically writing `plan.md` inside it. It errors out if run outside a git repository, since the base is resolved against the repo root.
+
+If running the script isn't possible in the current environment, fall back to creating the directory by hand: take today's date as `yyyymmdd`, slugify the topic to lowercase hyphen-separated words, and create `<plans-base>/<yyyymmdd>-<slug>/` using the base rule above.

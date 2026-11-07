@@ -11,3 +11,5 @@ argument-hint: '[example]'
 This is the `mzizzi:renderer-example` skill.
 
 Read `references/example.txt` relative to this skill directory.
+
+Pilot references: the `mzizzi:development-preferences` skill and the `mzizzi:create-plan-dir` skill.

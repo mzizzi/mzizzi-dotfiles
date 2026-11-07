@@ -48,6 +48,7 @@ TARGET_FIELDS = {
         "disable-model-invocation": bool,
         "user-invocable": bool,
         "argument-hint": str,
+        "allowed-tools": str,
     },
     Target.PI: {"disable-model-invocation": bool},
 }

@@ -2,7 +2,13 @@
 
 Keep adopted AI resource sources under `ai/`. Render them into Claude plugins and Pi packages without maintaining separate instructions for each harness.
 
-The current renderer handles skills only. `mzizzi/skills/renderer-example` is a loader fixture, not a migrated production skill. Agents, shared rule deployment, and installation remain separate phases. Existing plugins and installed settings stay unchanged.
+The current renderer handles skills only. `development-preferences` and `create-plan-dir` are pilot staging sources under `ai/mzizzi/skills/`. `renderer-example` is a loader fixture that references both pilots, not a production skill. Agents, shared rule deployment, and installation remain separate phases. Existing plugins and installed settings stay unchanged.
+
+## Pilot staging
+
+The active production copies remain under `plugins/mzizzi/skills/` until deployment establishes a single editable source. The pilot preserves their instruction bodies and supporting files. Claude output preserves the original metadata values; YAML formatting and key order can differ.
+
+The source paths supply skill names. Claude-specific metadata lives in each template's `claude` block. Pi retains the description and automatic-invocation setting, but has no equivalent for Claude's argument hint, user-invocation switch, or allowed-tools metadata. The pilot does not translate Claude's `allowed-tools` metadata into a Pi tool restriction. Unsupported metadata still stops generation rather than silently disappearing.
 
 ## Run
 

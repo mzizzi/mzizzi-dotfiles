@@ -98,6 +98,7 @@ class RendererTests(unittest.TestCase):
             ('---\ndescription: [broken\n---\n', "renderer-example"),
             ('---\ndescription: Example.\nname: wrong\n---\n', "unsupported shared"),
             ('---\ndescription: Example.\npi:\n  allowed-tools: read\n---\n', "unsupported pi"),
+            ('---\ndescription: Example.\nclaude:\n  allowed-tools: [Bash]\n---\n', "must be str"),
             ('---\ndescription: Example.\nclaude:\n  user-invocable: text\n---\n', "must be bool"),
             ('---\ndescription: one\ndescription: two\n---\n', "duplicate metadata"),
             ('---\n- not-a-mapping\n---\n', "must be a mapping"),
@@ -182,7 +183,7 @@ class RendererTests(unittest.TestCase):
         build(self.repo, targets=(Target.PI,))
         self.assertFalse(stale.exists())
         self.assertEqual({path: value for path, value in self.snapshot().items() if path.parts[1] == "claude"}, claude)
-        shutil.rmtree(self.source)
+        shutil.rmtree(self.repo / "ai/mzizzi")
         build(self.repo, targets=(Target.PI,))
         self.assertEqual(list((self.repo / "generated/pi").iterdir()), [self.repo / "generated/pi" / MARKER])
 

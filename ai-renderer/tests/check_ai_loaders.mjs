@@ -7,6 +7,11 @@ import { pathToFileURL, fileURLToPath } from "node:url";
 
 const repo = fileURLToPath(new URL("../../", import.meta.url));
 const temporary = mkdtempSync(join(tmpdir(), "ai-loader-check-"));
+const expectedSkills = [
+  "create-plan-dir",
+  "development-preferences",
+  "renderer-example",
+];
 try {
   const npmRoot = execFileSync("npm", ["root", "-g"], {
     encoding: "utf8",
@@ -38,8 +43,8 @@ try {
   });
   assert.deepEqual(loaded.diagnostics, []);
   assert.deepEqual(
-    loaded.skills.map((skill) => skill.name),
-    ["renderer-example"],
+    loaded.skills.map((skill) => skill.name).sort(),
+    expectedSkills,
   );
   console.log("Pi package and skill discovery passed.");
 
@@ -64,7 +69,9 @@ try {
       encoding: "utf8",
     },
   );
-  assert.match(inventory, /renderer-example/);
+  for (const name of expectedSkills) {
+    assert.ok(inventory.includes(name), `Claude plugin must expose ${name}`);
+  }
   console.log("Claude plugin validation and skill inventory passed.");
 } finally {
   rmSync(temporary, { recursive: true, force: true });
