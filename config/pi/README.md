@@ -18,6 +18,16 @@ The extension also adds a hidden reminder before each model request, including a
 
 The sandbox's existing `pi/setup.sh` copies the host-mounted output style into `APPEND_SYSTEM.md` at creation. That external style takes precedence over the bundled `style.md`; the extension still adds its reminder. Extension code changes in the sandbox checkout take effect on `/reload`. Host style changes need another run of `pi/setup.sh` before `/reload` because that script copies the file rather than linking it.
 
+## Tasks
+
+`extensions/tasks/` vendors a minimal task tracker from [tintinweb/pi-tasks](https://github.com/tintinweb/pi-tasks). It registers `TaskCreate`, `TaskList`, `TaskGet`, and `TaskUpdate`, with dependency warnings and a task widget above the editor. `/tasks` shows the full list.
+
+Pi session history stores tasks on the active branch. Resume, reload, fork, tree navigation, and compaction retain the corresponding state. New sessions start empty. No separate task files, npm packages, background processes, or subagent extension are needed.
+
+Completed tasks remain until `TaskUpdate` removes them with `status: "deleted"`. A hidden reminder includes unfinished tasks before each model request. The widget shows up to five tasks; the reminder includes up to ten. See `extensions/tasks/UPSTREAM.md` for source attribution, limits, and omitted features.
+
+Do not load upstream `pi-tasks` alongside this extension; their tool names overlap. The existing setup command installs both local extensions.
+
 ## Tests
 
 Run from the repository root:

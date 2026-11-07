@@ -53,6 +53,23 @@ test("installs the complete extension on first boot and tolerates repeated boots
   );
 });
 
+test("installs the task extension with its supporting modules and license", (t) => {
+  const home = temporaryHome(t);
+  const source = join(repoRoot, "config/pi/extensions/tasks");
+  const installed = join(home, ".pi/agent/extensions/tasks");
+
+  setup(home);
+  setup(home);
+
+  assert.equal(readlinkSync(installed), source);
+  for (const name of ["index.js", "store.js", "LICENSE", "UPSTREAM.md"]) {
+    assert.equal(
+      readFileSync(join(installed, name), "utf8"),
+      readFileSync(join(source, name), "utf8"),
+    );
+  }
+});
+
 test("installs multiple extension layouts without changing unrelated extensions", (t) => {
   const home = temporaryHome(t);
   const checkout = join(home, "checkout with spaces");
