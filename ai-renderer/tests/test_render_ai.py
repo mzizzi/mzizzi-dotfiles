@@ -9,6 +9,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
+import yaml
+
 RENDERER = Path(__file__).resolve().parent.parent
 REPO = RENDERER.parent
 sys.path.insert(0, str(RENDERER))
@@ -26,7 +28,7 @@ class RendererTests(unittest.TestCase):
 
     def skill_output(self, target=Target.PI):
         if target == Target.PI:
-            return self.repo / "generated/pi/packages/mzizzi/skills/mzizzi-renderer-example"
+            return self.repo / "generated/pi/packages/mzizzi/skills/renderer-example"
         return self.repo / "generated/claude/plugins/mzizzi/skills/renderer-example"
 
     def snapshot(self):
@@ -54,18 +56,18 @@ class RendererTests(unittest.TestCase):
         self.assertEqual(json.loads(claude_manifest.read_text()), {"name": "mzizzi"})
 
     def test_qualified_references_and_resource_templates(self):
-        other = self.repo / "ai/other/skills/renderer-example"
+        other = self.repo / "ai/other/skills/other-example"
         other.mkdir(parents=True)
         (other / "SKILL.md.j2").write_text(
             '---\ndescription: Another example.\n---\nLoad {{ Skill("mzizzi:renderer-example") }}.\n'
         )
-        (self.source / "references/link.md.j2").write_text('See {{ Skill("other:renderer-example") }}.\n')
+        (self.source / "references/link.md.j2").write_text('See {{ Skill("other:other-example") }}.\n')
         build(self.repo)
         self.assertEqual(
             (self.skill_output() / "references/link.md").read_text(),
-            'See the `other-renderer-example` skill.\n',
+            'See the `other-example` skill.\n',
         )
-        other_output = self.repo / "generated/claude/plugins/other/skills/renderer-example/SKILL.md"
+        other_output = self.repo / "generated/claude/plugins/other/skills/other-example/SKILL.md"
         self.assertIn("the `mzizzi:renderer-example` skill", other_output.read_text())
 
     def test_nested_skill_template_is_a_resource_not_an_entrypoint(self):
@@ -74,7 +76,7 @@ class RendererTests(unittest.TestCase):
         build(self.repo)
         self.assertEqual(
             (self.skill_output() / "references/SKILL.md").read_text(),
-            '# Example skill document\n\nSee the `mzizzi-renderer-example` skill.\n',
+            '# Example skill document\n\nSee the `renderer-example` skill.\n',
         )
 
     def test_literal_resources_binary_and_script_mode(self):
@@ -123,7 +125,7 @@ class RendererTests(unittest.TestCase):
             build(self.repo)
         self.assertEqual(self.snapshot(), before)
         (self.source / "references/example.txt.j2").unlink()
-        for namespace, name in (("a-b", "c"), ("a", "b-c")):
+        for namespace, name in (("a", "review"), ("b", "review")):
             folder = self.repo / "ai" / namespace / "skills" / name
             folder.mkdir(parents=True)
             (folder / "SKILL.md.j2").write_text('---\ndescription: Collision.\n---\n')
@@ -132,7 +134,16 @@ class RendererTests(unittest.TestCase):
         self.assertEqual(self.snapshot(), before)
 
     def test_name_limits_and_missing_entrypoint(self):
-        for name, message in (("bad--name", "invalid skill"), ("x" * 64, "invalid skill")):
+        longest = self.source.with_name("x" * 64)
+        self.source.rename(longest)
+        (longest / "SKILL.md.j2").write_text('---\ndescription: Name limit example.\n---\n')
+        try:
+            build(self.repo)
+            output = self.repo / "generated/pi/packages/mzizzi/skills" / longest.name / "SKILL.md"
+            self.assertEqual(yaml.safe_load(output.read_text().split("---")[1])["name"], longest.name)
+        finally:
+            longest.rename(self.source)
+        for name, message in (("bad--name", "invalid skill"), ("x" * 65, "invalid skill")):
             with self.subTest(name=name):
                 new = self.source.with_name(name)
                 self.source.rename(new)

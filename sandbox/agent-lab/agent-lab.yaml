@@ -49,6 +49,9 @@ capabilities:
           - chatgpt.com:443
           - api.openai.com:443
           - registry.npmjs.org:443
+          - nodejs.org:443
+          - pypi.org:443
+          - files.pythonhosted.org:443
           - pi.dev:443
           - github.com:443
           - api.github.com:443
@@ -111,6 +114,10 @@ capabilities:
           user: agent
           description: Install pi packages and append the attention-control output style
       startup:
+        - command: 'bash "$WORKSPACE_DIR/sandbox/agent-lab/bin/setup-pre-commit.sh"'
+          user: agent
+          env: [WORKSPACE_DIR, HTTP_PROXY, HTTPS_PROXY]
+          description: Install workspace Git hooks and their dependencies
         - command: 'bash "$WORKSPACE_DIR/sandbox/agent-lab/bin/setup-pi.sh"'
           user: agent
           env: [WORKSPACE_DIR]
@@ -157,6 +164,20 @@ capabilities:
           overwrite: false
           content: |
             {"mcpServers": {"langchain-docs": {"type": "http", "url": "https://docs.langchain.com/mcp"}}}
+        # Connect Pi to the host-managed Docker sbx MCP gateway.
+        - path: /home/agent/.pi/agent/mcp.json
+          overwrite: false
+          content: |
+            {
+              "mcpServers": {
+                "sandbox-gateway": {
+                  "url": "http://mcp-gateway.docker.internal/mcp",
+                  "exposure": "deferred",
+                  "description": "Docker sbx MCP gateway: find and use host-managed MCP servers"
+                }
+              }
+            }
+          mode: "0600"
         # Pi's ChatGPT provider, keyed with the proxy's placeholder token like Codex above. Pi's
         # built-in openai-codex provider reads the account ID from a JWT access token, so it
         # rejects the placeholder. With no other provider logged in, plain `pi` starts on the

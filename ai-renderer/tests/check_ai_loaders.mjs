@@ -39,7 +39,7 @@ try {
   assert.deepEqual(loaded.diagnostics, []);
   assert.deepEqual(
     loaded.skills.map((skill) => skill.name),
-    ["mzizzi-renderer-example"],
+    ["renderer-example"],
   );
   console.log("Pi package and skill discovery passed.");
 

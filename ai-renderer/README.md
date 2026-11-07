@@ -18,6 +18,8 @@ venv/bin/python -m unittest discover -s ai-renderer/tests
 
 On Windows, use `venv\Scripts\python.exe` instead of `venv/bin/python`.
 
+The `render-ai` pre-commit hook renders both targets before every commit, including commits without AI source changes. Pre-commit installs the renderer dependencies in its own Python environment. Rendering errors block the commit; generated output stays Git-ignored. Agent-lab installs hooks and their environments at startup. For other environments, see the [repository hook setup](../README.md).
+
 Run `python ai-renderer/render_ai.py --help` for CLI options. Generation resolves repository paths from the script, so it also works from another directory.
 
 Generated files live under `generated/claude/plugins/` and `generated/pi/packages/`. These directories are build artifacts, not editable sources. The renderer marks owned target trees and refuses to replace unrelated files. Template failures preserve previous output. Each selected target publishes separately; a filesystem failure during a later target does not roll back an earlier published target. Directory replacement is not a cross-platform atomic transaction.
@@ -35,7 +37,7 @@ Load {{ Skill("review") }} before changing the code.
 Load {{ Skill("other-package:review") }} for another package's review.
 ```
 
-An unqualified reference stays within its source namespace. Claude references use plugin-qualified names; Pi references use flattened names. Unknown references and flattened-name collisions stop generation. Helpers return Markdown reference phrases, not tool calls or invocation recipes.
+An unqualified reference stays within its source namespace. Claude references use plugin-qualified names; Pi references use local skill names without a namespace prefix. Unknown references and duplicate Pi skill names across namespaces stop generation. Helpers return Markdown reference phrases, not tool calls or invocation recipes.
 
 Only `.j2` files receive Jinja rendering. The renderer removes that suffix in output. Other resources remain byte-identical, including text that resembles Jinja syntax. Keep supporting file references relative to the loaded skill directory. Source symlinks and output collisions stop generation. Script permissions survive where the filesystem supports them.
 

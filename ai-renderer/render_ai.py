@@ -33,11 +33,6 @@ class SkillSource:
     def identity(self):
         return f"{self.namespace}:{self.name}"
 
-    def target_name(self, target):
-        if target == Target.PI:
-            return f"{self.namespace}-{self.name}"
-        return self.name
-
 
 @dataclass(frozen=True)
 class Artifact:
@@ -131,7 +126,7 @@ def parse_skill(text, skill, target):
                 raise RenderError(f"unsupported {metadata_target} metadata: {key}")
             if type(value) is not expected:
                 raise RenderError(f"{metadata_target}.{key} must be {expected.__name__}")
-    name = skill.target_name(target)
+    name = skill.name
     check_name(name)
     output_metadata = {"name": name, "description": description, **metadata.get(target, {})}
     frontmatter = yaml.safe_dump(output_metadata, sort_keys=False, allow_unicode=True)
@@ -157,7 +152,7 @@ def render_target(source, skills, target):
         artifacts[path] = artifact
 
     for skill in skills.values():
-        name = skill.target_name(target)
+        name = skill.name
         identity = skill.identity if target == Target.CLAUDE else name
         if identity in names:
             raise RenderError(f"{skill.directory}: {target}: output name collision: {name}")
@@ -175,7 +170,7 @@ def render_target(source, skills, target):
             referenced = skills.get(qualified)
             if referenced is None:
                 raise RenderError(f"unknown skill {identity!r}")
-            reference = referenced.identity if target == Target.CLAUDE else referenced.target_name(target)
+            reference = referenced.identity if target == Target.CLAUDE else referenced.name
             return f"the `{reference}` skill"
 
         for path in sorted(skill.directory.rglob("*")):

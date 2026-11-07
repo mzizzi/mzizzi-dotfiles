@@ -25,6 +25,9 @@ ARG DCODE_VERSION
 RUN uv tool install --no-cache --python 3.13 --prerelease allow "deepagents-code==${DCODE_VERSION}" \
     && dcode --version
 
+RUN uv tool install --no-cache --python 3.13 "pre-commit==4.7.0" \
+    && pre-commit --version
+
 RUN mkdir -p /home/agent/.claude /home/agent/.codex /home/agent/.pi/agent /home/agent/.deepagents/.state
 
 # Keep Bash history, Claude, dcode and pi sessions, and the Claude login on the host

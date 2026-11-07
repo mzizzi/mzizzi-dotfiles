@@ -10,3 +10,11 @@ repos:
         language: node
         types: [markdown]
         additional_dependencies: ["prettier@3.6.2"]
+      - id: render-ai
+        name: render AI resources
+        entry: python ai-renderer/render_ai.py
+        language: python
+        additional_dependencies: ["Jinja2==3.1.6", "PyYAML==6.0.3"]
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
