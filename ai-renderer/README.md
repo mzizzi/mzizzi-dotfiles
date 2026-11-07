@@ -21,7 +21,7 @@ Run `python ai-renderer/render_ai.py --help` for options. Paths resolve from the
 - Agents: `ai/<namespace>/agents/<name>.md.j2`.
 - Frontmatter: shared description plus explicit `claude` and `pi` blocks. `TARGET_FIELDS`, `AGENT_FIELDS`, and `AGENT_CHOICES` in `render_ai.py` define supported metadata.
 
-Use `Skill("name")` and `Agent("name")` for references; qualify another namespace as `"namespace:name"`. Helpers render names, not invocations or preloads. The renderer renders `.j2` files and copies other skill resources unchanged. Unknown references, unsupported metadata, multiline frontmatter fields, collisions, and symlinks stop generation.
+Use `Skill("name")` and `Agent("name")` for references; qualify another namespace as `"namespace:name"`. Helpers render names, not invocations or preloads. Templates receive `target` (`claude` or `pi`). Set a target block to `false` to omit that resource; references to omitted resources fail generation. The renderer renders `.j2` files and copies other skill resources unchanged. Unknown references, unsupported metadata, multiline frontmatter fields, collisions, and symlinks stop generation.
 
 ## Check loaders
 
@@ -33,4 +33,6 @@ node ai-renderer/tests/check_ai_loaders.mjs
 
 This checks discovery without model requests. Pi agents need `pi-subagents`; core Pi alone does not load them.
 
-The pilot sources are staging copies. Existing production plugins and installed settings stay unchanged. Read-only review remains a prompt instruction, not an enforced sandbox. Model policy: Claude Fable/medium maps to Pi Astra/medium; Claude Opus 5.5/medium maps to Pi Sol 6.1/high. Set these explicitly in each agent template.
+Pi omits `prepare-feature-branch`, `implement-plan`, and `review-pr` until worktree support exists. Other Pi workflows read nested skills directly and use `pi-subagents` for delegation. Without interactive question or task tools, they use plain-text questions or a conversation checklist. Codex review still needs the installed `codex@openai-codex` Claude plugin and an authenticated Codex CLI.
+
+The sources are staging copies. Existing production plugins and installed settings stay unchanged. Read-only review remains a prompt instruction, not an enforced sandbox. Model policy: Claude Fable/medium maps to Pi Astra/medium; Claude Opus 5.5/medium maps to Pi Sol 6.1/high. Set these explicitly in each agent template.

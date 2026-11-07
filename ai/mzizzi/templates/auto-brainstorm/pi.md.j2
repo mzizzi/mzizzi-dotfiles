@@ -1,0 +1,58 @@
+---
+description: "Run a brainstorm with no human in the loop: one long-lived agent, `mzizzi.complex` by default, answers the interview questions in the user's place, and the decisions are saved as brainstorm.md. Use when the user asks for an auto-brainstorm, an unattended brainstorm, or to brainstorm against a reviewer agent instead of answering the questions themselves."
+pi:
+  disable-model-invocation: false
+---
+
+Resolve `<skill-dir>` to the absolute directory containing this `SKILL.md`. Each nested skill resolves its own directory; keep its arguments and return to the caller after it completes.
+
+
+# Auto-brainstorm
+
+Run {{ Skill("brainstorm") }} with an agent answering in the user's place. Where this skill and brainstorm differ, this skill wins: questions go to the interviewee agent, never to the user or the harness's user-question tool, and you pick brainstorm's menu options yourself (see Ending). Load it with:
+
+Read and follow {{ Skill("brainstorm") }} from `<skill-dir>/../brainstorm/SKILL.md` with arguments `<the arguments this skill was given, without --agent or --max-reviews>`. Then return to this workflow.
+
+`--agent=<name>` is the agent type of the interviewee. It defaults to {{ Agent("complex") }}.
+
+`--max-reviews=<n>` is the **review limit**: the most reviews by {{ Agent("pragmatic-reviewer") }} the saved document gets. It defaults to 2.
+
+Everything below is what changes when no human answers.
+
+## The interviewee
+
+Every question brainstorm asks the user goes to one live interviewee agent instead. `--agent` accepts the canonical Pi agent name; use `mzizzi.complex` by default. Enable `subagent` with `subagents_enable` if needed. Start the interviewee once, asynchronously, with the briefing, first question, and the protocol below:
+
+```js
+subagent({ agent: "<resolved interviewee agent>", task: "<briefing and first question; include the live interview protocol below>", async: true, options: { context: "fresh" } })
+```
+
+Keep its run id separate from reviewer run ids. The interviewee sends each answer through a blocking supervisor request:
+
+```js
+contact_supervisor({ reason: "need_decision", message: "<answer and request for the next question or STOP>" })
+```
+
+The interviewee stays alive inside that call until the parent replies. The reply supplies the next question; the interviewee answers it through another blocking request. It must not finish between questions. On `STOP`, it gives its final response and exits.
+
+Wait for the native supervisor-request notification, not child completion. Reply to that request's exact id with the previous decision, recommendation, and next question:
+
+```js
+subagent_supervisor({ action: "reply", replyTo: "<pending interviewee request id>", message: "<previous decision, recommendation, and next question>" })
+```
+
+Use `subagent({ action: "steer", id: "<interviewee run id>", message: "<live guidance>" })` only for additional guidance while the child works. Steering is not a substitute for replying to a pending supervisor request. Do not use resume or start a new interviewee for each question.
+
+If launch or coordination fails, or the interviewee exits early, report the reason and stop. Do not silently replace its conversation. If the interviewee remains live on failure, stop that exact run with `subagent({ action: "stop", id: "<interviewee run id>" })`.
+
+Before the first question, read the code the idea touches. The briefing passes on what you found as facts with `file:line`, and says:
+
+- what is being designed
+- one question per message: send the answer through blocking `contact_supervisor`, then wait for the next supervisor reply without finishing
+- give a pick and the fact that decides it
+- disagree when the code says so
+
+Each question says how the previous one was settled and carries your recommendation with its reason.
+
+{% include "mzizzi/templates/auto-brainstorm/shared.md.j2" %}
+Leave the interviewee waiting on its pending supervisor request while you save and review. Reuse it if findings reopen the interview. When the workflow ends, reply `STOP` to its pending request and wait for native completion before the final sign-off. If it fails to exit, report the error and stop that exact interviewee run; never leave it waiting after the workflow ends.

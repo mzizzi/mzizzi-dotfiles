@@ -60,11 +60,12 @@ TARGET_FIELDS = {
 }
 
 AGENT_FIELDS = {
-    Target.CLAUDE: {"model": str, "effort": str},
+    Target.CLAUDE: {"model": str, "effort": str, "experimental": dict},
     Target.PI: {
         "model": str, "thinking": str,
         "advertise": bool, "defaultContext": str, "systemPromptMode": str,
         "inheritProjectContext": bool, "inheritGlobalContext": bool, "inheritSkills": bool,
+        "allowNestedSubagents": bool,
     },
 }
 AGENT_CHOICES = {
@@ -131,7 +132,10 @@ def discover(source):
 
 def render_frontmatter(metadata):
     # Pi's agent parser ignores indented plain-scalar continuations.
-    text = yaml.safe_dump(metadata, sort_keys=False, allow_unicode=True, width=float("inf"))
+    flow_style = None if any(isinstance(value, dict) for value in metadata.values()) else False
+    text = yaml.safe_dump(
+        metadata, sort_keys=False, allow_unicode=True, width=float("inf"), default_flow_style=flow_style,
+    )
     lines = text.splitlines()
     if len(lines) != len(metadata) or any(
         not line.startswith(f"{key}:") for key, line in zip(metadata, lines)
@@ -159,6 +163,8 @@ def parse_resource(text, resource, target):
     fields = TARGET_FIELDS if resource.kind == ResourceKind.SKILL else AGENT_FIELDS
     for metadata_target in Target:
         block = metadata.get(metadata_target, {})
+        if block is False:
+            continue
         if not isinstance(block, dict):
             raise RenderError(f"{metadata_target} metadata must be a mapping")
         for key, value in block.items():
@@ -168,11 +174,16 @@ def parse_resource(text, resource, target):
             if type(value) is not expected:
                 raise RenderError(f"{metadata_target}.{key} must be {expected.__name__}")
             if resource.kind == ResourceKind.AGENT:
+                if key == "experimental":
+                    if value.keys() != {"cacheTtl"} or not isinstance(value["cacheTtl"], str) or not value["cacheTtl"].strip():
+                        raise RenderError("claude.experimental must contain only a nonempty cacheTtl string")
                 choices = AGENT_CHOICES.get((metadata_target, key))
                 if choices is not None and value not in choices:
                     raise RenderError(f"{metadata_target}.{key} must be one of {', '.join(sorted(choices))}")
                 if expected is str and not value.strip():
                     raise RenderError(f"{metadata_target}.{key} must be nonempty text")
+    if metadata.get(target) is False:
+        return None
     output_metadata = {"name": resource.name, "description": description}
     if resource.kind == ResourceKind.AGENT and target == Target.PI:
         output_metadata["package"] = resource.namespace
@@ -191,6 +202,8 @@ def render_target(source, resources, target):
     )
     artifacts = {Path(MARKER): Artifact(MARKER_CONTENT)}
     names = set()
+    included = set()
+    references = set()
 
     def add(path, artifact):
         if path in artifacts or any(parent in artifacts for parent in path.parents):
@@ -201,10 +214,6 @@ def render_target(source, resources, target):
 
     for resource in resources.values():
         kind = resource.kind
-        identity = resource.identity if target == Target.CLAUDE or kind == ResourceKind.AGENT else resource.name
-        if (kind, identity) in names:
-            raise RenderError(f"{resource.path}: {target}: output name collision: {resource.name}")
-        names.add((kind, identity))
         package = Path("plugins" if target == Target.CLAUDE else "packages") / resource.namespace
         destination = package / kind
         if kind == ResourceKind.SKILL:
@@ -219,6 +228,7 @@ def render_target(source, resources, target):
             referenced = resources.get((reference_kind, qualified))
             if referenced is None:
                 raise RenderError(f"unknown {label} {identity!r}")
+            references.add((resource, referenced))
             if target == Target.CLAUDE:
                 name = referenced.identity
             elif reference_kind == ResourceKind.AGENT:
@@ -226,6 +236,26 @@ def render_target(source, resources, target):
             else:
                 name = referenced.name
             return f"the `{name}` {label}"
+
+        def render_template(path):
+            template = environment.get_template(path.relative_to(source).as_posix())
+            return template.render(
+                target=target,
+                Skill=lambda identity: reference(identity, ResourceKind.SKILL),
+                Agent=lambda identity: reference(identity, ResourceKind.AGENT),
+            )
+
+        try:
+            entry = parse_resource(render_template(resource.path), resource, target)
+        except (RenderError, TemplateError, yaml.YAMLError, UnicodeError) as error:
+            raise RenderError(f"{resource.path}: {target}: {error}") from error
+        if entry is None:
+            continue
+        included.add(resource)
+        identity = resource.identity if target == Target.CLAUDE or kind == ResourceKind.AGENT else resource.name
+        if (kind, identity) in names:
+            raise RenderError(f"{resource.path}: {target}: output name collision: {resource.name}")
+        names.add((kind, identity))
 
         paths = sorted(resource.path.parent.rglob("*")) if kind == ResourceKind.SKILL else [resource.path]
         for path in paths:
@@ -236,27 +266,24 @@ def render_target(source, resources, target):
                 mode = stat.S_IMODE(path.stat().st_mode)
                 if path.suffix == ".j2":
                     relative = relative.with_suffix("")
-                    template = environment.get_template(path.relative_to(source).as_posix())
-                    text = template.render(
-                        Skill=lambda identity: reference(identity, ResourceKind.SKILL),
-                        Agent=lambda identity: reference(identity, ResourceKind.AGENT),
-                    )
-                    if path == resource.path:
-                        text = parse_resource(text, resource, target)
+                    text = entry if path == resource.path else render_template(path)
                     artifact = Artifact((text.rstrip("\n") + "\n").encode("utf-8"), mode)
                 else:
                     artifact = Artifact(path.read_bytes(), mode)
                 add(destination / relative, artifact)
             except (RenderError, TemplateError, yaml.YAMLError, UnicodeError) as error:
                 raise RenderError(f"{path}: {target}: {error}") from error
-    for namespace in sorted({resource.namespace for resource in resources.values()}):
+    for caller, referenced in sorted(references, key=lambda pair: (pair[0].identity, pair[1].identity)):
+        if caller in included and referenced not in included:
+            raise RenderError(f"{caller.path}: {target}: reference to excluded resource {referenced.identity!r}")
+    for namespace in sorted({resource.namespace for resource in included}):
         if target == Target.CLAUDE:
             path = Path("plugins") / namespace / ".claude-plugin/plugin.json"
             manifest = {"name": namespace}
         else:
             path = Path("packages") / namespace / "package.json"
             pi = {}
-            kinds = {resource.kind for resource in resources.values() if resource.namespace == namespace}
+            kinds = {resource.kind for resource in included if resource.namespace == namespace}
             if ResourceKind.SKILL in kinds:
                 pi["skills"] = ["./skills"]
             if ResourceKind.AGENT in kinds:

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL, fileURLToPath } from "node:url";
@@ -8,10 +8,24 @@ import { pathToFileURL, fileURLToPath } from "node:url";
 const repo = fileURLToPath(new URL("../../", import.meta.url));
 const temporary = mkdtempSync(join(tmpdir(), "ai-loader-check-"));
 const originalAgentDir = process.env.PI_CODING_AGENT_DIR;
-const expectedSkills = [
-  "create-plan-dir",
-  "development-preferences",
+const expectedClaudeSkills = [
+  ...readdirSync(join(repo, "plugins/mzizzi/skills")),
   "renderer-example",
+].sort();
+const deferredPiSkills = new Set([
+  "prepare-feature-branch",
+  "implement-plan",
+  "review-pr",
+]);
+const expectedPiSkills = expectedClaudeSkills.filter(
+  (name) => !deferredPiSkills.has(name),
+);
+const expectedAgents = [
+  ["pragmatic-reviewer", "chatgpt/gpt-6-astra", "medium"],
+  ["standard", "chatgpt/gpt-6.1-sol", "high"],
+  ["complex", "chatgpt/gpt-6-astra", "medium"],
+  ["simple", "chatgpt/gpt-6.1-sol", "medium"],
+  ["delegator", "chatgpt/gpt-6.1-sol", "high"],
 ];
 try {
   const npmRoot = execFileSync("npm", ["root", "-g"], {
@@ -45,7 +59,7 @@ try {
   assert.deepEqual(loaded.diagnostics, []);
   assert.deepEqual(
     loaded.skills.map((skill) => skill.name).sort(),
-    expectedSkills,
+    expectedPiSkills,
   );
   console.log("Pi package and skill discovery passed.");
 
@@ -65,26 +79,32 @@ try {
     globalNpmRoot: null,
   });
   assert.deepEqual(discovered.agentDiagnostics ?? [], []);
-  const agent = discovered.agents.find(
-    (agent) => agent.name === "mzizzi.pragmatic-reviewer",
-  );
-  assert.ok(agent, "Pi package must expose the qualified reviewer");
-  assert.equal(agent.source, "package");
   const { parseFrontmatter } = await import(
     pathToFileURL(join(subagents, "src/agents/frontmatter.js"))
   );
-  const source = readFileSync(
-    join(repo, "ai/mzizzi/agents/pragmatic-reviewer.md.j2"),
-    "utf8",
-  );
-  assert.equal(
-    agent.description,
-    parseFrontmatter(source).frontmatter.description,
-  );
-  assert.equal(agent.advertise, true);
-  assert.equal(agent.model, "chatgpt/gpt-6-astra");
-  assert.equal(agent.thinking, "medium");
-  assert.match(agent.systemPrompt, /the `development-preferences` skill/);
+  for (const [name, model, thinking] of expectedAgents) {
+    const agent = discovered.agents.find(
+      (agent) => agent.name === `mzizzi.${name}`,
+    );
+    assert.ok(agent, `Pi package must expose mzizzi.${name}`);
+    assert.equal(agent.source, "package");
+    const source = readFileSync(
+      join(repo, `ai/mzizzi/agents/${name}.md.j2`),
+      "utf8",
+    );
+    assert.equal(
+      agent.description,
+      parseFrontmatter(source).frontmatter.description,
+    );
+    assert.equal(agent.advertise, true);
+    assert.equal(agent.model, model);
+    assert.equal(agent.thinking, thinking);
+    assert.equal(
+      agent.allowNestedSubagents,
+      name === "delegator" ? true : undefined,
+    );
+    assert.match(agent.systemPrompt, /the `development-preferences` skill/);
+  }
   console.log("Pi agent package discovery passed.");
 
   const plugin = join(repo, "generated/claude/plugins/mzizzi");
@@ -108,13 +128,12 @@ try {
       encoding: "utf8",
     },
   );
-  for (const name of expectedSkills) {
+  for (const name of expectedClaudeSkills) {
     assert.ok(inventory.includes(name), `Claude plugin must expose ${name}`);
   }
-  assert.ok(
-    inventory.includes("pragmatic-reviewer"),
-    "Claude plugin must expose the reviewer",
-  );
+  for (const [name] of expectedAgents) {
+    assert.ok(inventory.includes(name), `Claude plugin must expose ${name}`);
+  }
   console.log(
     "Claude plugin validation, skill inventory, and agent inventory passed.",
   );

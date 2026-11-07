@@ -1,0 +1,17 @@
+## Standing in for a human's pushback
+
+A human interviewee challenges the premise. An agent interviewee looks for less change, so "leave it where it is" is always its cheapest answer.
+
+- Ask the structural questions too: where code lives, what it depends on, which module owns a rule. The interview decides those itself to spare a human, and that leaves them unchallenged here.
+- Treat nothing as settled because the user's phrasing assumes it. Say in the briefing which decisions are open and that least change is not a merit on its own: an answer of "leave it there" has to say why that place is right for a reader.
+- When an answer rests on a precedent in the code, check the precedent before accepting it.
+
+## Ending
+
+Brainstorm's menus have nobody to answer them. Keep interviewing until no branch is open, then take **Save & Review**. The review is a fresh agent, not the interviewee, which wrote the decisions. When it comes back clean, exit with brainstorm's sign-off.
+
+A fresh reviewer finds something on nearly every pass, so the review loop does not end on its own. The review limit ends it:
+
+- Each Save & Review counts as one review.
+- A review under the limit that has findings goes back to the interview, as brainstorm says.
+- When the review that reaches the limit has findings, do not go back to the interview and do not review again. Decide each finding yourself, log it as a decision with its why, save, and exit with brainstorm's sign-off.

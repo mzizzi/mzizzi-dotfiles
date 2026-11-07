@@ -69,6 +69,30 @@ class RendererTests(unittest.TestCase):
                 with self.subTest(target=target, output=output.name):
                     self.assertIn(f"description: {description}", output.read_text().splitlines())
 
+    def test_target_exclusion_removes_bundles_and_rejects_references(self):
+        build(self.repo)
+        self.template.write_text('---\ndescription: Claude only.\npi: false\n---\nOnly Claude.\n')
+        build(self.repo)
+        self.assertFalse(self.skill_output(Target.PI).exists())
+        self.assertTrue(self.skill_output(Target.CLAUDE).is_dir())
+        caller = self.repo / "ai/mzizzi/skills/create-plan-dir/SKILL.md.j2"
+        caller.write_text('---\ndescription: Caller.\n---\n{{ Skill("renderer-example") }}\n')
+        before = self.snapshot()
+        with self.assertRaisesRegex(RenderError, "pi: reference to excluded resource"):
+            build(self.repo)
+        self.assertEqual(self.snapshot(), before)
+        self.template.write_text('---\ndescription: Claude only.\nclaude:\n  unsupported: true\npi: false\n---\n')
+        with self.assertRaisesRegex(RenderError, "unsupported claude metadata"):
+            build(self.repo, targets=(Target.PI,))
+
+    def test_excluded_namespace_has_no_manifest(self):
+        other = self.repo / "ai/other/skills/claude-only"
+        other.mkdir(parents=True)
+        (other / "SKILL.md.j2").write_text('---\ndescription: Claude only.\npi: false\n---\n')
+        build(self.repo)
+        self.assertFalse((self.repo / "generated/pi/packages/other").exists())
+        self.assertTrue((self.repo / "generated/claude/plugins/other/.claude-plugin/plugin.json").is_file())
+
     def test_qualified_references_and_resource_templates(self):
         other = self.repo / "ai/other/skills/other-example"
         other.mkdir(parents=True)
