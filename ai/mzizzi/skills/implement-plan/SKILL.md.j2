@@ -5,8 +5,12 @@ claude:
   allowed-tools: Read, Grep, Glob, Edit, Write, Bash, Agent, AskUserQuestion, Skill, EnterWorktree, TaskCreate, TaskUpdate, TaskList
   disable-model-invocation: false
   user-invocable: true
-pi: false
----
+pi:
+  disable-model-invocation: false
+---{% if target == "pi" %}
+
+Resolve `<skill-dir>` to this skill's absolute directory. This workflow needs task tools, `pi-subagents`, and the worktree extension; stop if unavailable.
+{% endif %}
 
 ## Step 0: Resolve the target and scope
 
@@ -18,15 +22,15 @@ Confirm the scope back to the user in one line before moving on, so a misread is
 
 ## Step 1: Prepare the feature branch
 
-    Skill(skill: "prepare-feature-branch", args: "<plan directory>")
+{% if target == "claude" %}    Skill(skill: "prepare-feature-branch", args: "<plan directory>"){% else %}Read and follow {{ Skill("prepare-feature-branch") }} at `<skill-dir>/../prepare-feature-branch/SKILL.md` with arguments `<plan directory>`. Return here after branch preparation, including completed worktree entry, before Step 2.{% endif %}
 
-The branch keeps the diff mapped to the plan and off the trunk, and Step 4 reads the working-tree diff, so the baseline must be clean. The skill derives the name, reuses existing feature work for this plan or creates it, commits the plan document onto the branch, and announces the result. An untracked plan directory is expected there and needs no intervention; unrelated pending edits get put to the user as a choice, so relay whatever they decided rather than re-litigating it here.
+{% if target == "claude" %}The branch keeps the diff mapped to the plan and off the trunk, and Step 4 reads the working-tree diff, so the baseline must be clean.{% else %}Prepare the branch before implementation; Step 4 reviews that checkout's working diff.{% endif %} The skill derives the name, reuses existing feature work for this plan or creates it, commits the plan document onto the branch, and announces the result. An untracked plan directory is expected there and needs no intervention; unrelated pending edits get put to the user as a choice, so relay whatever they decided rather than re-litigating it here.
 
 Keep referencing the plan by its Step 0 absolute path. Entering a worktree changes the cwd; that path still resolves.
 
 ## Step 2: Seed the task list
 
-Every item is knowable now, so build the list in **two messages**: one carrying every `TaskCreate`, one carrying every `TaskUpdate` that chains them. Two only because `TaskCreate` has no blocked-by field.
+{% if target == "claude" %}Every item is knowable now, so build the list in **two messages**: one carrying every `TaskCreate`, one carrying every `TaskUpdate` that chains them. Two only because `TaskCreate` has no blocked-by field.
 
 **Implementation items: exactly one per in-scope `### Implementation Phase <N>` section**, in plan order. One task per phase and no finer — not one per file the phase lists, not one per bullet inside it. A phase touching six files is one task. The count is checkable before you send it: implementation items should equal in-scope phases, and if it doesn't, you've split a phase that the plan already treats as one unit of work.
 
@@ -56,15 +60,22 @@ The chain puts the run's order in the list while changing it is still free.
 - Bookkeeping never gets its own turn. A completion rides in the same message as the next item's first tool call, alongside that item's in-progress mark. An update travels alone only when the run is ending.
 - Exactly one of _this run's_ items in progress at a time; complete each as it's done, never in a batch at the end. Unrelated tasks already in the session get left alone.
 - Never end the turn with this run's items pending unless the run genuinely stopped short — redirected, aborted, or blocked (failing verification, an unavailable dependency, an unresolvable tool error). Annotate the current item with the blocker and leave it and everything downstream pending; pending is the honest state for unfinished work.
-- A step that becomes moot (a phase turns out to be already satisfied by existing code, so there is nothing to write) gets a short reason appended and is marked completed — not deleted, not left pending. Blocked is pending; moot is completed.
+- A step that becomes moot (a phase turns out to be already satisfied by existing code, so there is nothing to write) gets a short reason appended and is marked completed — not deleted, not left pending. Blocked is pending; moot is completed.{% else %}Create exactly one task per in-scope phase, then one for review passes and one for the summary. Use phase titles without hand-written task numbers; descriptions point to the plan.
+
+Use two messages: all `TaskCreate` calls, then all `TaskUpdate` calls that chain each task after its predecessor with `addBlockedBy`. Keep exactly one item in progress. Update completion alongside the next task's first action; leave unrelated tasks alone.
+
+Complete satisfied phases with a short reason. If blocked, record the reason and leave unfinished work pending. Do not finish with pending tasks unless the workflow genuinely stops.{% endif %}
 
 ## Step 3: Implement
 
 Take the Step 2 items in chain order — plans order files so that later ones can import earlier ones.
 
-- Delegate to mzizzi:standard sub-agents for implementation
+{% if target == "claude" %}- Delegate to mzizzi:standard sub-agents for implementation
   - At least one sub-agent per plan phase (multiple)
-  - Instruct sub-agents to hand off work to a new agent when >250k is used
+  - Instruct sub-agents to hand off work to a new agent when >250k is used{% else %}- Use {{ Agent("standard") }}: delegate at least one child per phase. Enable `subagent` if needed:
+  `subagent({agent:"mzizzi.standard", task:"<phase, absolute plan path, scope, checks>", cwd:"<selected absolute cwd>", async:true, options:{context:"fresh"}})`.
+- Wait for native completion before dependent work. Keep all phases in this checkout; do not allocate child worktrees.
+- Ask children to hand off before context exhaustion. On child failure, report the blocker rather than silently replacing delegation with parent work.{% endif %}
 - Treat the plan's design and code sketches as intent, not rigid. If a better approach is obvious or the plan was incorrect then do the right thing and note the deviation for Step 5.
 - Match the surrounding codebase's conventions, not the plan's illustrative style.
 - Verify as you go, after meaningful chunks rather than all at the end; a failure caught early is cheaper to locate. Write any tests the plan named.
@@ -73,7 +84,7 @@ Leave the changes uncommitted on the Step 1 branch. All three passes ahead read 
 
 ## Step 4: Review passes
 
-    Skill(skill: "fix-all", args: "--plan <plan document path> --strictness=high --apply=all")
+{% if target == "claude" %}    Skill(skill: "fix-all", args: "--plan <plan document path> --strictness=high --apply=all"){% else %}Read and follow {{ Skill("fix-all") }} at `<skill-dir>/../fix-all/SKILL.md` with arguments `--plan <plan document path> --strictness=high --apply=all`. Use the same checkout and uncommitted diff. Return here afterward.{% endif %}
 
 `<plan document path>` is the file from Step 0. No `--base`: the implementation is still uncommitted. `--strictness=high` covers the long block comments and module headers fresh implementation work tends to produce. `--apply=all` fixes the large findings now rather than deferring them: the code is fresh and uncommitted, so an invasive edit is cheapest here.
 
@@ -85,7 +96,7 @@ If it reports a review was unavailable, a verification failure, or an applied cl
 
 The user can read the diff and the plan themselves, so cover what they need to decide or know:
 
-- The **feature branch**, and the **worktree path** when applicable (both announced in Step 1), so the summary is self-contained. A worktree persists after the session — the harness offers to keep or remove it on exit; keep it for review/PR.
+- The **feature branch**, and the **worktree path** when applicable (both announced in Step 1), so the summary is self-contained. {% if target == "claude" %}A worktree persists after the session — the harness offers to keep or remove it on exit; keep it for review/PR.{% else %}Do not automatically exit. The worktree stays after shutdown; include the replacement session path if entry occurred.{% endif %}
 - What was implemented, from which plan and scope.
 - Deviations from the plan, and why.
 - Each pass's outcome, reported separately since they answer different questions: findings raised, fixed inline, and deferred for the correctness and quality passes; what it cut for the comment pass. If any was unavailable, say so and why.

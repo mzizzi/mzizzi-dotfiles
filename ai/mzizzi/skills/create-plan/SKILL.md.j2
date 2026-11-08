@@ -100,7 +100,9 @@ Report, in this order, without reciting the plan:
 {% if target == "claude" %}End with this command alone on the last line, using the absolute path, with no backticks or punctuation, so it can be copied:
 
     /mzizzi:implement-plan <target file path>
-{% else %}End with the absolute plan path. State that Pi's implementation workflow is deferred until worktree support exists; do not advertise an unavailable implementation command.
+{% else %}End with this command for {{ Skill("implement-plan") }}, using the absolute plan path:
+
+    /skill:implement-plan <target file path>
 {% endif %}
 ## Plan Output Template
 

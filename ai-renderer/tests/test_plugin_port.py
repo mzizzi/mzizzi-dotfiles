@@ -9,7 +9,7 @@ import unittest
 from test_pilot_skills import REPO, skill_document
 from render_ai import Target, build
 
-PI_DEFERRED = {"prepare-feature-branch", "implement-plan", "review-pr"}
+PI_DEFERRED = set()
 
 
 class PluginPortTests(unittest.TestCase):
@@ -79,8 +79,13 @@ class PluginPortTests(unittest.TestCase):
                     "description": description,
                     "disable-model-invocation": original_metadata["disable-model-invocation"],
                 })
-                for forbidden in ("Skill(skill:", "Agent(subagent_type:", "EnterWorktree(", "ExitWorktree(", "SendMessage", "TaskCreate", "TaskUpdate", "run_in_background:"):
-                    self.assertNotIn(forbidden, body)
+                forbidden = ["Skill(skill:", "Agent(subagent_type:", "SendMessage", "run_in_background:"]
+                if name not in {"prepare-feature-branch", "review-pr"}:
+                    forbidden.extend(["EnterWorktree(", "ExitWorktree("])
+                if name != "implement-plan":
+                    forbidden.extend(["TaskCreate", "TaskUpdate"])
+                for token in forbidden:
+                    self.assertNotIn(token, body)
                 self.assertNotRegex(body, r"mzizzi:[a-z-]+")
                 for args in re.findall(r'Skill\(skill: "[a-z-]+",\s*args: "([^"]*)"\)', original_body):
                     self.assertIn(args, body)
@@ -115,12 +120,53 @@ class PluginPortTests(unittest.TestCase):
         plan = body("create-plan")
         self.assertIn("never ask the user a question", plan)
         self.assertIn("If the decider fails, report the blocker and stop", plan)
-        self.assertIn("deferred until worktree support exists", plan)
-        self.assertNotIn("/skill:implement-plan", plan)
+        self.assertIn("/skill:implement-plan <target file path>", plan)
+        self.assertNotIn("deferred until worktree support exists", plan)
         codex = body("codex-adversarial-review")
         self.assertIn("codex@openai-codex", codex)
         self.assertIn("timeout: 600", codex)
         self.assertIn("Do not replace it with a native Pi agent", codex)
+
+    def test_pi_worktree_workflows_preserve_order_scope_and_cleanup(self):
+        def body(name):
+            return skill_document(self.package(Target.PI) / "skills" / name / "SKILL.md")[1]
+
+        prepare = body("prepare-feature-branch")
+        for action in ("stay", "enter-worktree", "switch", "judge-current-branch-then-create", "create"):
+            self.assertIn(f"**`{action}`**", prepare)
+        self.assertIn('EnterWorktree({path: "<WORKTREE_PATH>"})', prepare)
+        self.assertIn("alone in its message", prepare)
+        self.assertIn("Wait for completed entry", prepare)
+        self.assertIn("no outstanding child work", prepare)
+        self.assertIn("stop for a transfer decision", prepare)
+        self.assertIn("do not silently copy or commit elsewhere", prepare)
+        self.assertNotIn("rerun the same command with elevated permissions", prepare)
+        self.assertNotIn("the worktree's diff is clean either way", prepare)
+
+        implementation = body("implement-plan")
+        self.assertLess(implementation.index("../prepare-feature-branch/SKILL.md"), implementation.index("## Step 2"))
+        self.assertLess(implementation.index("TaskCreate"), implementation.index("subagent({"))
+        self.assertLess(implementation.index("subagent({"), implementation.index("../fix-all/SKILL.md"))
+        self.assertIn("including completed worktree entry", implementation)
+        self.assertIn("the `mzizzi.standard` agent: delegate at least one child per phase", implementation)
+        self.assertIn('cwd:"<selected absolute cwd>"', implementation)
+        self.assertIn('options:{context:"fresh"}', implementation)
+        self.assertIn("--plan <plan document path> --strictness=high --apply=all", implementation)
+        self.assertIn("same checkout and uncommitted diff", implementation)
+        self.assertIn("Do not automatically exit", implementation)
+        self.assertNotRegex(implementation, r"worktree\s*:\s*true")
+
+        review = body("review-pr")
+        self.assertIn("git worktree add --detach", review)
+        self.assertIn("git worktree list --porcelain -z", review)
+        self.assertIn("bindingWasActive", review)
+        self.assertIn('EnterWorktree({path:"<start>"})', review)
+        self.assertIn('ExitWorktree({action:"keep"})', review)
+        self.assertIn("Wait for completed return", review)
+        self.assertIn("--apply=none --base origin/<baseRefName>", review)
+        self.assertIn("git worktree remove <path>", review)
+        self.assertNotIn("git worktree remove --force", review)
+        self.assertIn("Never force removal without approval", review)
 
 
 if __name__ == "__main__":

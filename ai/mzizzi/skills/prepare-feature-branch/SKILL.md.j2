@@ -5,8 +5,12 @@ claude:
   allowed-tools: Bash, EnterWorktree, AskUserQuestion
   disable-model-invocation: false
   user-invocable: true
-pi: false
----
+pi:
+  disable-model-invocation: false
+---{% if target == "pi" %}
+
+Keep `<skill-dir>` and the plan path absolute across worktree entry. Entry needs the worktree extension in an interactive parent session; stop if unavailable.
+{% endif %}
 
 # Prepare Feature Branch
 
@@ -41,13 +45,13 @@ Uncommitted changes are classified in the script, not here: the plan directory t
 
 When the fetch fails, the script prints git's error after the `KEY=value` lines. `TRUNK_BEHIND` is then counted against an old remote ref, so tell the user the count may be stale and why.
 
-If a git command here or in the steps below fails with "Read-only file system" or "Permission denied" under `.git`, or with "dubious ownership", rerun the same command with elevated permissions and say why. Do not try other workarounds.
+{% if target == "claude" %}If a git command here or in the steps below fails with "Read-only file system" or "Permission denied" under `.git`, or with "dubious ownership", rerun the same command with elevated permissions and say why. Do not try other workarounds.{% else %}If Git reports "Read-only file system", "Permission denied" under `.git`, or "dubious ownership", report the exact error and stop. Do not invent permission elevation, change ownership/trust settings, or use another workaround.{% endif %}
 
 ## Step 2: Settle any pending edits
 
-Skip this entirely when `OTHER_DIRTY=no`, which is the common case — and also when `ACTION=enter-worktree`, since the edits stay behind in this working tree and the worktree's diff is clean either way.
+Skip this entirely when `OTHER_DIRTY=no`, which is the common case — and also when `ACTION=enter-worktree`, {% if target == "claude" %}since the edits stay behind in this working tree and the worktree's diff is clean either way.{% else %}since the edits stay behind in this working tree. The destination can already be dirty; report its actual state rather than claiming it is clean.{% endif %}
 
-Otherwise the user has work in progress outside the plan directory, and it has to go somewhere before implementation starts — pending edits left in place get attributed to the implementation by whatever reviews the working-tree diff afterward. Which destination is right depends on whether that work belongs with this plan, and only the user knows. Put it to them with `AskUserQuestion`, listing the reported paths so they can decide from the question itself:
+Otherwise the user has work in progress outside the plan directory, and it has to go somewhere before implementation starts — pending edits left in place get attributed to the implementation by whatever reviews the working-tree diff afterward. Which destination is right depends on whether that work belongs with this plan, and only the user knows. {% if target == "claude" %}Put it to them with `AskUserQuestion`, listing the reported paths so they can decide from the question itself:{% else %}Use a human-question tool, or ask a numbered question and wait. Include the reported paths:{% endif %}
 
 - **Commit onto the feature branch** — carried across the switch and committed there before implementation starts, as its own commit. Right when the edits are groundwork for this plan.
 - **Commit where you are** — committed on the current branch first, before branching. Right when the edits are unrelated and belong on the trunk.
@@ -62,7 +66,7 @@ Never stash without being asked to. A stash is silent and easy to forget, so it'
 
 **`stay`** — already on the branch. Nothing to do.
 
-**`enter-worktree`** — the branch lives in a worktree elsewhere: `EnterWorktree(path: <WORKTREE_PATH>)`.
+**`enter-worktree`** — the branch lives in a worktree elsewhere: {% if target == "claude" %}`EnterWorktree(path: <WORKTREE_PATH>)`.{% else %}`EnterWorktree({path: "<WORKTREE_PATH>"})`, alone in its message, with no outstanding child work. Wait for completed entry, then continue at Step 4. On failure or cancellation, stop. If a child guard reveals live work, choose Stay.{% endif %}
 
 **`switch`** — the branch exists in this working tree: `git switch <BRANCH>`.
 
@@ -82,7 +86,9 @@ Then `git switch -c <BRANCH>`, basing the branch on local `HEAD` rather than `<R
 
 ## Step 4: Commit the plan document
 
-When `PLAN_DIR_DIRTY=yes`, commit the plan directory now that you're on the feature branch:
+{% if target == "pi" %}After entry, stage only the destination's plan directory. If it lacks dirty/untracked source-plan changes, stop for a transfer decision; do not silently copy or commit elsewhere.
+
+{% endif %}When `PLAN_DIR_DIRTY=yes`, commit the plan directory now that you're on the feature branch:
 
 ```bash
 git add <plan dir> && git commit -m "plan: <SLUG>"
@@ -96,4 +102,4 @@ Name the plan directory explicitly rather than staging everything: if the user c
 
 Report the branch and, when in a worktree, its path — and whether it was reused or created, plus the plan commit if you made one and what became of any pending edits. Callers put this in their summary so the work is easy to find for review, and the distinction tells the user whether they're adding to existing work or starting fresh.
 
-Two things worth passing on when a worktree is involved: the session cwd changed, so any path the caller resolved earlier (the plan document especially) should keep being referenced by its original absolute path; and the worktree persists after the session — on exit the harness offers to keep or remove it, and keeping it preserves the work for review.
+Two things worth passing on when a worktree is involved: the session cwd changed, so any path the caller resolved earlier (the plan document especially) should keep being referenced by its original absolute path; {% if target == "claude" %}and the worktree persists after the session — on exit the harness offers to keep or remove it, and keeping it preserves the work for review.{% else %}and the worktree stays after shutdown. Do not automatically exit. Include the replacement session path after entry.{% endif %}

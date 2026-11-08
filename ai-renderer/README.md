@@ -34,6 +34,10 @@ node ai-renderer/tests/check_ai_loaders.mjs
 
 This checks discovery without model requests. Pi agents need `pi-subagents`; core Pi alone does not load them.
 
-Pi omits `prepare-feature-branch`, `implement-plan`, and `review-pr` until worktree support exists. Other Pi workflows read nested skills directly and use `pi-subagents` for delegation. Without interactive question or task tools, they use plain-text questions or a conversation checklist. Codex review still needs the installed `codex@openai-codex` Claude plugin and an authenticated Codex CLI.
+Pi now renders `prepare-feature-branch`, `implement-plan`, and `review-pr` as an interactive pilot. Install the user-level [worktree extension](../config/pi/README.md#worktrees-interactive-pilot) before use. Implementation also needs the local task extension and `pi-subagents`; other review workflows can use a conversation checklist without task tools. Human questions use plain text when no question tool exists.
+
+Branch selection and the shared uncommitted diff stay unchanged. Worktree entry replaces the Pi session ID/file and pauses until completion. Finish all child work before switching. Worktrees stay after shutdown; PR cleanup refuses forced removal without approval. Dirty source plans absent from the destination need a transfer decision. Full model-driven workflow checks remain manual pilot gates.
+
+Pi workflows read nested skills directly and use native subagents for delegation. Codex review still needs the installed `codex@openai-codex` Claude plugin and an authenticated Codex CLI.
 
 The sources are staging copies. Existing production plugins and installed settings stay unchanged. Read-only review remains a prompt instruction, not an enforced sandbox. Model policy: Claude Fable/medium maps to Pi Astra/medium; Claude Opus 5.5/medium maps to Pi Sol 6.1/high. Set these explicitly in each agent template.

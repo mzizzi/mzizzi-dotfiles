@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL, fileURLToPath } from "node:url";
@@ -12,11 +18,7 @@ const expectedClaudeSkills = [
   ...readdirSync(join(repo, "plugins/mzizzi/skills")),
   "renderer-example",
 ].sort();
-const deferredPiSkills = new Set([
-  "prepare-feature-branch",
-  "implement-plan",
-  "review-pr",
-]);
+const deferredPiSkills = new Set();
 const expectedPiSkills = expectedClaudeSkills.filter(
   (name) => !deferredPiSkills.has(name),
 );
