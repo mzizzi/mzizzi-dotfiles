@@ -11,28 +11,18 @@ pi:
 
 # Adversarial Review
 
-Resolve `<skill-dir>` to the absolute directory containing this `SKILL.md`.
+Resolve `<skill-dir>` to this skill's absolute directory. Review without changing target files.
 
-Use one review target:
+- `--files <paths>`: current contents and staged/unstaged diffs of those files. Repeat the flag or use comma-separated paths.
+- `--base <ref>`: the working tree against the merge base, including commits, dirty changes, and untracked files. Default: `HEAD`.
+- `--model` and `--effort`: reviewer configuration. Other arguments are focus text.
 
-- `--files <paths>`: only those files, including current contents and their staged/unstaged diffs. Repeat the flag or use comma-separated paths.
-- `--base <ref>`: the working tree against the merge base with `<ref>`, including commits, staged/unstaged changes, and untracked files. The default is `HEAD`.
-
-`--model` and `--effort` select the reviewer configuration. Other arguments are focus text. An empty explicit-file scope or collection failure makes the review unavailable; never widen the target.
-
-Both implementations use the same pinned adversarial prompt, report schema, outcome envelope, and formatter. Review without changing target files. Fresh context supplies a separate review, not a guarantee of a different model.
+Never widen an empty or failed explicit-file scope.
 
 {% include "mzizzi/skills/adversarial-review/_templates/" + target + ".md.j2" %}
 
-## Result contract
+## Result
 
-Both reviewers return one outcome, with all three fields present:
+Return the helper's Markdown report. A `complete` review can approve or request attention. A failed, cancelled, missing, or incomplete review is unavailable, never approval.
 
-- **Complete:** `{"status":"complete","report":<review report>,"reason":null}`.
-- **Unavailable:** `{"status":"unavailable","report":null,"reason":"<specific reason>"}`.
-
-The report uses the existing `verdict`, `summary`, `findings`, and `next_steps` schema. A complete report can approve or request attention. Unavailable never means approval. Transport failure, cancellation, missing output, or an incomplete review makes the review unavailable even if the process or child otherwise completes successfully.
-
-The helper prints Markdown with a verdict, summary, severity-ordered findings, recommendations, and optional next steps. It preserves the upstream formatter's normalization, including malformed-finding and reversed-line fallback.
-
-On failure, stdout is empty and stderr gives the reason. Exit 2 means preparation or dependency setup failed; exit 1 means execution, output, or report handling failed. Return the unavailable reason to the caller and stop this skill. The caller decides whether its larger workflow can continue.
+On failure, return stderr as the unavailable reason and stop this skill. Exit 2 means preparation or dependency failure; exit 1 means execution or output failure.

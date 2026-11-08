@@ -9,7 +9,7 @@ pi:
   disable-model-invocation: false
 ---{% if target == "claude" %}{% else %}
 
-Resolve `<skill-dir>` to the absolute directory containing this `SKILL.md`. Each nested skill resolves its own directory; keep its arguments and return to the caller after it completes.
+Resolve `<skill-dir>` to this skill's absolute directory.
 {% endif %}
 
 # Create Plan
@@ -54,8 +54,8 @@ The adversarial reviewer looks for what's missing, the pragmatic reviewer for wh
 subagent({ agent: "mzizzi.pragmatic-reviewer", task: "Review the plan at <absolute target file path>. Also answer each item under its ## Open Questions: the option you would pick and why. Read-only; do not edit the plan.", async: true, options: { context: "fresh" } })
 ```
 
-Keep its run id. Run the adversarial-review skill below while that reviewer works. Before Step 4, wait for the reviewer's native completion notification and read both reports; do not poll or use `bg_wait`.
-Read and follow {{ Skill("adversarial-review") }} from `<skill-dir>/../adversarial-review/SKILL.md` with arguments `--model gpt-6-astra --effort high --files <target file path> focus on feasibility, completeness, missing risks, and questionable assumptions. Right-size each recommendation to the problem — KISS/YAGNI/DRY balanced against the complexity the plan actually warrants; no scope or machinery the plan's stated problem does not require. Answer each item under Open Questions with the option you would pick and why.`. Then return to this workflow.
+Run adversarial review while that reviewer works. Before Step 4, wait for completion without polling or `bg_wait` and read both reports.
+Read and follow {{ Skill("adversarial-review") }} from `<skill-dir>/../adversarial-review/SKILL.md` with arguments `--model gpt-6-astra --effort high --files <target file path> focus on feasibility, completeness, missing risks, and questionable assumptions. Right-size each recommendation to the problem — KISS/YAGNI/DRY balanced against the complexity the plan actually warrants; no scope or machinery the plan's stated problem does not require. Answer each item under Open Questions with the option you would pick and why.`.
 {% endif %}
 Hold both reports for Step 4. If a review is unavailable, tell the user which one and why, and continue with the other; if both are, skip to Step 5.
 

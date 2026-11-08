@@ -37,7 +37,7 @@ bash "<skill-dir>/scripts/inspect_branch_state.sh" plans/20260713-oauth-token-re
 
 `<skill-dir>` is the directory this `SKILL.md` was loaded from.
 
-It derives the branch name, gathers the git state, and prints `KEY=value` lines ending in a recommended `ACTION`. It only reports — it never switches, creates, or commits, because entering a worktree is a harness tool call rather than a shell command, and because a script that both decides and acts is harder to override when its recommendation is wrong.
+The script prints the branch and Git state as `KEY=value` lines ending in a recommended `ACTION`. It does not switch branches, create worktrees, or commit.
 
 Uncommitted changes are classified in the script, not here: the plan directory this run is about is reported as `PLAN_DIR_DIRTY`, everything else as `OTHER_DIRTY` with a count and the porcelain lines, so there is no judgment call left for you at this step. `ACTION` covers only where the branch comes from; pending edits are separate state that Step 2 settles.
 
@@ -75,7 +75,7 @@ Never stash without being asked to. A stash is silent and easy to forget, so it'
 - It's for this plan (e.g. `feat/oauth-refresh` when the plan is `20260713-oauth-token-refresh`) → stay on it. One piece of work shouldn't span two branches.
 - It's unrelated → `git switch -c <BRANCH> <TRUNK>`, weighing `TRUNK_BEHIND` first as in `create` below. Name the local trunk explicitly here: `HEAD` is the unrelated branch, so it's the one case where the base isn't where you're standing.
 
-The script hands you this call rather than making it because it can compare strings but can't tell that two differently-worded names describe the same effort. If it's genuinely ambiguous, ask the user — landing a plan's implementation on somebody else's in-progress branch is annoying to unpick.
+If the current branch's purpose is ambiguous, ask the user before switching.
 
 **`create`** — no feature work for this plan exists and you're on the trunk. The script has already fetched, so `TRUNK_BEHIND` says how many commits the local trunk is missing from `<REMOTE>/<TRUNK>`:
 
@@ -102,4 +102,4 @@ Name the plan directory explicitly rather than staging everything: if the user c
 
 Report the branch and, when in a worktree, its path — and whether it was reused or created, plus the plan commit if you made one and what became of any pending edits. Callers put this in their summary so the work is easy to find for review, and the distinction tells the user whether they're adding to existing work or starting fresh.
 
-Two things worth passing on when a worktree is involved: the session cwd changed, so any path the caller resolved earlier (the plan document especially) should keep being referenced by its original absolute path; {% if target == "claude" %}and the worktree persists after the session — on exit the harness offers to keep or remove it, and keeping it preserves the work for review.{% else %}and the worktree stays after shutdown. Do not automatically exit. Include the replacement session path after entry.{% endif %}
+After worktree entry, keep plan paths absolute. {% if target == "claude" %}Keep the worktree for review.{% else %}Do not automatically exit. Include the replacement session path.{% endif %}

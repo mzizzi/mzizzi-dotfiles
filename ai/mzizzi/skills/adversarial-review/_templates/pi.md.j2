@@ -1,43 +1,41 @@
-## Pi execution
+## Run
 
-Use native `pi-subagents`, not the Codex CLI or a Claude plugin. Default to `chatgpt/gpt-6-astra` with high thinking. Accept `gpt-6-astra` as the same model. Reject unsupported model/effort choices without fallback.
+Default to `chatgpt/gpt-6-astra` at high thinking; accept `gpt-6-astra` as an alias. Reject unsupported choices without fallback.
 
-1. **Prepare the input.** Create a temporary directory outside the checkout with `mktemp -d`. Run the helper with the caller's actual arguments, and redirect stdout to `<review-dir>/prepared.json`:
+1. **Prepare.** Create `<review-dir>` outside the checkout with `mktemp -d`. Run the helper with the caller's arguments:
 
    ```bash
-   node "<skill-dir>/scripts/run_review.mjs" prepare --model gpt-6-astra --effort high --files plans/example/plan.md "focus on feasibility, completeness, missing risks, and questionable assumptions" > "<review-dir>/prepared.json"
+   node "<skill-dir>/scripts/run_review.mjs" prepare --files plans/example/plan.md "review focus" > "<review-dir>/prepared.json"
    ```
 
-   Stop on failure and return stderr as the unavailable reason. Read the complete JSON file, using additional reads if it is truncated. It contains `repoRoot`, `targetLabel`, `model`, `effort`, `prompt`, and `outputSchema`. Do not rewrite or summarize the prompt or schema.
+   Stop on failure. Read the complete prepared JSON, including any truncated portion.
 
-2. **Start one reviewer.** Enable `subagent` with `subagents_enable` if needed. Start {{ Agent("adversarial-reviewer") }} asynchronously. Substitute the prepared values below; `outputSchema` must be the actual schema object, not a filename or string:
+2. **Review.** Enable `subagent` if needed. Start {{ Agent("adversarial-reviewer") }} with the prepared values verbatim; pass `outputSchema` as an object:
 
    ```js
    subagent({
      agent: "mzizzi.adversarial-reviewer",
-     task: "<prepared.prompt verbatim>",
+     task: "<prepared.prompt>",
      cwd: "<prepared.repoRoot>",
      model: "<prepared.model>:<prepared.effort>",
      async: true,
      output: "<absolute review-dir>/outcome.json",
-     options: { context: "fresh", outputSchema: /* prepared.outputSchema object */ }
+     options: { context: "fresh", outputSchema: /* prepared.outputSchema */ }
    })
    ```
 
-   `outputSchema` and the child-only `structured_output` tool come from `pi-subagents`, not Pi core. Keep the run id and the returned output-path mapping. Do not silently switch agent, model, or execution path after a failure.
+   Keep the run id and returned output path. Wait for completion without polling or `bg_wait`. Require successful completion and captured `structured_output`; read its saved JSON, not final prose. Do not switch execution paths on failure.
 
-3. **Wait for completion.** Use the native completion notification; do not poll or use `bg_wait`. Dispatch success is not completion. Check the final run status and its captured structured output. Read the runtime's persisted outcome JSON at the returned output path; do not parse final prose as the report. The child must submit through `structured_output`, not write its own output artifact.
-
-   If the run fails, is cancelled, or has no captured structured output, ignore any partial artifact. Produce an unavailable outcome with the helper and save it to `<review-dir>/outcome.json`:
+3. **Render.** For a failed, cancelled, or missing result, ignore any partial artifact and create an unavailable outcome:
 
    ```bash
-   node "<skill-dir>/scripts/run_review.mjs" unavailable "<specific completion failure>" > "<review-dir>/outcome.json"
+   node "<skill-dir>/scripts/run_review.mjs" unavailable "<failure reason>" > "<review-dir>/outcome.json"
    ```
 
-4. **Render and return.** Pass the prepared JSON and the actual outcome JSON to the helper:
+   Otherwise use the returned outcome path. Render it:
 
    ```bash
-   node "<skill-dir>/scripts/run_review.mjs" render "<review-dir>/prepared.json" "<actual outcome path>"
+   node "<skill-dir>/scripts/run_review.mjs" render "<review-dir>/prepared.json" "<outcome path>"
    ```
 
-   Return its report or unavailable reason to the caller. Remove only this run's temporary directory after the child stops and the result is read. Do not change target files or leave review artifacts in the checkout.
+   After the child stops and the result is read, remove this run's temporary directory. Return the report or unavailable reason.

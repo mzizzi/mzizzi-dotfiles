@@ -7,7 +7,7 @@ pi:
   disable-model-invocation: false
 ---{% if target == "claude" %}{% else %}
 
-Resolve `<skill-dir>` to the absolute directory containing this `SKILL.md`. Each nested skill resolves its own directory; keep its arguments and return to the caller after it completes.
+Resolve `<skill-dir>` to this skill's absolute directory.
 {% endif %}
 
 # Instructions

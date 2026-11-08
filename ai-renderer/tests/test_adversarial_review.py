@@ -53,7 +53,32 @@ class AdversarialReviewTests(unittest.TestCase):
             pi = target == Target.PI
             review = (root / "adversarial-review/SKILL.md").read_text()
             self.assertEqual("mzizzi.adversarial-reviewer" in review, pi)
-            self.assertEqual("Claude execution" in review, not pi)
+            self.assertEqual('prepare --files' in review, pi)
+            self.assertEqual('600000' in review, not pi)
+
+    def test_skill_text_keeps_actions_without_portability_commentary(self):
+        for target in Target:
+            for skill in self.bundle(target).parent.glob("*/SKILL.md"):
+                with self.subTest(target=target, skill=skill.parent.name):
+                    body = skill.read_text()
+                    for explanation in (
+                        "Both implementations use", "not Pi core", "human-only",
+                        "formatter's normalization", "Each nested skill resolves",
+                        "Then return to this workflow", "do not assume Claude's",
+                        "because entering a worktree is a harness tool call",
+                    ):
+                        self.assertNotIn(explanation, body)
+            review = (self.bundle(target) / "SKILL.md").read_text()
+            self.assertIn("Never widen", review)
+            self.assertIn("unavailable, never approval", review)
+            self.assertIn("stderr", review)
+            if target == Target.PI:
+                for instruction in (
+                    "prepared values verbatim", "outputSchema", 'context: "fresh"',
+                    "without polling", "captured `structured_output`",
+                    "ignore any partial artifact", "temporary directory",
+                ):
+                    self.assertIn(instruction, review)
 
     @unittest.skipUnless(shutil.which("node"), "Node.js is needed for helper regression checks")
     def test_generated_helpers(self):

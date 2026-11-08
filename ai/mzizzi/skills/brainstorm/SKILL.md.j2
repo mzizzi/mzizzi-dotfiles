@@ -9,7 +9,7 @@ pi:
   disable-model-invocation: false
 ---{% if target == "claude" %}{% else %}
 
-Resolve `<skill-dir>` to the absolute directory containing this `SKILL.md`. Each nested skill resolves its own directory; keep its arguments and return to the caller after it completes.
+Resolve `<skill-dir>` to this skill's absolute directory.
 {% endif %}
 
 # Brainstorm
@@ -35,7 +35,7 @@ Read `references/recommendation-guidelines.md` (relative to this skill's directo
 
 Walk down each branch of the design tree, resolving dependencies between decisions one by one, until you and the user share an understanding of the idea. Research each fork, then state the call with its reason, or ask when the guidelines say the fork deserves a question:
 
-- Ask one question at a time, through the harness's interactive user-question tool (e.g. `AskUserQuestion` in Claude Code) if it has one. Otherwise, write the question as numbered options and stop.
+- Ask one question at a time using a question tool if available. Otherwise, ask with numbered options and wait.
 - Put the recommended option first, with "(Recommended)" on its label and the rationale in its description.
 - A reply that isn't an option pick can be an answer, a question, or "you decide". Take an answer as the decision. Answer a question, then state your call with its reason; don't re-ask the same question with new framing. Make the call yourself on "you decide".
 
@@ -107,7 +107,7 @@ Run a pragmatic review of the document:
 subagent({ agent: "mzizzi.pragmatic-reviewer", task: "Review the brainstorm at <absolute document path>. Read-only; return findings without editing it.", async: true, options: { context: "fresh" } })
 ```
 
-Keep the run id. Wait for its native completion notification before processing the review; do not poll or use `bg_wait`. If the review fails, report the reason and stop without claiming a clean review.
+Wait for completion without polling or `bg_wait`. On failure, report the reason and stop.
 {% endif %}
 If the review has findings, say briefly what they are and go back to Step 1, starting from them. A finding against something the user chose goes back to them as a question; never apply it on the reviewer's word. A decision the review overturns is re-logged per the merge rule, and the next save rewrites the same file.
 
@@ -118,7 +118,7 @@ Otherwise, report the saved path and any `## Open questions`, then ask the Step 
 Only after **Create implementation plan**:
 
 {% if target == "claude" %}    Skill(skill: "create-plan", args: "<plan dir path> — build plan.md from <brainstorm file path>")
-{% else %}Read and follow {{ Skill("create-plan") }} from `<skill-dir>/../create-plan/SKILL.md` with arguments `<plan dir path> — build plan.md from <brainstorm file path>`. Then return to this workflow.
+{% else %}Read and follow {{ Skill("create-plan") }} from `<skill-dir>/../create-plan/SKILL.md` with arguments `<plan dir path> — build plan.md from <brainstorm file path>`.
 {% endif %}
 ## Signing off
 

@@ -9,7 +9,7 @@ pi:
   disable-model-invocation: false
 ---{% if target == "claude" %}{% else %}
 
-Resolve `<skill-dir>` to the absolute directory containing this `SKILL.md`. Each nested skill resolves its own directory; keep its arguments and return to the caller after it completes.
+Resolve `<skill-dir>` to this skill's absolute directory.
 {% endif %}
 
 # Fix correctness
@@ -30,7 +30,7 @@ If `git diff --stat --merge-base <ref>` and the untracked list are both empty, s
 ## 2. Run the review
 
 {% if target == "claude" %}    Skill(skill: "adversarial-review", args: "--base <ref> focus on correctness, edge cases, error handling. Right-size each recommendation to the problem — KISS/YAGNI/DRY balanced against the complexity the change actually warrants; no guards, retries, or abstraction for failures this diff does not exhibit.")
-{% else %}Read and follow {{ Skill("adversarial-review") }} from `<skill-dir>/../adversarial-review/SKILL.md` with arguments `--base <ref> focus on correctness, edge cases, error handling. Right-size each recommendation to the problem — KISS/YAGNI/DRY balanced against the complexity the change actually warrants; no guards, retries, or abstraction for failures this diff does not exhibit.`. Then return to this workflow.
+{% else %}Read and follow {{ Skill("adversarial-review") }} from `<skill-dir>/../adversarial-review/SKILL.md` with arguments `--base <ref> focus on correctness, edge cases, error handling. Right-size each recommendation to the problem — KISS/YAGNI/DRY balanced against the complexity the change actually warrants; no guards, retries, or abstraction for failures this diff does not exhibit.`.
 {% endif %}
 With `--plan`, append `, and whether the implementation faithfully follows the plan at <plan path>` to that focus text.
 
@@ -66,7 +66,7 @@ Then run the project's verification — typecheck, tests, lint, whatever the rep
 **With `--plan <path>`** — hand them to the skill that owns the format:
 
 {% if target == "claude" %}    Skill(skill: "record-follow-ups", args: "<plan path> <the deferred findings>")
-{% else %}Read and follow {{ Skill("record-follow-ups") }} from `<skill-dir>/../record-follow-ups/SKILL.md` with arguments `<plan path> <the deferred findings>`. Then return to this workflow.
+{% else %}Read and follow {{ Skill("record-follow-ups") }} from `<skill-dir>/../record-follow-ups/SKILL.md` with arguments `<plan path> <the deferred findings>`.
 {% endif %}
 Give it each finding's `file:line`, what the issue is, why you deferred it rather than fixing it, and the fix the reviewer proposed where that holds up. It shapes and places the entries, dedups against what the plan already carries, and reports back what it wrote.
 
