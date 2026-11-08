@@ -23,6 +23,7 @@ class RendererTests(unittest.TestCase):
         self.addCleanup(self.temporary.cleanup)
         self.repo = Path(self.temporary.name)
         shutil.copytree(REPO / "ai", self.repo / "ai")
+        shutil.copytree(RENDERER / "tests/fixtures/source", self.repo / "ai", dirs_exist_ok=True)
         self.source = self.repo / "ai/mzizzi/skills/renderer-example"
         self.template = self.source / "SKILL.md.j2"
 

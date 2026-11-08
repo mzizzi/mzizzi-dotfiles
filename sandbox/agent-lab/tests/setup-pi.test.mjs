@@ -24,16 +24,128 @@ const extension = join(repoRoot, "config/pi/extensions/attention-control");
 function temporaryHome(t) {
   const home = mkdtempSync(join(tmpdir(), "setup-pi-"));
   t.after(() => rmSync(home, { recursive: true, force: true }));
+  const bin = join(home, "bin");
+  mkdirSync(bin);
+  writeFileSync(
+    join(bin, "uv"),
+    '#!/bin/sh\nprintf "%s\\n" "$@" > "$HOME/render-args.log"\nexit "${UV_EXIT_STATUS:-0}"\n',
+    { mode: 0o755 },
+  );
+  writeFileSync(
+    join(bin, "pi"),
+    `#!/usr/bin/env node
+const fs = require("node:fs");
+const path = require("node:path");
+const args = process.argv.slice(2);
+fs.appendFileSync(path.join(process.env.HOME, "pi-installs.log"), args.join(" ") + "\\n");
+if (process.env.PI_EXIT_STATUS) process.exit(Number(process.env.PI_EXIT_STATUS));
+if (process.env.PI_SKIP_REGISTRATION || !path.isAbsolute(args[1])) process.exit(0);
+const agentDir = process.env.PI_CODING_AGENT_DIR || path.join(process.env.HOME, ".pi/agent");
+fs.mkdirSync(agentDir, {recursive: true});
+const settingsPath = path.join(agentDir, "settings.json");
+const settings = fs.existsSync(settingsPath) ? JSON.parse(fs.readFileSync(settingsPath, "utf8")) : {};
+settings.packages ??= [];
+if (!settings.packages.includes(args[1])) settings.packages.push(args[1]);
+fs.writeFileSync(settingsPath, JSON.stringify(settings));
+`,
+    { mode: 0o755 },
+  );
   return home;
 }
 
-function setup(home, script = setupScript) {
+function setup(home, script = setupScript, env = {}) {
   execFileSync("bash", [script], {
     cwd: tmpdir(),
-    env: { ...process.env, HOME: home },
+    env: {
+      ...process.env,
+      HOME: home,
+      PI_CODING_AGENT_DIR: join(home, ".pi/agent"),
+      PATH: `${home}/bin:${process.env.PATH}`,
+      ...env,
+    },
     stdio: "pipe",
   });
 }
+
+test("renders and registers the Pi package on repeated boots", (t) => {
+  const home = temporaryHome(t);
+  setup(home);
+  setup(home);
+  assert.deepEqual(
+    readFileSync(join(home, "render-args.log"), "utf8").trim().split("\n"),
+    [
+      "run",
+      "--no-project",
+      "--with-requirements",
+      join(repoRoot, "ai-renderer/requirements.txt"),
+      "python",
+      join(repoRoot, "ai-renderer/render_ai.py"),
+      "--target",
+      "pi",
+    ],
+  );
+  assert.deepEqual(
+    readFileSync(join(home, "pi-installs.log"), "utf8").trim().split("\n"),
+    [
+      `install ${join(repoRoot, "generated/pi/packages/mzizzi")}`,
+      `install ${join(repoRoot, "generated/pi/packages/mzizzi")}`,
+    ],
+  );
+});
+
+test("stops before package registration when rendering fails", (t) => {
+  const home = temporaryHome(t);
+  assert.throws(() => setup(home, setupScript, { UV_EXIT_STATUS: "1" }));
+  assert.throws(() => readFileSync(join(home, "pi-installs.log")), {
+    code: "ENOENT",
+  });
+});
+
+test("reports package registration failure instead of completing setup", (t) => {
+  const home = temporaryHome(t);
+  assert.throws(() => setup(home, setupScript, { PI_EXIT_STATUS: "1" }));
+  assert.throws(
+    () => readlinkSync(join(home, ".pi/agent/extensions/worktree")),
+    { code: "ENOENT" },
+  );
+});
+
+test("rejects a successful CLI exit without persisted registration", (t) => {
+  const home = temporaryHome(t);
+  const agentDir = join(home, ".pi/agent");
+  mkdirSync(agentDir, { recursive: true });
+  writeFileSync(join(agentDir, "settings.json"), "{}\n");
+  assert.throws(
+    () => setup(home, setupScript, { PI_SKIP_REGISTRATION: "1" }),
+    /Pi did not register/,
+  );
+  assert.throws(() => readlinkSync(join(agentDir, "extensions/worktree")), {
+    code: "ENOENT",
+  });
+});
+
+test("rejects malformed settings without repairing them after a successful CLI exit", (t) => {
+  const home = temporaryHome(t);
+  const agentDir = join(home, ".pi/agent");
+  mkdirSync(agentDir, { recursive: true });
+  const settings = "{broken settings\n";
+  writeFileSync(join(agentDir, "settings.json"), settings);
+  assert.throws(() => setup(home, setupScript, { PI_SKIP_REGISTRATION: "1" }));
+  assert.equal(readFileSync(join(agentDir, "settings.json"), "utf8"), settings);
+  assert.throws(() => readlinkSync(join(agentDir, "extensions/worktree")), {
+    code: "ENOENT",
+  });
+});
+
+test("installs package and extensions in a custom Pi profile", (t) => {
+  const home = temporaryHome(t);
+  const agentDir = join(home, "custom profile");
+  setup(home, setupScript, { PI_CODING_AGENT_DIR: agentDir });
+  assert.equal(
+    readlinkSync(join(agentDir, "extensions/worktree")),
+    join(repoRoot, "config/pi/extensions/worktree"),
+  );
+});
 
 test("installs the complete extension on first boot and tolerates repeated boots", (t) => {
   const home = temporaryHome(t);
@@ -116,6 +228,14 @@ test("installs multiple extension layouts without changing unrelated extensions"
   for (const name of ["bundled", "first.js", "second.ts"]) {
     assert.equal(readlinkSync(join(installed, name)), join(source, name));
   }
+  assert.deepEqual(readFileSync(join(home, "render-args.log"), "utf8").trim().split("\n"), [
+    "run", "--no-project", "--with-requirements", join(checkout, "ai-renderer/requirements.txt"),
+    "python", join(checkout, "ai-renderer/render_ai.py"), "--target", "pi",
+  ]);
+  assert.deepEqual(readFileSync(join(home, "pi-installs.log"), "utf8").trim().split("\n"), [
+    `install ${join(checkout, "generated/pi/packages/mzizzi")}`,
+    `install ${join(checkout, "generated/pi/packages/mzizzi")}`,
+  ]);
   assert.equal(
     readFileSync(join(installed, "unrelated.js"), "utf8"),
     "Existing extension.\n",
@@ -136,12 +256,6 @@ test("replaces an outdated extension link", (t) => {
 test("preserves the shared setup's external style and packages while adding reminders", (t) => {
   const home = temporaryHome(t);
   const bin = join(home, "bin");
-  mkdirSync(bin);
-  writeFileSync(
-    join(bin, "pi"),
-    '#!/bin/sh\nprintf "%s\\n" "$*" >> "$HOME/pi-installs.log"\n',
-    { mode: 0o755 },
-  );
   const style = join(home, "external-style.md");
   const body = "\n# Attention Control\n\nUse the external style.\n";
   writeFileSync(
@@ -173,10 +287,13 @@ test("preserves the shared setup's external style and packages while adding remi
     join(repoRoot, "sandbox/agent-lab/pi/settings.json"),
     "utf8",
   );
-  assert.equal(readFileSync(join(agentDir, "settings.json"), "utf8"), settings);
   const installedSettings = JSON.parse(
     readFileSync(join(agentDir, "settings.json"), "utf8"),
   );
+  assert.deepEqual(installedSettings, {
+    ...JSON.parse(settings),
+    packages: [...JSON.parse(settings).packages, join(repoRoot, "generated/pi/packages/mzizzi")],
+  });
   assert.equal(installedSettings.defaultProvider, "chatgpt");
   assert.equal(installedSettings.defaultModel, "gpt-6.1-sol");
   assert.equal(installedSettings.defaultThinkingLevel, "high");
@@ -191,7 +308,10 @@ test("preserves the shared setup's external style and packages while adding remi
   );
   assert.deepEqual(
     readFileSync(join(home, "pi-installs.log"), "utf8").trim().split("\n"),
-    JSON.parse(settings).packages.map((source) => `install ${source}`),
+    [
+      ...JSON.parse(settings).packages.map((source) => `install ${source}`),
+      ...Array(2).fill(`install ${join(repoRoot, "generated/pi/packages/mzizzi")}`),
+    ],
   );
   const handlers = new Map();
   attentionControl({ on: (event, callback) => handlers.set(event, callback) });

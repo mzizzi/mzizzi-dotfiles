@@ -2,26 +2,23 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import {
   mkdtempSync,
+  mkdirSync,
   readFileSync,
   readdirSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { pathToFileURL, fileURLToPath } from "node:url";
 
 const repo = fileURLToPath(new URL("../../", import.meta.url));
 const temporary = mkdtempSync(join(tmpdir(), "ai-loader-check-"));
 const originalAgentDir = process.env.PI_CODING_AGENT_DIR;
-const expectedClaudeSkills = [
-  ...readdirSync(join(repo, "plugins/mzizzi/skills")),
-  "renderer-example",
-].sort();
-const deferredPiSkills = new Set();
-const expectedPiSkills = expectedClaudeSkills.filter(
-  (name) => !deferredPiSkills.has(name),
-);
+const expectedClaudeSkills = readdirSync(
+  join(repo, "plugins/mzizzi/skills"),
+).sort();
+const expectedPiSkills = expectedClaudeSkills;
 const expectedAgents = [
   ["pragmatic-reviewer", "chatgpt/gpt-6-astra", "medium"],
   ["standard", "chatgpt/gpt-6.1-sol", "high"],
@@ -42,17 +39,49 @@ try {
   );
   const { loadSkills } = await import(pathToFileURL(join(core, "skills.js")));
   const packagePath = join(repo, "generated/pi/packages/mzizzi");
+  const agentDir = join(temporary, "agent");
+  const existingPackage = join(temporary, "existing-package");
+  mkdirSync(agentDir);
+  mkdirSync(existingPackage);
+  writeFileSync(
+    join(existingPackage, "package.json"),
+    JSON.stringify({ name: "existing-package", pi: {} }),
+  );
+  writeFileSync(
+    join(agentDir, "settings.json"),
+    JSON.stringify({
+      defaultProvider: "chatgpt",
+      defaultModel: "gpt-6.1-sol",
+      defaultThinkingLevel: "high",
+      packages: [existingPackage],
+    }),
+  );
+  for (let boot = 0; boot < 2; boot++) {
+    execFileSync("pi", ["install", packagePath], {
+      cwd: temporary,
+      env: { ...process.env, PI_CODING_AGENT_DIR: agentDir },
+      stdio: "pipe",
+    });
+  }
+  const settingsManager = SettingsManager.create(temporary, agentDir);
+  assert.deepEqual(
+    settingsManager.getPackages().map((source) => resolve(agentDir, source)),
+    [existingPackage, packagePath],
+  );
+  assert.equal(settingsManager.getDefaultProvider(), "chatgpt");
+  assert.equal(settingsManager.getDefaultModel(), "gpt-6.1-sol");
+  assert.equal(settingsManager.getDefaultThinkingLevel(), "high");
   const manager = new DefaultPackageManager({
     cwd: temporary,
-    agentDir: temporary,
-    settingsManager: SettingsManager.inMemory({ packages: [packagePath] }),
+    agentDir,
+    settingsManager,
   });
   const resources = await manager.resolve();
   assert.deepEqual(resources.installFailures ?? [], []);
   assert.ok(resources.skills.length > 0, "Pi package must expose skills");
   const loaded = loadSkills({
     cwd: temporary,
-    agentDir: temporary,
+    agentDir,
     includeDefaults: false,
     skillPaths: resources.skills
       .filter((resource) => resource.enabled)
@@ -69,11 +98,7 @@ try {
     pathToFileURL(join(core, "../config.js"))
   );
   const subagents = join(getAgentDir(), "npm/node_modules/pi-subagents");
-  process.env.PI_CODING_AGENT_DIR = temporary;
-  writeFileSync(
-    join(temporary, "settings.json"),
-    JSON.stringify({ packages: [packagePath] }),
-  );
+  process.env.PI_CODING_AGENT_DIR = agentDir;
   const { discoverAgents } = await import(
     pathToFileURL(join(subagents, "src/agents/agents.js"))
   );

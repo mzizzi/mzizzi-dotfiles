@@ -142,8 +142,8 @@ capabilities:
           description: Install workspace Git hooks and their dependencies
         - command: 'bash "$WORKSPACE_DIR/sandbox/agent-lab/bin/setup-pi.sh"'
           user: agent
-          env: [WORKSPACE_DIR]
-          description: Install custom Pi extensions from the workspace
+          env: [WORKSPACE_DIR, HTTP_PROXY, HTTPS_PROXY]
+          description: Render and install the mzizzi Pi package and custom extensions
       files:
         - path: /home/agent/.codex/config.toml
           overwrite: false

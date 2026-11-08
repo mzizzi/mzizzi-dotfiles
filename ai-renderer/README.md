@@ -32,7 +32,7 @@ With Claude, Pi, and `pi-subagents` installed:
 node ai-renderer/tests/check_ai_loaders.mjs
 ```
 
-This checks discovery without model requests. Pi agents need `pi-subagents`; core Pi alone does not load them.
+This checks repeated local package installation and discovery without model requests. Pi agents need `pi-subagents`; core Pi alone does not load them. Renderer fixtures live under `tests/fixtures/source/`, outside the normal `ai/` sources.
 
 Pi now renders `prepare-feature-branch`, `implement-plan`, and `review-pr` as an interactive pilot. Install the user-level [worktree extension](../config/pi/README.md#worktrees-interactive-pilot) before use. Implementation also needs the local task extension and `pi-subagents`; other review workflows can use a conversation checklist without task tools. Human questions use plain text when no question tool exists.
 
@@ -40,4 +40,4 @@ Branch selection and the shared uncommitted diff stay unchanged. Worktree entry 
 
 Pi workflows read nested skills directly and use native subagents for delegation. Codex review still needs the installed `codex@openai-codex` Claude plugin and an authenticated Codex CLI.
 
-The sources are staging copies. Existing production plugins and installed settings stay unchanged. Read-only review remains a prompt instruction, not an enforced sandbox. Model policy: Claude Fable/medium maps to Pi Astra/medium; Claude Opus 5.5/medium maps to Pi Sol 6.1/high. Set these explicitly in each agent template.
+The sources are staging copies. Sandbox startup renders and registers the Pi package at a stable user-level path; see [sandbox setup](../sandbox/README.md). Existing production Claude plugins and host settings stay unchanged. Read-only review remains a prompt instruction, not an enforced sandbox. Model policy: Claude Fable/medium maps to Pi Astra/medium; Claude Opus 5.5/medium maps to Pi Sol 6.1/high. Set these explicitly in each agent template.

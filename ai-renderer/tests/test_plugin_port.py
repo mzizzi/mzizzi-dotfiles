@@ -9,8 +9,6 @@ import unittest
 from test_pilot_skills import REPO, skill_document
 from render_ai import Target, build
 
-PI_DEFERRED = set()
-
 
 class PluginPortTests(unittest.TestCase):
     def setUp(self):
@@ -36,11 +34,9 @@ class PluginPortTests(unittest.TestCase):
                     if kind == "skills":
                         self.assertEqual(body, expected_body)
             expected = {path.name for path in (original / kind).iterdir()}
-            if kind == "skills":
-                expected.add("renderer-example")
             self.assertEqual({path.name for path in (self.package(Target.CLAUDE) / kind).iterdir()}, expected)
 
-    def test_skill_resources_and_pi_exclusions(self):
+    def test_skill_resources_match_both_targets(self):
         for source in sorted((REPO / "plugins/mzizzi/skills").iterdir()):
             resources = {
                 path.relative_to(source): path
@@ -49,9 +45,6 @@ class PluginPortTests(unittest.TestCase):
             for target in Target:
                 with self.subTest(skill=source.name, target=target):
                     output = self.package(target) / "skills" / source.name
-                    if target == Target.PI and source.name in PI_DEFERRED:
-                        self.assertFalse(output.exists())
-                        continue
                     self.assertEqual(
                         {path.relative_to(output) for path in output.rglob("*") if path.is_file()},
                         {Path("SKILL.md"), *resources},
@@ -65,8 +58,8 @@ class PluginPortTests(unittest.TestCase):
 
     def test_pi_workflows_forward_arguments_without_claude_tool_calls(self):
         skills = self.package(Target.PI) / "skills"
-        expected = {path.name for path in (REPO / "plugins/mzizzi/skills").iterdir()} - PI_DEFERRED
-        self.assertEqual({path.name for path in skills.iterdir()}, expected | {"renderer-example"})
+        expected = {path.name for path in (REPO / "plugins/mzizzi/skills").iterdir()}
+        self.assertEqual({path.name for path in skills.iterdir()}, expected)
         for name in sorted(expected):
             with self.subTest(skill=name):
                 metadata, body = skill_document(skills / name / "SKILL.md")

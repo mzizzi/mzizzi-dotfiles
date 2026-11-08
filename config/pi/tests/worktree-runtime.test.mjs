@@ -5,6 +5,7 @@ import {
   mkdirSync,
   readFileSync,
   realpathSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -127,7 +128,7 @@ async function runtimeHarness(t, f, options = {}) {
   let onConfirm;
   let transitionFinished;
   const settingsManager = SettingsManager.inMemory({
-    packages: [],
+    packages: options.packages ?? [],
     compaction: { enabled: false },
     retry: { enabled: false },
     cacheWarming: { enabled: false },
@@ -256,13 +257,13 @@ async function runtimeHarness(t, f, options = {}) {
     seen,
     errors,
     notices,
-    async prompt(content) {
+    async prompt(content, request = "fixture request") {
       const commandDone = new Promise((resolve) => {
         transitionFinished = resolve;
       });
       const source = runtime.session;
       responses.push(content);
-      await source.prompt("fixture request");
+      await source.prompt(request);
       if (restoreState(source.sessionManager)?.status === "pending")
         await commandDone;
       await runtime.session.waitForIdle();
@@ -415,6 +416,89 @@ hostTest(
       "preserve\n",
     );
     assert.ok(existsSync(f.target) && existsSync(f.review));
+    assert.deepEqual(h.errors, []);
+  },
+);
+
+hostTest(
+  "user-level extension links, package skills and resources survive entry and return",
+  async (t) => {
+    const f = fixture(t);
+    const packagePath = join(f.dir, "user package");
+    const skillPath = join(packagePath, "skills/worktree-package-probe");
+    mkdirSync(skillPath, { recursive: true });
+    writeFileSync(
+      join(packagePath, "package.json"),
+      JSON.stringify({
+        name: "worktree-package-probe",
+        pi: { skills: ["./skills"] },
+      }),
+    );
+    writeFileSync(
+      join(skillPath, "SKILL.md"),
+      "---\nname: worktree-package-probe\ndescription: Check package continuity.\n---\nWORKTREE_PACKAGE_SKILL_MARKER\n",
+    );
+    writeFileSync(join(skillPath, "resource.txt"), "STABLE_PACKAGE_RESOURCE\n");
+    const extensions = join(f.dir, "agent/extensions");
+    mkdirSync(extensions, { recursive: true });
+    for (const name of ["worktree", "tasks"]) {
+      symlinkSync(
+        resolve(`config/pi/extensions/${name}`),
+        join(extensions, name),
+      );
+    }
+    const requests = [];
+    const h = await runtimeHarness(t, f, {
+      packages: [packagePath],
+      resources: { noExtensions: false, extensionFactories: [] },
+      onRequest: (context) =>
+        requests.push(
+          JSON.stringify(
+            context.messages.findLast((message) => message.role === "user")
+              ?.content,
+          ),
+        ),
+    });
+    await h.prompt(
+      [call("EnterWorktree", { path: f.target })],
+      "/skill:worktree-package-probe before-entry",
+    );
+    assert.equal(h.runtime.cwd, f.target);
+    assert.ok(
+      requests.some(
+        (request) =>
+          request.includes("WORKTREE_PACKAGE_SKILL_MARKER") &&
+          request.includes("before-entry"),
+      ),
+    );
+    assert.ok(h.runtime.session.systemPrompt.includes(skillPath));
+    await h.prompt(
+      [call("read", { path: join(skillPath, "resource.txt") })],
+      "/skill:worktree-package-probe after-entry",
+    );
+    assert.ok(requests.at(-1).includes("WORKTREE_PACKAGE_SKILL_MARKER"));
+    assert.ok(requests.at(-1).includes("after-entry"));
+    for (const name of ["EnterWorktree", "ExitWorktree", "TaskList"]) {
+      assert.ok(h.runtime.session.getActiveToolNames().includes(name));
+    }
+    assert.ok(
+      h.runtime.session.messages.some(
+        (message) =>
+          message.role === "toolResult" &&
+          message.toolName === "read" &&
+          message.content.some((part) =>
+            part.text?.includes("STABLE_PACKAGE_RESOURCE"),
+          ),
+      ),
+    );
+    await h.prompt([call("ExitWorktree", { action: "keep" })]);
+    assert.equal(h.runtime.cwd, f.source);
+    await h.prompt([], "/skill:worktree-package-probe after-return");
+    assert.ok(requests.at(-1).includes("WORKTREE_PACKAGE_SKILL_MARKER"));
+    assert.ok(requests.at(-1).includes("after-return"));
+    for (const name of ["EnterWorktree", "ExitWorktree", "TaskList"]) {
+      assert.ok(h.runtime.session.getActiveToolNames().includes(name));
+    }
     assert.deepEqual(h.errors, []);
   },
 );

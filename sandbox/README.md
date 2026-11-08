@@ -40,7 +40,11 @@ The SSH setup script also runs on macOS with Python 3. The environment file stil
 
 `pi/setup.sh` installs `pi/settings.json` as Pi's whole settings file, installs the web-access and sub-agent packages it pins, and appends the attention-control output style to Pi's system prompt. The kit runs it at creation against `%USERPROFILE%\code\attention-control`, which `sbxenv.yaml` mounts read-only; the SimRacing devcontainer runs the same script.
 
-On every boot, the kit also runs `agent-lab/bin/setup-pi.sh` to link custom extensions from `config/pi/extensions/` in the workspace into `~/.pi/agent/extensions/`. It supports `.js` files, `.ts` files, and extension directories. It leaves unrelated extensions and the shared setup's packages, settings, and `APPEND_SYSTEM.md` unchanged.
+On every boot, the kit runs `agent-lab/bin/setup-pi.sh` to render the mzizzi Pi package and register it in user settings. `uv` supplies the renderer's pinned Python dependencies. Setup stops on render or registration failure. The package exposes all 15 mzizzi skills and five agents; the renderer test fixture is not included. This enables a sandbox pilot, not a replacement of the production Claude plugin.
+
+The same script links custom extensions from `config/pi/extensions/` into `~/.pi/agent/extensions/`. It supports `.js` files, `.ts` files, and extension directories. It preserves unrelated extensions, existing package declarations, model settings, and `APPEND_SYSTEM.md`. User-level paths keep the package and extensions available after worktree entry.
+
+Worktree transitions need an interactive parent session with no unfinished child work. Full implementation and PR review still need the current Codex review dependency; the native replacement is separate work.
 
 Attention Control is one of those extensions. It uses the external style and adds a per-request reminder; its bundled style is a fallback when no style is already loaded. Extension code changes in the workspace take effect on `/reload`. After adding a new extension, run `bash sandbox/agent-lab/bin/setup-pi.sh` before `/reload` to create its link.
 
