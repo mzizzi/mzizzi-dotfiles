@@ -129,6 +129,9 @@ capabilities:
         - command: "bash /opt/pi-setup/setup.sh /*/Users/*/code/attention-control/output-styles/attention-control.md"
           user: agent
           description: Install pi packages and append the attention-control output style
+        - command: 'git config --global user.name mzizzi && git config --global user.email mhzizzi@gmail.com'
+          user: agent
+          description: Configure Git commit identity
         - command: 'gh auth setup-git --hostname github.com --force'
           user: agent
           description: Configure Git to use GitHub CLI credentials
