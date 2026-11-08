@@ -15,16 +15,19 @@ import { pathToFileURL, fileURLToPath } from "node:url";
 const repo = fileURLToPath(new URL("../../", import.meta.url));
 const temporary = mkdtempSync(join(tmpdir(), "ai-loader-check-"));
 const originalAgentDir = process.env.PI_CODING_AGENT_DIR;
+const originalPiRoot = process.env.PI_SUBAGENTS_PI_CODING_AGENT_PACKAGE_ROOT;
 const expectedClaudeSkills = readdirSync(
   join(repo, "plugins/mzizzi/skills"),
 ).sort();
-const expectedPiSkills = expectedClaudeSkills;
+const renameReview = (name) => name === "codex-adversarial-review" ? "adversarial-review" : name;
+const expectedPiSkills = expectedClaudeSkills.map(renameReview).sort();
 const expectedAgents = [
   ["pragmatic-reviewer", "chatgpt/gpt-6-astra", "medium"],
   ["standard", "chatgpt/gpt-6.1-sol", "high"],
   ["complex", "chatgpt/gpt-6-astra", "medium"],
   ["simple", "chatgpt/gpt-6.1-sol", "medium"],
   ["delegator", "chatgpt/gpt-6.1-sol", "high"],
+  ["adversarial-reviewer", "chatgpt/gpt-6-astra", "high"],
 ];
 try {
   const npmRoot = execFileSync("npm", ["root", "-g"], {
@@ -130,9 +133,37 @@ try {
       agent.allowNestedSubagents,
       name === "delegator" ? true : undefined,
     );
-    assert.match(agent.systemPrompt, /the `development-preferences` skill/);
+    if (name === "adversarial-reviewer") {
+      assert.deepEqual(agent.tools, ["read", "grep", "find", "ls", "bash"]);
+      assert.equal(agent.acceptanceRole, "read-only");
+      assert.equal(agent.inheritSkills, false);
+      assert.match(agent.systemPrompt, /structured_output/);
+    } else {
+      assert.match(agent.systemPrompt, /the `development-preferences` skill/);
+    }
   }
   console.log("Pi agent package discovery passed.");
+
+  process.env.PI_SUBAGENTS_PI_CODING_AGENT_PACKAGE_ROOT = join(npmRoot, "@earendil-works/pi-coding-agent");
+  const { validateStructuredOutputValue } = await import(
+    pathToFileURL(join(subagents, "src/runs/shared/structured-output.js"))
+  );
+  const { outputSchema } = await import(
+    pathToFileURL(join(packagePath, "skills/adversarial-review/scripts/lib/review.mjs"))
+  );
+  const report = { verdict: "approve", summary: "No material findings.", findings: [], next_steps: [] };
+  for (const outcome of [
+    { status: "complete", report, reason: null },
+    { status: "unavailable", report: null, reason: "Cancelled" },
+  ]) {
+    const validation = await validateStructuredOutputValue(outputSchema, outcome);
+    assert.notEqual(validation.status, "invalid", JSON.stringify(validation));
+  }
+  const malformed = await validateStructuredOutputValue(outputSchema, {
+    status: "complete", report: { ...report, findings: [{}] }, reason: null,
+  });
+  assert.equal(malformed.status, "invalid");
+  console.log("Pi structured review outcome schema passed.");
 
   const plugin = join(repo, "generated/claude/plugins/mzizzi");
   const env = { ...process.env, CLAUDE_CONFIG_DIR: join(temporary, "claude") };
@@ -155,17 +186,23 @@ try {
       encoding: "utf8",
     },
   );
-  for (const name of expectedClaudeSkills) {
+  for (const name of expectedClaudeSkills.map(renameReview)) {
     assert.ok(inventory.includes(name), `Claude plugin must expose ${name}`);
   }
   for (const [name] of expectedAgents) {
-    assert.ok(inventory.includes(name), `Claude plugin must expose ${name}`);
+    if (name !== "adversarial-reviewer") {
+      assert.ok(inventory.includes(name), `Claude plugin must expose ${name}`);
+    }
   }
+  assert.ok(!inventory.includes("codex-adversarial-review"));
+  assert.ok(!readdirSync(join(plugin, "agents")).includes("adversarial-reviewer.md"));
   console.log(
     "Claude plugin validation, skill inventory, and agent inventory passed.",
   );
 } finally {
   if (originalAgentDir === undefined) delete process.env.PI_CODING_AGENT_DIR;
   else process.env.PI_CODING_AGENT_DIR = originalAgentDir;
+  if (originalPiRoot === undefined) delete process.env.PI_SUBAGENTS_PI_CODING_AGENT_PACKAGE_ROOT;
+  else process.env.PI_SUBAGENTS_PI_CODING_AGENT_PACKAGE_ROOT = originalPiRoot;
   rmSync(temporary, { recursive: true, force: true });
 }

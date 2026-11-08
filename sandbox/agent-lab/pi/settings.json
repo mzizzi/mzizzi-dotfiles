@@ -2,5 +2,8 @@
   "defaultProvider": "chatgpt",
   "defaultModel": "gpt-6.1-sol",
   "defaultThinkingLevel": "high",
-  "packages": ["npm:pi-web-access@0.47.0", "npm:pi-subagents@0.87.0"]
+  "packages": [
+    "git:github.com/nicobailon/pi-web-access@322e44fafc1aaa691779cdf2116584e67edd7645",
+    "git:github.com/nicobailon/pi-subagents@52e68e9ef0e563d5c97b28519f9999f1b5fbbbea"
+  ]
 }

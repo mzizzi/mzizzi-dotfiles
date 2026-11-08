@@ -10,6 +10,19 @@ from test_pilot_skills import REPO, skill_document
 from render_ai import Target, build
 
 
+def renamed(name):
+    return "adversarial-review" if name == "codex-adversarial-review" else name
+
+
+def renamed_body(body):
+    return body.replace("codex-adversarial-review", "adversarial-review").replace(
+        "Codex looks for what's missing, the pragmatic reviewer for what's excess. Start the pragmatic reviewer in the background, then run Codex:",
+        "The adversarial reviewer looks for what's missing, the pragmatic reviewer for what's excess. Start the pragmatic reviewer in the background, then run adversarial review:",
+    ).replace("tagged `[Codex]`", "tagged `[Adversarial]`").replace(
+        "and the fix Codex proposed where that holds up.", "and the fix the reviewer proposed where that holds up.",
+    )
+
+
 class PluginPortTests(unittest.TestCase):
     def setUp(self):
         temporary = tempfile.TemporaryDirectory(prefix="ai-plugin-port-")
@@ -27,17 +40,26 @@ class PluginPortTests(unittest.TestCase):
         for kind, pattern in (("skills", "*/SKILL.md"), ("agents", "*.md")):
             for source in sorted((original / kind).glob(pattern)):
                 with self.subTest(resource=source.relative_to(original)):
-                    output = self.package(Target.CLAUDE) / source.relative_to(original)
+                    relative = str(source.relative_to(original)).replace("codex-adversarial-review", "adversarial-review")
+                    output = self.package(Target.CLAUDE) / relative
                     expected_metadata, expected_body = skill_document(source)
                     metadata, body = skill_document(output)
+                    if source.parent.name == "codex-adversarial-review":
+                        self.assertEqual(metadata["name"], "adversarial-review")
+                        self.assertIn("Claude execution", body)
+                        self.assertIn("status", body)
+                        continue
                     self.assertEqual(metadata, expected_metadata)
                     if kind == "skills":
-                        self.assertEqual(body, expected_body)
-            expected = {path.name for path in (original / kind).iterdir()}
+                        self.assertEqual(body, renamed_body(expected_body))
+            expected = {renamed(path.name) for path in (original / kind).iterdir()}
             self.assertEqual({path.name for path in (self.package(Target.CLAUDE) / kind).iterdir()}, expected)
 
     def test_skill_resources_match_both_targets(self):
         for source in sorted((REPO / "plugins/mzizzi/skills").iterdir()):
+            if source.name == "codex-adversarial-review":
+                # This bundle deliberately changes transport, prompt delivery, and outcome handling.
+                continue
             resources = {
                 path.relative_to(source): path
                 for path in source.rglob("*") if path.is_file() and path.name != "SKILL.md"
@@ -58,13 +80,16 @@ class PluginPortTests(unittest.TestCase):
 
     def test_pi_workflows_forward_arguments_without_claude_tool_calls(self):
         skills = self.package(Target.PI) / "skills"
-        expected = {path.name for path in (REPO / "plugins/mzizzi/skills").iterdir()}
+        expected = {renamed(path.name) for path in (REPO / "plugins/mzizzi/skills").iterdir()}
         self.assertEqual({path.name for path in skills.iterdir()}, expected)
         for name in sorted(expected):
             with self.subTest(skill=name):
                 metadata, body = skill_document(skills / name / "SKILL.md")
-                original_metadata, original_body = skill_document(REPO / "plugins/mzizzi/skills" / name / "SKILL.md")
+                original_name = "codex-adversarial-review" if name == "adversarial-review" else name
+                original_metadata, original_body = skill_document(REPO / "plugins/mzizzi/skills" / original_name / "SKILL.md")
                 description = original_metadata["description"]
+                if name == "adversarial-review":
+                    description = "Run an adversarial review of a plan, document, or code change. Challenge assumptions and report material findings with evidence, or explain why the review is unavailable."
                 if name == "auto-brainstorm":
                     description = description.replace("mzizzi:complex", "mzizzi.complex")
                 self.assertEqual(metadata, {
@@ -115,10 +140,16 @@ class PluginPortTests(unittest.TestCase):
         self.assertIn("If the decider fails, report the blocker and stop", plan)
         self.assertIn("/skill:implement-plan <target file path>", plan)
         self.assertNotIn("deferred until worktree support exists", plan)
-        codex = body("codex-adversarial-review")
-        self.assertIn("codex@openai-codex", codex)
-        self.assertIn("timeout: 600", codex)
-        self.assertIn("Do not replace it with a native Pi agent", codex)
+        review = body("adversarial-review")
+        self.assertIn('agent: "mzizzi.adversarial-reviewer"', review)
+        self.assertIn('context: "fresh"', review)
+        self.assertIn("outputSchema", review)
+        self.assertIn("structured_output", review)
+        self.assertIn("not Pi core", review)
+        self.assertIn("Do not finish with prose", (self.package(Target.PI) / "skills/adversarial-review/scripts/lib/review.mjs").read_text())
+        self.assertIn("ignore any partial artifact", review)
+        self.assertNotIn("cross-model", body("fix-correctness"))
+        self.assertNotIn("codex-adversarial-review", plan)
 
     def test_pi_worktree_workflows_preserve_order_scope_and_cleanup(self):
         def body(name):

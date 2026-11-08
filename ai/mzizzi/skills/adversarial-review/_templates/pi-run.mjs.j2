@@ -1,0 +1,22 @@
+import fs from "node:fs";
+import { prepareReview, renderOutcome, unavailable, fail } from "./lib/review.mjs";
+
+const [command, ...args] = process.argv.slice(2);
+try {
+  if (command === "prepare") {
+    process.stdout.write(`${JSON.stringify(prepareReview(args, { native: true }), null, 2)}\n`);
+  } else if (command === "render") {
+    if (args.length !== 2) throw new Error("Usage: run_review.mjs render <prepared.json> <outcome.json>");
+    const prepared = JSON.parse(fs.readFileSync(args[0], "utf8"));
+    const outcome = JSON.parse(fs.readFileSync(args[1], "utf8"));
+    if (typeof prepared.targetLabel !== "string" || !prepared.targetLabel.trim()) throw new Error("Missing prepared target label.");
+    process.stdout.write(renderOutcome(outcome, prepared.targetLabel, "Astra"));
+  } else if (command === "unavailable") {
+    if (!args.join(" ").trim()) throw new Error("Usage: run_review.mjs unavailable <reason>");
+    process.stdout.write(`${JSON.stringify(unavailable(args.join(" ")), null, 2)}\n`);
+  } else {
+    throw new Error("Usage: run_review.mjs prepare [review arguments] | render <prepared.json> <outcome.json> | unavailable <reason>");
+  }
+} catch (error) {
+  fail(error, command === "prepare" || !["render", "unavailable"].includes(command) ? 2 : 1);
+}

@@ -1,0 +1,38 @@
+---
+description: Run an adversarial review of a plan, document, or code change. Challenge assumptions and report material findings with evidence, or explain why the review is unavailable.
+claude:
+  argument-hint: "[--files <paths> | --base <ref>] [--model <id>] [--effort <level>] [focus]"
+  allowed-tools: Bash
+  disable-model-invocation: false
+  user-invocable: true
+pi:
+  disable-model-invocation: false
+---
+
+# Adversarial Review
+
+Resolve `<skill-dir>` to the absolute directory containing this `SKILL.md`.
+
+Use one review target:
+
+- `--files <paths>`: only those files, including current contents and their staged/unstaged diffs. Repeat the flag or use comma-separated paths.
+- `--base <ref>`: the working tree against the merge base with `<ref>`, including commits, staged/unstaged changes, and untracked files. The default is `HEAD`.
+
+`--model` and `--effort` select the reviewer configuration. Other arguments are focus text. An empty explicit-file scope or collection failure makes the review unavailable; never widen the target.
+
+Both implementations use the same pinned adversarial prompt, report schema, outcome envelope, and formatter. Review without changing target files. Fresh context supplies a separate review, not a guarantee of a different model.
+
+{% include "mzizzi/skills/adversarial-review/_templates/" + target + ".md.j2" %}
+
+## Result contract
+
+Both reviewers return one outcome, with all three fields present:
+
+- **Complete:** `{"status":"complete","report":<review report>,"reason":null}`.
+- **Unavailable:** `{"status":"unavailable","report":null,"reason":"<specific reason>"}`.
+
+The report uses the existing `verdict`, `summary`, `findings`, and `next_steps` schema. A complete report can approve or request attention. Unavailable never means approval. Transport failure, cancellation, missing output, or an incomplete review makes the review unavailable even if the process or child otherwise completes successfully.
+
+The helper prints Markdown with a verdict, summary, severity-ordered findings, recommendations, and optional next steps. It preserves the upstream formatter's normalization, including malformed-finding and reversed-line fallback.
+
+On failure, stdout is empty and stderr gives the reason. Exit 2 means preparation or dependency setup failed; exit 1 means execution, output, or report handling failed. Return the unavailable reason to the caller and stop this skill. The caller decides whether its larger workflow can continue.

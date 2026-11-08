@@ -15,7 +15,7 @@ Resolve `<skill-dir>` to the absolute directory containing this `SKILL.md`. Each
 # Fix correctness
 
 {% if target == "claude" %}Run a cross-model adversarial review of a change, then act on what it finds: apply the fixes that are trivial and belong in this round, defer the rest, report both. Correctness only — comment quality belongs to `/mzizzi:fix-comments`, reuse and simplification to `/mzizzi:fix-quality`. Work the steps in order.
-{% else %}Run a cross-model adversarial review of a change, then act on what it finds: apply the fixes that are trivial and belong in this round, defer the rest, report both. Correctness only — comment quality belongs to {{ Skill("fix-comments") }}, reuse and simplification to {{ Skill("fix-quality") }}. Work the steps in order.
+{% else %}Run a fresh-context adversarial review of a change, then act on what it finds: apply the fixes that are trivial and belong in this round, defer the rest, report both. Correctness only — comment quality belongs to {{ Skill("fix-comments") }}, reuse and simplification to {{ Skill("fix-quality") }}. Work the steps in order.
 {% endif %}
 ## 1. Resolve the arguments
 
@@ -29,8 +29,8 @@ If `git diff --stat --merge-base <ref>` and the untracked list are both empty, s
 
 ## 2. Run the review
 
-{% if target == "claude" %}    Skill(skill: "codex-adversarial-review", args: "--base <ref> focus on correctness, edge cases, error handling. Right-size each recommendation to the problem — KISS/YAGNI/DRY balanced against the complexity the change actually warrants; no guards, retries, or abstraction for failures this diff does not exhibit.")
-{% else %}Read and follow {{ Skill("codex-adversarial-review") }} from `<skill-dir>/../codex-adversarial-review/SKILL.md` with arguments `--base <ref> focus on correctness, edge cases, error handling. Right-size each recommendation to the problem — KISS/YAGNI/DRY balanced against the complexity the change actually warrants; no guards, retries, or abstraction for failures this diff does not exhibit.`. Then return to this workflow.
+{% if target == "claude" %}    Skill(skill: "adversarial-review", args: "--base <ref> focus on correctness, edge cases, error handling. Right-size each recommendation to the problem — KISS/YAGNI/DRY balanced against the complexity the change actually warrants; no guards, retries, or abstraction for failures this diff does not exhibit.")
+{% else %}Read and follow {{ Skill("adversarial-review") }} from `<skill-dir>/../adversarial-review/SKILL.md` with arguments `--base <ref> focus on correctness, edge cases, error handling. Right-size each recommendation to the problem — KISS/YAGNI/DRY balanced against the complexity the change actually warrants; no guards, retries, or abstraction for failures this diff does not exhibit.`. Then return to this workflow.
 {% endif %}
 With `--plan`, append `, and whether the implementation faithfully follows the plan at <plan path>` to that focus text.
 
@@ -68,7 +68,7 @@ Then run the project's verification — typecheck, tests, lint, whatever the rep
 {% if target == "claude" %}    Skill(skill: "record-follow-ups", args: "<plan path> <the deferred findings>")
 {% else %}Read and follow {{ Skill("record-follow-ups") }} from `<skill-dir>/../record-follow-ups/SKILL.md` with arguments `<plan path> <the deferred findings>`. Then return to this workflow.
 {% endif %}
-Give it each finding's `file:line`, what the issue is, why you deferred it rather than fixing it, and the fix Codex proposed where that holds up. It shapes and places the entries, dedups against what the plan already carries, and reports back what it wrote.
+Give it each finding's `file:line`, what the issue is, why you deferred it rather than fixing it, and the fix the reviewer proposed where that holds up. It shapes and places the entries, dedups against what the plan already carries, and reports back what it wrote.
 
 ## 6. Report
 

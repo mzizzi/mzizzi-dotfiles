@@ -44,18 +44,18 @@ Research and write the draft yourself.
 
 ### Step 3: Adversarial reviews
 
-Codex looks for what's missing, the pragmatic reviewer for what's excess. Start the pragmatic reviewer in the background, then run Codex:
+The adversarial reviewer looks for what's missing, the pragmatic reviewer for what's excess. Start the pragmatic reviewer in the background, then run adversarial review:
 
 {% if target == "claude" %}    Agent(subagent_type: "mzizzi:pragmatic-reviewer", prompt: "Review the plan at <target file path>. Also answer each item under its ## Open Questions: the option you would pick and why.")
-    Skill(skill: "codex-adversarial-review", args: "--model gpt-6-astra --effort high --files <target file path> focus on feasibility, completeness, missing risks, and questionable assumptions. Right-size each recommendation to the problem — KISS/YAGNI/DRY balanced against the complexity the plan actually warrants; no scope or machinery the plan's stated problem does not require. Answer each item under Open Questions with the option you would pick and why.")
+    Skill(skill: "adversarial-review", args: "--model gpt-6-astra --effort high --files <target file path> focus on feasibility, completeness, missing risks, and questionable assumptions. Right-size each recommendation to the problem — KISS/YAGNI/DRY balanced against the complexity the plan actually warrants; no scope or machinery the plan's stated problem does not require. Answer each item under Open Questions with the option you would pick and why.")
 {% else %}Enable `subagent` with `subagents_enable` if needed. Start {{ Agent("pragmatic-reviewer") }} asynchronously:
 
 ```js
 subagent({ agent: "mzizzi.pragmatic-reviewer", task: "Review the plan at <absolute target file path>. Also answer each item under its ## Open Questions: the option you would pick and why. Read-only; do not edit the plan.", async: true, options: { context: "fresh" } })
 ```
 
-Keep its run id. Run the Codex skill below while that reviewer works. Before Step 4, wait for the reviewer's native completion notification and read both reports; do not poll or use `bg_wait`.
-Read and follow {{ Skill("codex-adversarial-review") }} from `<skill-dir>/../codex-adversarial-review/SKILL.md` with arguments `--model gpt-6-astra --effort high --files <target file path> focus on feasibility, completeness, missing risks, and questionable assumptions. Right-size each recommendation to the problem — KISS/YAGNI/DRY balanced against the complexity the plan actually warrants; no scope or machinery the plan's stated problem does not require. Answer each item under Open Questions with the option you would pick and why.`. Then return to this workflow.
+Keep its run id. Run the adversarial-review skill below while that reviewer works. Before Step 4, wait for the reviewer's native completion notification and read both reports; do not poll or use `bg_wait`.
+Read and follow {{ Skill("adversarial-review") }} from `<skill-dir>/../adversarial-review/SKILL.md` with arguments `--model gpt-6-astra --effort high --files <target file path> focus on feasibility, completeness, missing risks, and questionable assumptions. Right-size each recommendation to the problem — KISS/YAGNI/DRY balanced against the complexity the plan actually warrants; no scope or machinery the plan's stated problem does not require. Answer each item under Open Questions with the option you would pick and why.`. Then return to this workflow.
 {% endif %}
 Hold both reports for Step 4. If a review is unavailable, tell the user which one and why, and continue with the other; if both are, skip to Step 5.
 
@@ -66,7 +66,7 @@ Incorporate the feedback from the reviews into the plan document using your best
 - **The plan is missing something or rests on a wrong assumption:** change the plan to fix it.
 - **The plan includes something it doesn't need:** remove it.
 - **The finding is wrong or not worth acting on:** skip it.
-- **Only the user can decide it** (scope, product direction): add it to `## Open Questions`, tagged `[Codex]` or `[Pragmatism]`.
+- **Only the user can decide it** (scope, product direction): add it to `## Open Questions`, tagged `[Adversarial]` or `[Pragmatism]`.
 - **The reviews disagree** (one wants something strengthened, the other wants it removed): add it to `## Open Questions` with both positions.
 
 Weigh the reviewers' answers and settle the open questions you can.

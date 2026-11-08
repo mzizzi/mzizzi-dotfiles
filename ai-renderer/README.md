@@ -38,6 +38,13 @@ Pi now renders `prepare-feature-branch`, `implement-plan`, and `review-pr` as an
 
 Branch selection and the shared uncommitted diff stay unchanged. Worktree entry replaces the Pi session ID/file and pauses until completion. Finish all child work before switching. Worktrees stay after shutdown; PR cleanup refuses forced removal without approval. Dirty source plans absent from the destination need a transfer decision. Full model-driven workflow checks remain manual pilot gates.
 
-Pi workflows read nested skills directly and use native subagents for delegation. Codex review still needs the installed `codex@openai-codex` Claude plugin and an authenticated Codex CLI.
+Pi workflows read nested skills directly and use native subagents for delegation. The shared `adversarial-review` skill uses one prompt, report schema, outcome contract, and formatter. Claude still needs the installed `codex@openai-codex` plugin and authenticated Codex CLI. Pi uses a fresh Astra/high child through `pi-subagents`, without those Codex dependencies. Its `outputSchema` and `structured_output` tool come from `pi-subagents`, not Pi core. Both return `complete` with a report or `unavailable` with a reason; failure never counts as approval.
 
-The sources are staging copies. Sandbox startup renders and registers the Pi package at a stable user-level path; see [sandbox setup](../sandbox/README.md). Existing production Claude plugins and host settings stay unchanged. Read-only review remains a prompt instruction, not an enforced sandbox. Model policy: Claude Fable/medium maps to Pi Astra/medium; Claude Opus 5.5/medium maps to Pi Sol 6.1/high. Set these explicitly in each agent template.
+Run the bundled regression checks after rendering:
+
+```bash
+node generated/claude/plugins/mzizzi/skills/adversarial-review/scripts/tests/test_run_review.mjs
+node generated/pi/packages/mzizzi/skills/adversarial-review/scripts/tests/test_run_review.mjs
+```
+
+The sources are staging copies. Sandbox startup renders and registers the Pi package at a stable user-level path; see [sandbox setup](../sandbox/README.md). Existing production Claude plugins and host settings stay unchanged. Reviewers receive instructions not to change target files. Model policy: Claude Fable/medium maps to Pi Astra/medium; Claude Opus 5.5/medium maps to Pi Sol 6.1/high. Set these explicitly in each agent template.

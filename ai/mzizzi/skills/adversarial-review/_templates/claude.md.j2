@@ -1,0 +1,11 @@
+## Claude execution
+
+Run the bundled helper synchronously. It needs the installed `codex@openai-codex` Claude plugin and authenticated Codex CLI. The helper calls the plugin's app-server library, not its human-only `/codex:adversarial-review` skill.
+
+```bash
+node "<skill-dir>/scripts/run_review.mjs" --model gpt-6-astra --effort high --files plans/example/plan.md "focus on feasibility, completeness, missing risks, and questionable assumptions"
+```
+
+Use the caller's actual target, focus, model, and effort. Without model/effort arguments, Codex uses its configured defaults. Do not background the command. Use the maximum Bash timeout, `600000` milliseconds.
+
+The helper supplies the shared prompt and outcome schema, checks the outcome, and formats a completed report. It reports plugin absence, failed turns, invalid output, and unavailable outcomes as failures, not approval.

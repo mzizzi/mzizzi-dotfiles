@@ -65,7 +65,7 @@ AGENT_FIELDS = {
         "model": str, "thinking": str,
         "advertise": bool, "defaultContext": str, "systemPromptMode": str,
         "inheritProjectContext": bool, "inheritGlobalContext": bool, "inheritSkills": bool,
-        "allowNestedSubagents": bool,
+        "allowNestedSubagents": bool, "tools": str, "acceptanceRole": str,
     },
 }
 AGENT_CHOICES = {
@@ -73,6 +73,7 @@ AGENT_CHOICES = {
     (Target.PI, "thinking"): {"off", "minimal", "low", "medium", "high", "xhigh", "max"},
     (Target.PI, "defaultContext"): {"fresh", "fork"},
     (Target.PI, "systemPromptMode"): {"replace", "append"},
+    (Target.PI, "acceptanceRole"): {"read-only", "writer"},
 }
 
 

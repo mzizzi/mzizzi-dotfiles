@@ -88,6 +88,20 @@ class AgentTests(unittest.TestCase):
                 self.assertIn("Keep all delegated work within the user's requested scope.", body)
                 self.assertIn("up to 10", body)
 
+    def test_adversarial_reviewer_is_pi_only_with_explicit_tools(self):
+        build(self.repo)
+        self.assertFalse(self.output(Target.CLAUDE, "adversarial-reviewer").exists())
+        _, metadata, body = self.output(Target.PI, "adversarial-reviewer").read_text().split("---", 2)
+        metadata = yaml.safe_load(metadata)
+        self.assertEqual(metadata["model"], "chatgpt/gpt-6-astra")
+        self.assertEqual(metadata["thinking"], "high")
+        self.assertEqual(metadata["tools"], "read, grep, find, ls, bash")
+        self.assertEqual(metadata["acceptanceRole"], "read-only")
+        self.assertEqual(metadata["defaultContext"], "fresh")
+        self.assertFalse(metadata["inheritSkills"])
+        self.assertIn("structured_output", body)
+        self.assertIn("Do not write the output artifact yourself", body)
+
     def test_agent_references_resolve_across_namespaces(self):
         folder = self.repo / "ai/other/agents"
         folder.mkdir(parents=True)
@@ -109,6 +123,8 @@ class AgentTests(unittest.TestCase):
             "claude:\n  permissionMode: plan",
             "pi:\n  inheritGlobalContext: wrong",
             "pi:\n  allowNestedSubagents: wrong",
+            "pi:\n  tools: [read, bash]",
+            "pi:\n  acceptanceRole: reviewer",
             "claude:\n  experimental:\n    unknown: 1h",
             "claude:\n  experimental:\n    cacheTtl: false",
             "pi:\n  model: |\n    First line.\n    Second line.",
