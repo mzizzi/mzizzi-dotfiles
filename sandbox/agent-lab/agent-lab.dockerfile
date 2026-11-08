@@ -30,7 +30,7 @@ RUN uv tool install --no-cache --python 3.13 "pre-commit==4.7.0" \
 
 RUN mkdir -p /home/agent/.claude /home/agent/.codex /home/agent/.pi/agent /home/agent/.deepagents/.state
 
-# Keep Bash history, Claude, dcode and pi sessions, and the Claude login on the host
+# Keep Bash history, Claude, dcode and pi sessions on the host
 # when %USERPROFILE%\.sandbox-state\agent-lab is passed as an extra workspace; sbx
 # mounts it at the host-mirrored path. Without the mount, the defaults apply.
 RUN cat >> /home/agent/.bashrc <<'EOF'
@@ -44,6 +44,9 @@ for state_dir in /*/Users/*/.sandbox-state/agent-lab; do
         HISTFILESIZE=-1
 
         export CLAUDE_CONFIG_DIR="$state_dir/claude"
+        # Copy the kit's placeholder login, which the credential proxy swaps for the host login, into
+        # Claude's config dir. A copy because the Windows-backed mount refuses symlinks.
+        cp -f /home/agent/.claude/.credentials.json "$CLAUDE_CONFIG_DIR/.credentials.json"
 
         # Only dcode's thread database moves; the kit's dcode files stay in place.
         # dcode fails to create this database on the mount, so start from an empty one.

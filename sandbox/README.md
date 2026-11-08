@@ -9,6 +9,7 @@ On the host, from the repo root:
 ```powershell
 sbx login                                       # once
 sbx secret set openai --oauth                   # once: ChatGPT login for Codex, dcode, and Pi
+sbx secret set anthropic --oauth                # once: Claude login for Claude Code
 gh auth status                                  # GitHub login on the host; run gh auth login if needed
 sbx env run sandbox                             # create (network open) if missing, attach
 sbx env exec -it sandbox -- bash                # second shell
@@ -22,7 +23,6 @@ sbx env rm sandbox                              # discards the clone; fetch firs
 Inside the sandbox:
 
 ```bash
-claude auth login --claudeai                    # repeat after each recreate
 claude --plugin-dir "$WORKSPACE_DIR/plugins/mzizzi"
 codex
 dcode
@@ -30,7 +30,7 @@ pi
 gh api user --jq .login                         # verify GitHub proxy authentication
 ```
 
-The clone starts from the committed ref; uncommitted files are readable at `/run/sandbox/source`. Bash history, Claude and pi sessions, the Claude login, and dcode threads are kept on the host in `%USERPROFILE%\.sandbox-state\agent-lab`, which `sbxenv.yaml` mounts. Codex, dcode, and Pi use the host ChatGPT login through Docker's credential proxy, so don't use dcode's own `/auth` or Pi's `/login`. Pi reaches it through the kit's `chatgpt` provider in `~/.pi/agent/models.json`.
+The clone starts from the committed ref; uncommitted files are readable at `/run/sandbox/source`. Bash history, Claude and pi sessions, and dcode threads are kept on the host in `%USERPROFILE%\.sandbox-state\agent-lab`, which `sbxenv.yaml` mounts. Claude Code uses the host Claude login, and Codex, dcode, and Pi use the host ChatGPT login, all through Docker's credential proxy; the sandbox only sees placeholder tokens. Don't log in inside the sandbox with `claude auth login`, dcode's `/auth`, or Pi's `/login`. Pi reaches the ChatGPT login through the kit's `chatgpt` provider in `~/.pi/agent/models.json`.
 
 For IntelliJ remote development, run `sbx setup ssh` once on the host and save an SSH configuration for `agent-lab.sbx` using OpenSSH config authentication. The host needs Python 3 available as `python`. After each rebuild, `postCreate` refreshes the host-specific key entries IntelliJ 2026.2 needs in `~/.ssh/known_hosts`. The saved IntelliJ SSH configuration stays on the host across rebuilds. Select `/c/Users/Matt/code/mzizzi-dotfiles` as the remote project path; it is the private sandbox clone, not a read-write host mount.
 
