@@ -56,4 +56,5 @@ Run the setup tests from the repo root with `node --test sandbox/agent-lab/tests
 - dcode loads the kit's MCP servers only inside a git repo such as the workspace. Elsewhere it treats the current directory as the project and skips them until you approve them.
 - Keep the OpenAI credential declared before Anthropic in `agent-lab.yaml`. `sbx` treats the first as the primary OAuth service, and swapping them makes Codex and dcode fail with 401.
 - `pi -p` reads stdin until EOF, and `sbx exec` leaves stdin open, so a scripted `sbx exec ... pi -p` hangs. Pass `</dev/null`.
+- `codex login status` reports "Not logged in" even though Codex works. The kit sends Codex through the proxy with a placeholder token, so Codex has no saved login of its own. Test with a real request, e.g. `codex exec "reply with just: ok"`.
 - Keep extra host mounts outside the repo path. The clone overwrites a mount inside it, and `sbx` has deleted host files in one.
