@@ -257,11 +257,11 @@ test("preserves the shared setup's external style and packages while adding remi
   const home = temporaryHome(t);
   const bin = join(home, "bin");
   const style = join(home, "external-style.md");
-  const body = "\n# Attention Control\n\nUse the external style.\n";
-  writeFileSync(
-    style,
-    "---\r\nname: Attention Control\r\n---\r\n" + body.replaceAll("\n", "\r\n"),
-  );
+  const body = '\n# Attention Control\n\nUse the external style.\n\n6. **Restate state every turn.** The reader cannot hold "step 3 of 5" between messages.\n';
+  const taskMandate = " If the harness has a task tool, use it for multi-step work: one item per step, one in progress at a time. The checklist does the restating. Do not also narrate the plan as prose.";
+  const sourceStyle = "---\r\nname: Attention Control\r\n---\r\n" +
+    (body.trimEnd() + taskMandate + "\n").replaceAll("\n", "\r\n");
+  writeFileSync(style, sourceStyle);
   const subagentConfig = join(
     home,
     ".pi/agent/extensions/subagent/config.json",
@@ -283,6 +283,8 @@ test("preserves the shared setup's external style and packages while adding remi
     "utf8",
   );
   assert.equal(installedStyle, body);
+  assert.equal(readFileSync(style, "utf8"), sourceStyle);
+  assert.ok(!readFileSync(join(extension, "style.md"), "utf8").includes("If the harness has a task tool"));
   const settings = readFileSync(
     join(repoRoot, "sandbox/agent-lab/pi/settings.json"),
     "utf8",

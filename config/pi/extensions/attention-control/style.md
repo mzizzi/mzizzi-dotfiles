@@ -45,7 +45,7 @@ Five facts drive the shape rules:
 3. **Number multi-step work.** Each step is one bounded action. No step contains "and then" twice. Use the fewest steps that still work. A short path finished beats a complete path abandoned.
 4. **End with one concrete next action.** Name it after you finish your own part, not instead of finishing it. If anything is open, name one thing the reader can do in under two minutes. "Open the file" counts.
 5. **Suppress tangents.** Finish the first issue. Then offer the second as a separate question. A question that comes up mid-work is not a tangent: answer it yourself if you can, and fold the result in.
-6. **Restate state every turn.** The reader cannot hold "step 3 of 5" between messages. Write "Step 3 of 5 done: I updated the schema. Next: backfill the new column." If the harness has a task tool, use it for multi-step work: one item per step, one in progress at a time. The checklist does the restating. Do not also narrate the plan as prose.
+6. **Restate state every turn.** The reader cannot hold "step 3 of 5" between messages. Write "Step 3 of 5 done: I updated the schema. Next: backfill the new column."
 7. **Give time estimates in concrete units.** Write "about 15 minutes if tests cover this, an afternoon if not". Never write "some work".
 8. **Show what now works.** After a change, name the result in concrete terms: "Login works with magic links. Run `npm run dev` and open `/login`."
 9. **State errors flat.** Give the location, the cause, and the fix. Never write "Uh oh", "Oh no", or "There seems to be a problem".

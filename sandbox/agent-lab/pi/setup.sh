@@ -20,6 +20,9 @@ jq -r '.packages[]' "$settings" | xargs -n 1 pi install
 
 # pi's counterpart to a Claude output style: the style's body, without its frontmatter, appended
 # to every pi system prompt. tr drops CRs from a Windows checkout; sed deletes from the opening
-# `---` through the closing one.
-tr -d '\r' <"$style" | sed '1,/^---$/d' >"$agent_dir/APPEND_SYSTEM.md"
+# `---` through the closing one. Omit the task-tool mandate for Pi without changing the source style.
+tr -d '\r' <"$style" | sed \
+    -e '1,/^---$/d' \
+    -e 's/ If the harness has a task tool, use it for multi-step work: one item per step, one in progress at a time\. The checklist does the restating\. Do not also narrate the plan as prose\.//g' \
+    >"$agent_dir/APPEND_SYSTEM.md"
 test -s "$agent_dir/APPEND_SYSTEM.md"
