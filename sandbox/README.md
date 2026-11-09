@@ -38,7 +38,7 @@ The SSH setup script also runs on macOS with Python 3. The environment file stil
 
 `sbxenv.yaml` reads the host's `gh auth token` when creating the sandbox. The kit gives `gh` a proxy-managed `GH_TOKEN` and configures it as Git's HTTPS credential helper. The real token stays on the host. `gh auth login` inside the sandbox is unnecessary; `GH_TOKEN` takes precedence over stored GitHub CLI logins. To refresh the host login, run `gh auth login` on the host and then `sbx secret set github --sandbox agent-lab --command 'gh auth token'` to update the existing sandbox without rebuilding it.
 
-`pi/setup.sh` installs `pi/settings.json` as Pi's whole settings file, installs the web-access and sub-agent packages it pins, and appends the attention-control output style to Pi's system prompt. The kit runs it at creation against `%USERPROFILE%\code\attention-control`, which `sbxenv.yaml` mounts read-only; the SimRacing devcontainer runs the same script.
+`pi/setup.sh` installs `pi/settings.json` as Pi's whole settings file and installs the web-access and sub-agent packages it pins. The kit runs it at creation without arguments. Pi's Attention Control extension owns the full style in this repo; setup needs no external style checkout or host mount.
 
 On every boot, the kit runs `agent-lab/bin/setup-pi.sh` to render the mzizzi Pi package and register it in user settings. `uv` supplies the renderer's pinned Python dependencies. Setup stops on render or registration failure. The package exposes all 15 mzizzi skills and six agents; the renderer test fixture is not included. This enables a sandbox pilot, not a replacement of the production Claude plugin.
 
@@ -46,7 +46,9 @@ The same script links custom extensions from `config/pi/extensions/` into `~/.pi
 
 Worktree transitions need an interactive parent session with no unfinished child work. Pi's `adversarial-review` skill uses a fresh Astra/high child through `pi-subagents`; it needs neither the Claude Codex plugin nor Codex CLI. The generated Claude skill retains those Codex dependencies. Both use the same review prompt and structured outcome contract.
 
-Attention Control is one of those extensions. It uses the external style and adds a per-request reminder; its bundled style is a fallback when no style is already loaded. Extension code changes in the workspace take effect on `/reload`. After adding a new extension, run `bash sandbox/agent-lab/bin/setup-pi.sh` before `/reload` to create its link.
+Attention Control is one of those extensions. It loads the full prompt from `config/pi/extensions/attention-control/style.md` and adds a per-request reminder. Edit that file to change the Pi style, including its narrow task-tracking policy. Style and extension changes in the workspace take effect on `/reload`. After adding a new extension, run `bash sandbox/agent-lab/bin/setup-pi.sh` before `/reload` to create its link.
+
+For an older sandbox, move the generated `~/.pi/agent/APPEND_SYSTEM.md` aside before `/reload` if it contains only Attention Control. Keep any user-authored instructions. New sandboxes do not create this file.
 
 Run the setup tests from the repo root with `node --test sandbox/agent-lab/tests/*.test.mjs`.
 

@@ -38,6 +38,14 @@ Five facts drive the shape rules:
 4. Time estimates feel uniform. "A bit of work" and "a few hours" register the same.
 5. Dopamine is scarce. Visible progress matters. A buried win does not register.
 
+## Task tracking
+
+Use task tools only when the user explicitly requests task tracking, or for long-horizon work with multiple substantial phases. Long-horizon work needs persistent state across interruptions or context compaction.
+
+Skip task tools for questions, short investigations, small edits, and routine edit-and-test work. Multiple steps, files, or tool calls alone do not justify task tracking. When unsure, skip task tools.
+
+When task tracking is justified, track substantial outcomes, not individual tool calls. Keep at most one task in progress.
+
 ## Shape rules
 
 1. **Lead with the next action.** The first line is something the reader can do. A command, a path, or a snippet goes first. Prose comes after, if at all. If the answer is a fact and not a task, lead with the fact.

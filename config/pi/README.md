@@ -12,11 +12,13 @@ Run `/reload` in Pi after setup or code changes. The setup script keeps unrelate
 
 ## Attention Control
 
-`extensions/attention-control/` bundles the full style in `style.md`. The extension adds it to the system prompt automatically. No separate `APPEND_SYSTEM.md` setup is needed. If the system prompt already contains a standalone `# Attention Control` heading, the extension keeps that style instead of adding a second copy.
+`extensions/attention-control/style.md` is the complete, repo-managed Pi style. Edit it directly; the extension adds it to the system prompt automatically. No external checkout, host mount, generated prompt, or text filter is needed. The copy retains its upstream license and attribution in the extension directory.
+
+Task tracking is opt-in for explicit requests or long-horizon work that needs persistent state across substantial phases or interruptions. Questions, short investigations, small edits, and routine edit-and-test work do not need task tools.
 
 The extension also adds a hidden reminder before each model request, including after tool calls. The reminder follows the conversation without changing existing messages or saved session history. It reinforces the style; it does not enforce response length.
 
-The sandbox's existing `pi/setup.sh` copies the host-mounted output style into `APPEND_SYSTEM.md` at creation. That external style takes precedence over the bundled `style.md`; the extension still adds its reminder. Extension code changes in the sandbox checkout take effect on `/reload`. Host style changes need another run of `pi/setup.sh` before `/reload` because that script copies the file rather than linking it.
+Style and extension changes take effect on `/reload`. Setup no longer creates `APPEND_SYSTEM.md` and leaves user-authored append files alone. If an older sandbox contains the generated Attention Control append file, move that file aside before `/reload`; otherwise the extension skips its bundled style to avoid a duplicate.
 
 ## Tasks
 

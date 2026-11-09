@@ -33,6 +33,21 @@ test("adds the complete bundled style without replacing other system sections", 
   assert.equal(Object.keys(event.systemPromptOptions.sections).length, 2);
 });
 
+test("the bundled Pi style limits task tracking to explicit requests or long-horizon work", () => {
+  const style = readFileSync(
+    new URL("../extensions/attention-control/style.md", import.meta.url),
+    "utf8",
+  );
+  assert.match(style, /## Task tracking/);
+  assert.match(style, /only when the user explicitly requests task tracking/);
+  assert.match(style, /long-horizon work with multiple substantial phases/);
+  assert.match(style, /persistent state across interruptions or context compaction/);
+  assert.match(style, /Skip task tools for questions, short investigations, small edits, and routine edit-and-test work/);
+  assert.match(style, /Multiple steps, files, or tool calls alone do not justify task tracking/);
+  assert.match(style, /When unsure, skip task tools/);
+  assert.doesNotMatch(style, /If the harness has a task tool, use it for multi-step work/);
+});
+
 test("adds the style to a forced system prompt and enables the reminder", () => {
   const handler = loadHandler("before_agent_start");
   const event = {

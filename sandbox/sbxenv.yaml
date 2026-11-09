@@ -14,9 +14,6 @@ workspace:
 additionalWorkspaces:
   # Bash history, Claude and pi sessions, and dcode threads; see the kit's .bashrc block.
   - path: C:/Users/Matt/.sandbox-state/agent-lab
-  # The output style pi/setup.sh appends to pi's system prompt.
-  - path: C:/Users/Matt/code/attention-control
-    readOnly: true
 sandboxOptions:
   skills: "off"
 secrets:

@@ -125,10 +125,9 @@ capabilities:
           user: agent
           env: [HTTP_PROXY, HTTPS_PROXY]
           description: Configure npm for package installs through the Sandbox proxy
-        # sbxenv.yaml mounts the attention-control checkout read-only at its host-mirrored path.
-        - command: "bash /opt/pi-setup/setup.sh /*/Users/*/code/attention-control/output-styles/attention-control.md"
+        - command: "bash /opt/pi-setup/setup.sh"
           user: agent
-          description: Install pi packages and append the attention-control output style
+          description: Install pi settings and pinned packages
         - command: 'git config --global user.name mzizzi && git config --global user.email mhzizzi@gmail.com'
           user: agent
           description: Configure Git commit identity

@@ -159,10 +159,12 @@ test("installs the complete extension on first boot and tolerates repeated boots
     readFileSync(join(installed, "index.js"), "utf8"),
     readFileSync(join(extension, "index.js"), "utf8"),
   );
-  assert.equal(
-    readFileSync(join(installed, "style.md"), "utf8"),
-    readFileSync(join(extension, "style.md"), "utf8"),
-  );
+  for (const name of ["style.md", "LICENSE", "UPSTREAM.md"]) {
+    assert.equal(
+      readFileSync(join(installed, name), "utf8"),
+      readFileSync(join(extension, name), "utf8"),
+    );
+  }
 });
 
 test("installs the task extension with its supporting modules and license", (t) => {
@@ -253,15 +255,9 @@ test("replaces an outdated extension link", (t) => {
   assert.equal(readlinkSync(installed), extension);
 });
 
-test("preserves the shared setup's external style and packages while adding reminders", (t) => {
+test("installs shared packages and the bundled style without an external prompt", (t) => {
   const home = temporaryHome(t);
   const bin = join(home, "bin");
-  const style = join(home, "external-style.md");
-  const body = '\n# Attention Control\n\nUse the external style.\n\n6. **Restate state every turn.** The reader cannot hold "step 3 of 5" between messages.\n';
-  const taskMandate = " If the harness has a task tool, use it for multi-step work: one item per step, one in progress at a time. The checklist does the restating. Do not also narrate the plan as prose.";
-  const sourceStyle = "---\r\nname: Attention Control\r\n---\r\n" +
-    (body.trimEnd() + taskMandate + "\n").replaceAll("\n", "\r\n");
-  writeFileSync(style, sourceStyle);
   const subagentConfig = join(
     home,
     ".pi/agent/extensions/subagent/config.json",
@@ -269,7 +265,7 @@ test("preserves the shared setup's external style and packages while adding remi
   mkdirSync(dirname(subagentConfig), { recursive: true });
   writeFileSync(subagentConfig, '{"maxSubagentSpawnsPerRun":64}\n');
   const sharedSetup = join(repoRoot, "sandbox/agent-lab/pi/setup.sh");
-  execFileSync("bash", [sharedSetup, style], {
+  execFileSync("bash", [sharedSetup], {
     env: { ...process.env, HOME: home, PATH: `${bin}:${process.env.PATH}` },
     stdio: "pipe",
   });
@@ -278,13 +274,10 @@ test("preserves the shared setup's external style and packages while adding remi
   setup(home);
 
   const agentDir = join(home, ".pi/agent");
-  const installedStyle = readFileSync(
-    join(agentDir, "APPEND_SYSTEM.md"),
-    "utf8",
-  );
-  assert.equal(installedStyle, body);
-  assert.equal(readFileSync(style, "utf8"), sourceStyle);
-  assert.ok(!readFileSync(join(extension, "style.md"), "utf8").includes("If the harness has a task tool"));
+  assert.throws(() => readFileSync(join(agentDir, "APPEND_SYSTEM.md")), {
+    code: "ENOENT",
+  });
+  const bundledStyle = readFileSync(join(extension, "style.md"), "utf8");
   const settings = readFileSync(
     join(repoRoot, "sandbox/agent-lab/pi/settings.json"),
     "utf8",
@@ -318,16 +311,36 @@ test("preserves the shared setup's external style and packages while adding remi
   const handlers = new Map();
   attentionControl({ on: (event, callback) => handlers.set(event, callback) });
   const event = {
-    systemPrompt: installedStyle,
+    systemPrompt: "Existing Pi instructions.",
     systemPromptOptions: { sections: {} },
   };
   handlers.get("before_agent_start")(event);
-  assert.deepEqual(event.systemPromptOptions.sections, {});
+  assert.deepEqual(event.systemPromptOptions.sections, {
+    attention_control: bundledStyle,
+  });
   const result = handlers.get("context_with_system")(
     { messages: [] },
-    { getSystemPrompt: () => installedStyle },
+    { getSystemPrompt: () => event.systemPrompt + "\n\n" + bundledStyle },
   );
   assert.equal(result.messages.at(-1).customType, "attention-control-reminder");
+});
+
+test("setup preserves user-authored append instructions", (t) => {
+  const home = temporaryHome(t);
+  const append = join(home, ".pi/agent/APPEND_SYSTEM.md");
+  const instructions = "# Personal instructions\n\nKeep these instructions.\n";
+  mkdirSync(dirname(append), { recursive: true });
+  writeFileSync(append, instructions);
+  setup(home, join(repoRoot, "sandbox/agent-lab/pi/setup.sh"));
+  setup(home);
+  assert.equal(readFileSync(append, "utf8"), instructions);
+});
+
+test("sandbox configuration needs no external Attention Control checkout", () => {
+  const kit = readFileSync(join(repoRoot, "sandbox/agent-lab/agent-lab.yaml"), "utf8");
+  const environment = readFileSync(join(repoRoot, "sandbox/sbxenv.yaml"), "utf8");
+  assert.match(kit, /command: "bash \/opt\/pi-setup\/setup\.sh"/);
+  assert.doesNotMatch(kit + environment, /code\/attention-control/);
 });
 
 test("does not inject Attention Control into background subagents", () => {

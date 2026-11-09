@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
-# Configure pi for the current user: install Pi and subagent settings and append an output style to its
-# system prompt. Usage: setup.sh OUTPUT_STYLE_MD
+# Configure pi for the current user: install Pi and subagent settings and pinned packages.
+# Usage: setup.sh
 # Shared by the agent-lab kit and the SimRacing devcontainer.
 set -euo pipefail
 
-style=$1
 agent_dir="$HOME/.pi/agent"
 mkdir -p "$agent_dir"
 
@@ -17,12 +16,3 @@ cp "$settings" "$agent_dir/settings.json"
 mkdir -p "$agent_dir/extensions/subagent"
 cp "$(dirname "$0")/subagents.json" "$agent_dir/extensions/subagent/config.json"
 jq -r '.packages[]' "$settings" | xargs -n 1 pi install
-
-# pi's counterpart to a Claude output style: the style's body, without its frontmatter, appended
-# to every pi system prompt. tr drops CRs from a Windows checkout; sed deletes from the opening
-# `---` through the closing one. Omit the task-tool mandate for Pi without changing the source style.
-tr -d '\r' <"$style" | sed \
-    -e '1,/^---$/d' \
-    -e 's/ If the harness has a task tool, use it for multi-step work: one item per step, one in progress at a time\. The checklist does the restating\. Do not also narrate the plan as prose\.//g' \
-    >"$agent_dir/APPEND_SYSTEM.md"
-test -s "$agent_dir/APPEND_SYSTEM.md"

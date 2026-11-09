@@ -110,7 +110,7 @@ export default function tasks(pi) {
 
   register(
     "TaskCreate",
-    "Create a task for multi-step work. Tasks track work; they do not execute it. Limit: 100 tasks.",
+    "Create a task only for explicit task-tracking requests or long-horizon work that needs persistent state. Skip routine short work. Tasks track work; they do not execute it. Limit: 100 tasks.",
     editable,
     ["subject", "description"],
     (params) => {

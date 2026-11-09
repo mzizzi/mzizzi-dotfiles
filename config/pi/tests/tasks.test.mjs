@@ -75,6 +75,13 @@ test("registers only four sequential tools without execution or subagent hooks",
   );
 });
 
+test("TaskCreate describes explicit requests or long-horizon work, not all multi-step work", () => {
+  const description = harness().tools.get("TaskCreate").description;
+  assert.match(description, /only for explicit task-tracking requests or long-horizon work/);
+  assert.match(description, /Skip routine short work/);
+  assert.doesNotMatch(description, /Create a task for multi-step work/);
+});
+
 test("creates, lists, gets, updates, and deletes tasks without recycling IDs", async () => {
   const h = harness();
   assert.equal(text(await h.call("TaskList")), "No tasks.");
