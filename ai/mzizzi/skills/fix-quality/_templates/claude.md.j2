@@ -1,0 +1,29 @@
+{% extends "mzizzi/skills/fix-quality/_templates/shared.md.j2" %}
+
+{% block resource_paths %}{% endblock %}
+
+{% block context_instructions %}- **CLAUDE.md** — the user-level `~/.claude/CLAUDE.md`, the repo root, and any `CLAUDE.md` or `CLAUDE.local.md` in a directory that is an ancestor of a changed file. A directory's file governs only what sits at or below it.
+{% endblock %}
+
+{% block review_launch %}Launch every agent with the Agent tool at the `mzizzi:standard` tier, all in a single message and every one with `run_in_background: true`, so they run concurrently:
+
+```
+Agent(subagent_type: "mzizzi:standard", run_in_background: true, description: "reuse review",
+      prompt: "<the prompt below>")
+```
+
+Use `run_in_background: true` for every agent.
+
+{% endblock %}
+
+{% block completion %}Launching returns as soon as the agents are running, so don't sit on the set — go to step 5 and work each report as it arrives.
+{% endblock %}
+
+{% block missing_coverage %}- Take the agent's coverage as given rather than auditing it. If one says outright that something stopped it covering its scope, send another agent at what's left the moment you read that, so it runs alongside the agents still going.
+{% endblock %}
+
+{% block author_decision %}- **a judgment only the author can make** — ask with AskUserQuestion now, while the code is uncommitted and the author is reading. A plan choice that pins a placement or a test is this case, not a reason to defer.
+{% endblock %}
+
+{% block record_follow_ups %}    Skill(skill: "record-follow-ups", args: "<plan path> <the deferred proposals>")
+{% endblock %}

@@ -93,6 +93,19 @@ class PluginPortTests(unittest.TestCase):
                     )
                     for relative, original in resources.items():
                         staging = self.repo / "ai/mzizzi/skills" / source.name / relative
+                        if source.name == "fix-quality" and relative == Path("references/reviewer.md"):
+                            staging = staging.with_name(staging.name + ".j2")
+                            expected = original.read_bytes()
+                            if target == Target.PI:
+                                expected = expected.replace(
+                                    b"Return nothing if you found nothing \xe2\x80\x94 padding a list with style preferences buries what the other angles did find.",
+                                    b"If you found nothing, return exactly `No material findings.`. Do not return an empty response; Pi treats it as a failed run. Do not pad the report with style preferences.",
+                                )
+                            self.assertEqual((output / relative).read_bytes(), expected)
+                            if os.name != "nt":
+                                for copy in (staging, output / relative):
+                                    self.assertEqual(stat.S_IMODE(copy.stat().st_mode), stat.S_IMODE(original.stat().st_mode))
+                            continue
                         for copy in (staging, output / relative):
                             self.assertEqual(copy.read_bytes(), original.read_bytes())
                             if os.name != "nt":
@@ -128,6 +141,23 @@ class PluginPortTests(unittest.TestCase):
                 for args in re.findall(r'Skill\(skill: "[a-z-]+",\s*args: "([^"]*)"\)', original_body):
                     self.assertIn(args, body)
 
+    def test_quality_target_templates_keep_shared_review_workflow(self):
+        source = self.repo / "ai/mzizzi/skills/fix-quality"
+        self.assertEqual(
+            (source / "SKILL.md.j2").read_text(),
+            '{% include "mzizzi/skills/fix-quality/_templates/" ~ target ~ ".md.j2" %}\n',
+        )
+        shared = (source / "_templates/shared.md.j2").read_text()
+        self.assertNotIn("if target", shared)
+        for heading in ("## 1. Resolve", "## 5. Triage", "## 6. Apply", "## 8. Report"):
+            self.assertIn(heading, shared)
+        for target in Target:
+            template = (source / f"_templates/{target}.md.j2").read_text()
+            self.assertIn('{% extends "mzizzi/skills/fix-quality/_templates/shared.md.j2" %}', template)
+            self.assertNotIn("if target", template)
+        self.assertIn('Agent(subagent_type:', (source / "_templates/claude.md.j2").read_text())
+        self.assertIn('subagent({ workflow:', (source / "_templates/pi.md.j2").read_text())
+
     def test_pi_adaptations_keep_live_interviews_review_order_and_stop_conditions(self):
         def body(name):
             return skill_document(self.package(Target.PI) / "skills" / name / "SKILL.md")[1]
@@ -150,6 +180,11 @@ class PluginPortTests(unittest.TestCase):
         self.assertIn("runs.all(", quality)
         self.assertIn('context: "fresh"', quality)
         self.assertIn("strictly read-only", quality)
+        self.assertIn('acceptance: { level: "none", reason: "read-only quality review" }', quality)
+        self.assertIn("on every item", quality)
+        self.assertIn("Require proposals or `No material findings.`", quality)
+        self.assertIn("incomplete coverage are unavailable, never clean reviews", quality)
+        self.assertIn("Do not substitute an acceptance ledger", quality)
         self.assertIn("including step 6", quality)
         self.assertIn("report its exact error and missing coverage", quality)
         sweep = body("fix-all")

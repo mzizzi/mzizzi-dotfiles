@@ -212,6 +212,14 @@ test("registers only model-only sequential transitions and refuses unsupported o
     assert.equal(tool.executionMode, "sequential");
     assert.equal(tool.exposure, "model-only");
   }
+  const entry = h.tools.get("EnterWorktree");
+  assert.match(entry.description, /Pass path only; omit name/);
+  assert.match(entry.parameters.properties.path.description, /omit name/);
+  assert.deepEqual(Object.keys(entry.parameters.properties), ["path"]);
+  assert.deepEqual(entry.parameters.required, ["path"]);
+  const exit = h.tools.get("ExitWorktree");
+  assert.deepEqual(Object.keys(exit.parameters.properties), ["action"]);
+  assert.deepEqual(exit.parameters.properties.action.enum, ["keep"]);
   for (const params of [{}, { name: "new" }, { name: "x", path: f.target }])
     await assert.rejects(h.call("EnterWorktree", params), /supports only/);
   for (const params of [

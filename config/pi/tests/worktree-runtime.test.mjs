@@ -9,7 +9,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import test from "node:test";
 import worktree from "../extensions/worktree/index.js";
 import tasks from "../extensions/tasks/index.js";
@@ -20,6 +20,7 @@ import {
 } from "../extensions/worktree/transition.js";
 import { inspectCheckout } from "../extensions/worktree/git-worktree.js";
 import { fixture } from "./worktree-fixture.mjs";
+import { response } from "./fixtures/scripted-response.mjs";
 
 let hostPath = process.env.PI_WORKTREE_HOST;
 if (!hostPath) {
@@ -43,33 +44,6 @@ const hostTest = (name, fn) =>
     fn,
   );
 
-function response(content, model) {
-  const message = {
-    role: "assistant",
-    content,
-    api: model.api,
-    provider: model.provider,
-    model: model.id,
-    stopReason: content.some((part) => part.type === "toolCall")
-      ? "toolUse"
-      : "stop",
-    usage: {
-      input: 0,
-      output: 0,
-      cacheRead: 0,
-      cacheWrite: 0,
-      totalTokens: 0,
-      cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
-    },
-    timestamp: Date.now(),
-  };
-  return {
-    result: async () => message,
-    async *[Symbol.asyncIterator]() {
-      yield { type: "done", reason: message.stopReason, message };
-    },
-  };
-}
 const call = (name, args = {}, id = `${name}-${Math.random()}`) => ({
   type: "toolCall",
   id,
@@ -174,7 +148,10 @@ async function runtimeHarness(t, f, options = {}) {
         noExtensions: true,
         noPromptTemplates: true,
         noThemes: true,
-        extensionFactories: [extension],
+        extensionFactories: [extension, ...(options.mcp ? [host.createMcpExtension({
+          loadConfig: () => ({ servers: [options.mcp], errors: [] }),
+          logPath: join(agentDir, "mcp.log"),
+        })] : [])],
         ...options.resources,
       },
     });
@@ -213,6 +190,7 @@ async function runtimeHarness(t, f, options = {}) {
         "TaskGet",
         "TaskUpdate",
         "probe",
+        ...(options.mcp ? ["mcp__cwd_probe__probe"] : []),
       ],
     });
     return { ...result, services, diagnostics: [] };
@@ -499,6 +477,60 @@ hostTest(
     for (const name of ["EnterWorktree", "ExitWorktree", "TaskList"]) {
       assert.ok(h.runtime.session.getActiveToolNames().includes(name));
     }
+    assert.deepEqual(h.errors, []);
+  },
+);
+
+hostTest(
+  "cwd-bound MCP reconnects after entry, a dropped connection, and return",
+  async (t) => {
+    const f = fixture(t);
+    writeFileSync(join(f.target, "same.txt"), "target MCP context\n");
+    const logPath = join(f.dir, "mcp-lifecycle.jsonl");
+    const h = await runtimeHarness(t, f, {
+      mcp: {
+        name: "cwd-probe",
+        source: join(f.dir, "mcp.json"),
+        scope: "user",
+        config: {
+          command: process.execPath,
+          args: [fileURLToPath(new URL("./fixtures/cwd-mcp.mjs", import.meta.url)), logPath],
+          exposure: "direct",
+        },
+      },
+    });
+    const probe = async () => {
+      await h.prompt([call("mcp__cwd_probe__probe")]);
+      const message = h.runtime.session.messages.findLast(
+        (message) => message.role === "toolResult" && message.toolName === "mcp__cwd_probe__probe",
+      );
+      assert.equal(message.isError, false, JSON.stringify({ message, notices: h.notices, errors: h.errors, tools: h.runtime.session.getAllTools().map((tool) => tool.name) }));
+      return JSON.parse(message.content[0].text);
+    };
+    const source = await probe();
+    assert.equal(source.cwd, f.source);
+    assert.equal(source.text, "source\n");
+    await h.prompt([call("EnterWorktree", { path: f.target })]);
+    const destination = await probe();
+    assert.equal(destination.cwd, f.target);
+    assert.equal(destination.text, "target MCP context\n");
+    assert.notEqual(destination.pid, source.pid);
+
+    process.kill(destination.pid, "SIGTERM");
+    // Let the real MCP transport observe process exit, rather than racing its next call.
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    const reconnected = await probe();
+    assert.equal(reconnected.cwd, f.target);
+    assert.notEqual(reconnected.pid, destination.pid);
+
+    await h.prompt([call("ExitWorktree", { action: "keep" })]);
+    const returned = await probe();
+    assert.equal(returned.cwd, f.source);
+    assert.equal(returned.text, "source\n");
+    assert.notEqual(returned.pid, reconnected.pid);
+    const lifecycle = readFileSync(logPath, "utf8").trim().split("\n").map(JSON.parse);
+    for (const pid of [source.pid, destination.pid, reconnected.pid])
+      assert.ok(lifecycle.some((entry) => entry.event === "stop" && entry.pid === pid));
     assert.deepEqual(h.errors, []);
   },
 );

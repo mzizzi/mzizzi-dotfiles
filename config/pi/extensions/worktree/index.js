@@ -344,7 +344,7 @@ export default function worktree(
       label: name,
       description:
         name === "EnterWorktree"
-          ? "Switch the interactive parent into an existing registered worktree. Call alone, before children start. Wait for completed entry. No creation."
+          ? "Switch the interactive parent into an existing registered worktree. Pass path only; omit name even when the branch name is known. Call alone, before children start. Wait for completed entry. No creation."
           : "Return to the exact first-entry cwd, keeping all worktrees. Call alone after all child work finishes. No removal.",
       executionMode: "sequential",
       exposure: "model-only",
@@ -354,14 +354,17 @@ export default function worktree(
         properties:
           name === "EnterWorktree"
             ? {
-                path: { type: "string", minLength: 1, maxLength: 4096 },
-                name: { type: "string", minLength: 1, maxLength: 200 },
+                path: {
+                  type: "string",
+                  minLength: 1,
+                  maxLength: 4096,
+                  description: "Existing registered worktree root. Use this field alone; omit name.",
+                },
               }
             : {
-                action: { type: "string", enum: ["keep", "remove"] },
-                discard_changes: { type: "boolean" },
+                action: { type: "string", enum: ["keep"] },
               },
-        required: name === "EnterWorktree" ? [] : ["action"],
+        required: name === "EnterWorktree" ? ["path"] : ["action"],
       },
       async execute(_id, params, signal, _onUpdate, ctx) {
         try {

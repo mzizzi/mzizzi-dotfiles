@@ -144,6 +144,23 @@ try {
   }
   console.log("Pi agent package discovery passed.");
 
+  const { resolveEffectiveAcceptance, formatAcceptancePrompt } = await import(
+    pathToFileURL(join(subagents, "src/runs/shared/acceptance.js"))
+  );
+  const standard = discovered.agents.find((agent) => agent.name === "mzizzi.standard");
+  const inferred = resolveEffectiveAcceptance({ acceptanceRole: standard.acceptanceRole, async: true });
+  assert.equal(inferred.level, "attested");
+  assert.match(formatAcceptancePrompt(inferred), /structured acceptance report/);
+  const qualityPolicy = { level: "none", reason: "read-only quality review" };
+  const explicit = resolveEffectiveAcceptance({ acceptanceRole: standard.acceptanceRole, async: true, explicit: qualityPolicy });
+  assert.equal(explicit.level, "none");
+  assert.equal(formatAcceptancePrompt(explicit), "");
+  assert.match(
+    readFileSync(join(packagePath, "skills/fix-quality/SKILL.md"), "utf8"),
+    /acceptance: \{ level: "none", reason: "read-only quality review" \}/,
+  );
+  console.log("Pi read-only quality review acceptance policy passed.");
+
   process.env.PI_SUBAGENTS_PI_CODING_AGENT_PACKAGE_ROOT = join(npmRoot, "@earendil-works/pi-coding-agent");
   const { validateStructuredOutputValue } = await import(
     pathToFileURL(join(subagents, "src/runs/shared/structured-output.js"))

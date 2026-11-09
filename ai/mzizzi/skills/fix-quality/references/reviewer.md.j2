@@ -49,4 +49,6 @@ Use this shape exactly — the parent merges one of these from every reviewer:
 - **effort:** [trivial | contained | invasive]
 ```
 
-Return nothing if you found nothing — padding a list with style preferences buries what the other angles did find.
+{% if target == "pi" %}If you found nothing, return exactly `No material findings.`. Do not return an empty response; Pi treats it as a failed run. Do not pad the report with style preferences.
+{% else %}Return nothing if you found nothing — padding a list with style preferences buries what the other angles did find.
+{% endif %}

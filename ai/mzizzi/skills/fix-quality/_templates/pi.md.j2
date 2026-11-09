@@ -1,0 +1,41 @@
+{% extends "mzizzi/skills/fix-quality/_templates/shared.md.j2" %}
+
+{% block resource_paths %}
+
+Resolve `<skill-dir>` to this skill's absolute directory.
+{% endblock %}
+
+{% block context_instructions %}- **Context instructions** — read applicable global and project `AGENTS.md` or `CLAUDE.md` files, including ancestor directories of changed files. Respect each file's scope.
+{% endblock %}
+
+{% block review_launch %}Enable `subagent` with `subagents_enable` if needed. Launch {{ Agent("standard") }} for every angle or shard in one asynchronous parallel workflow, with fresh context and the exact prompt below. Use fewer, larger shards when needed to fit the configured launch limits; never silently drop an angle.
+
+Write one `js workflow` block in your reply, populated with every selected angle or shard:
+
+````markdown
+```js workflow
+const reports = await runs.all([
+  { key: "reuse", agent: "mzizzi.standard", acceptance: { level: "none", reason: "read-only quality review" }, task: "<exact prompt below for reuse>" },
+  // Add one stable key and the exact prompt for every other selected angle or shard.
+]);
+return reports;
+```
+````
+
+Use `acceptance: { level: "none", reason: "read-only quality review" }` on every item: the review report is the result, not an acceptance attestation. Keep the exact task prompt below unchanged.
+
+Then call `subagent({ workflow: true, async: true, options: { context: "fresh" } })` in the same reply. These are read-only reviewers in the current checkout, not concurrent writers. Do not block the parent with `async: false`. If the fan-out fails, report its exact error and missing coverage; do not apply findings from an incomplete review. Require proposals or `No material findings.` from every successful reviewer. Empty output, failed runs, cancellation, and incomplete coverage are unavailable, never clean reviews. Do not substitute an acceptance ledger for the requested report.
+
+{% endblock %}
+
+{% block completion %}Process each completion in Step 5 without sleeping, polling, or `bg_wait`. If only the aggregate arrives, process it then and note the delayed triage.
+{% endblock %}
+
+{% block missing_coverage %}- Take the agent's coverage as given rather than auditing it. If one says outright that something stopped it covering its scope, start {{ Agent("standard") }} asynchronously on the missed scope with the same exact prompt and fresh context, within configured limits. If the missing coverage cannot run, report it as a blocker instead of declaring the review complete.
+{% endblock %}
+
+{% block author_decision %}- **a judgment only the author can make** — ask with the available interactive question tool; if none exists, write the question with numbered options and stop for the reply, while the code is uncommitted and the author is reading. A plan choice that pins a placement or a test is this case, not a reason to defer.
+{% endblock %}
+
+{% block record_follow_ups %}Read and follow {{ Skill("record-follow-ups") }} from `<skill-dir>/../record-follow-ups/SKILL.md` with arguments `<plan path> <the deferred proposals>`.
+{% endblock %}

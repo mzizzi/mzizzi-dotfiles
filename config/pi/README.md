@@ -32,7 +32,7 @@ Do not load upstream `pi-tasks` alongside this extension; their tool names overl
 
 ## Worktrees (interactive pilot)
 
-`extensions/worktree/` adds `EnterWorktree({path})` and `ExitWorktree({action:"keep"})`. It enters existing registered worktrees, including dirty and detached checkouts. It never creates, cleans, or removes a checkout or branch. Git policy stays in the skills.
+`extensions/worktree/` adds `EnterWorktree({path})` and `ExitWorktree({action:"keep"})`. It enters existing registered worktrees, including dirty and detached checkouts. The tool schemas advertise only these supported arguments; `name`, removal, and discard requests remain unsupported. It never creates, cleans, or removes a checkout or branch. Git policy stays in the skills.
 
 Use a persisted interactive parent session. Call each transition alone. Finish all child work, interviews, and pending results before switching. Confirm that condition in the dialog. If pi-subagents reveals live work, choose **Stay**, not Take or Leave. The extension cannot enumerate every child; unattended or live-child switching is unsupported.
 
@@ -54,9 +54,11 @@ This is cwd switching, not filesystem isolation. Absolute paths, custom tools, f
 
 ### Compatibility and checks
 
-Host contract tests target Pi 1.5.0. The skill pilot uses pi-subagents 0.87.0 and the local task extension. Test newer versions before relying on them. Linux is the checked platform; native Windows/Git Bash paths and junctions still need separate checks.
+Host contract tests target Pi 1.5.0. The skill pilot uses pi-subagents 0.87.0 and the local task extension. Test newer versions before relying on them. Linux is the checked platform. Native Windows/Git Bash checks are outside the current sandbox scope.
 
-Real-host tests use a local scripted provider, disposable repositories, and Pi's actual runtime/file loader. They cover mixed batches, replacement, relative tools, tasks/history, dirty/detached paths, source subdirectories, path hops, queues, and failures. They make no model requests. Full model-driven skill runs, a real child/supervisor round trip across completed entry, terminal interaction races, and MCP reconnect behavior remain manual pilot checks; these tests do not establish full Claude parity.
+Real-host tests use a local scripted provider, disposable repositories, and Pi's actual runtime/file loader. They cover mixed batches, replacement, relative tools, tasks/history, dirty/detached paths, source subdirectories, path hops, queues, and failures. They make no model requests.
+
+Linux pseudo-terminal tests run the real CLI with isolated profiles and a scripted provider. They check entry/return dialogs, late terminal input without false completion, and a native child/supervisor request and reply after entry. A real stdio MCP fixture checks its cwd, shutdown, and reconnection after entry, a dropped connection, and return. These bounded checks do not prove every terminal race, arbitrary MCP behavior, or full model-driven skill parity.
 
 ## Tests
 
