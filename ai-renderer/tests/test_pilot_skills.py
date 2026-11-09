@@ -23,6 +23,15 @@ def skill_document(path):
     return yaml.safe_load(frontmatter), body
 
 
+def expected_pilot_body(name, body):
+    if name == "create-plan-dir":
+        body = body.replace(
+            "    <plans-base>/yyyymmdd-short-description/",
+            "```text\n<plans-base>/yyyymmdd-short-description/\n```",
+        )
+    return body
+
+
 class PilotSkillTests(unittest.TestCase):
     def setUp(self):
         temporary = tempfile.TemporaryDirectory(prefix="ai-pilots-")
@@ -33,12 +42,13 @@ class PilotSkillTests(unittest.TestCase):
 
     def skill_output(self, target, name):
         package_type = "plugins" if target == Target.CLAUDE else "packages"
-        return self.repo / "generated" / target / package_type / "mzizzi/skills" / name
+        return self.repo / "ai-rendered" / target / package_type / "mzizzi/skills" / name
 
     def test_pilots_preserve_instructions_metadata_and_resources(self):
         for name in PILOTS:
             original = REPO / "plugins/mzizzi/skills" / name
             metadata, body = skill_document(original / "SKILL.md")
+            body = expected_pilot_body(name, body)
             staging = self.repo / "ai/mzizzi/skills" / name
             self.assertEqual(skill_document(staging / "SKILL.md.j2")[1], body)
             resources = {

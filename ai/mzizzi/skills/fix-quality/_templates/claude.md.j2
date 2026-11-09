@@ -7,7 +7,7 @@
 
 {% block review_launch %}Launch every agent with the Agent tool at the `mzizzi:standard` tier, all in a single message and every one with `run_in_background: true`, so they run concurrently:
 
-```
+```text
 Agent(subagent_type: "mzizzi:standard", run_in_background: true, description: "reuse review",
       prompt: "<the prompt below>")
 ```
@@ -25,5 +25,7 @@ Use `run_in_background: true` for every agent.
 {% block author_decision %}- **a judgment only the author can make** — ask with AskUserQuestion now, while the code is uncommitted and the author is reading. A plan choice that pins a placement or a test is this case, not a reason to defer.
 {% endblock %}
 
-{% block record_follow_ups %}    Skill(skill: "record-follow-ups", args: "<plan path> <the deferred proposals>")
+{% block record_follow_ups %}```text
+Skill(skill: "record-follow-ups", args: "<plan path> <the deferred proposals>")
+```
 {% endblock %}

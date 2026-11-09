@@ -1,3 +1,5 @@
+# Low-strictness comment rules
+
 - **A comment has to be true — check it against the code before keeping it.** For every comment that survives, verify its factual claims: the algorithm it names, the guarantee it asserts, the symbol or file it points at. Where comment and code disagree, the comment is wrong — cut it, or correct it to what the code actually does. A concise, well-shaped, false comment is worse than no comment, so this check outranks every rule below. Drift collects where a comment outlived a change to the code beneath it, so "the diff didn't touch this comment" is a reason to check it, not a reason to skip it.
 - **Inline narration restates the code.** Remove comments that just say what the next line plainly does (`// increment counter`, `// loop over users`). The code already says this.
 - **Section separator comments** Header style "----" or "\*\*\*" separating sections of code are never acceptable.

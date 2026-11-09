@@ -19,7 +19,7 @@ class AdversarialReviewTests(unittest.TestCase):
 
     def bundle(self, target):
         kind = "plugins" if target == Target.CLAUDE else "packages"
-        return self.repo / "generated" / target / kind / "mzizzi/skills/adversarial-review"
+        return self.repo / "ai-rendered" / target / kind / "mzizzi/skills/adversarial-review"
 
     def test_shared_review_assets_and_target_specific_transport(self):
         claude, pi = (self.bundle(target) for target in Target)

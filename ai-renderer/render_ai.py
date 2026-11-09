@@ -363,7 +363,7 @@ def publish(destination, artifacts):
 
 def build(repo_root, targets=tuple(Target), check=False):
     source = repo_root / "ai"
-    output = repo_root / "generated"
+    output = repo_root / "ai-rendered"
     if output.is_symlink():
         raise RenderError(f"{output}: output symlinks are not supported")
     resources = discover(source)

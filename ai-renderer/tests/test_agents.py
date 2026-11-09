@@ -23,7 +23,7 @@ class AgentTests(unittest.TestCase):
 
     def output(self, target, name="pragmatic-reviewer"):
         packages = "plugins" if target == Target.CLAUDE else "packages"
-        return self.repo / "generated" / target / packages / "mzizzi/agents" / f"{name}.md"
+        return self.repo / "ai-rendered" / target / packages / "mzizzi/agents" / f"{name}.md"
 
     def test_agents_preserve_instructions_and_target_settings(self):
         build(self.repo)
@@ -110,7 +110,7 @@ class AgentTests(unittest.TestCase):
         build(self.repo)
         self.assertIn("the `other:reviewer` agent", self.output(Target.CLAUDE).read_text())
         self.assertIn("the `other.reviewer` agent", self.output(Target.PI).read_text())
-        manifest = self.repo / "generated/pi/packages/other/package.json"
+        manifest = self.repo / "ai-rendered/pi/packages/other/package.json"
         self.assertEqual(json.loads(manifest.read_text())["pi"], {"subagents": {"agents": ["./agents"]}})
         self.source.write_text('---\ndescription: Review.\n---\n{{ Agent("development-preferences") }}\n')
         with self.assertRaisesRegex(RenderError, "unknown agent"):

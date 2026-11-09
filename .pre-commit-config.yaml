@@ -1,3 +1,5 @@
+default_install_hook_types: [pre-commit, pre-push]
+default_stages: [pre-commit, pre-push]
 repos:
   - repo: local
     hooks:
@@ -9,12 +11,48 @@ repos:
         entry: prettier --write
         language: node
         types: [markdown]
+        exclude: ^ai-rendered/
+        stages: [pre-commit]
         additional_dependencies: ["prettier@3.6.2"]
-      - id: render-ai
-        name: render AI resources
-        entry: python ai-renderer/render_ai.py
+      - id: check-ai
+        name: check AI commit candidate
+        entry: python ai-renderer/check_ai.py
         language: python
         additional_dependencies: ["Jinja2==3.1.6", "PyYAML==6.0.3"]
         pass_filenames: false
         always_run: true
+        fail_fast: true
         stages: [pre-commit]
+      - id: check-ai-push
+        name: check AI push candidate
+        entry: python ai-renderer/check_ai.py --push
+        language: python
+        additional_dependencies: ["Jinja2==3.1.6", "PyYAML==6.0.3"]
+        pass_filenames: false
+        always_run: true
+        fail_fast: true
+        stages: [pre-push]
+      - id: prettier-ai-rendered
+        name: check rendered Markdown formatting (fix sources and render again)
+        entry: prettier --check --config .prettierrc --ignore-path .prettierignore "ai-rendered/**/*.md"
+        language: node
+        additional_dependencies: ["prettier@3.6.2"]
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit, pre-push]
+      - id: markdownlint-ai-rendered
+        name: lint rendered Markdown (fix sources and render again)
+        entry: markdownlint-cli2 --config .markdownlint-cli2.yaml
+        language: node
+        additional_dependencies: ["markdownlint-cli2@0.24.0"]
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit, pre-push]
+      - id: prettier-push
+        name: check authored Markdown formatting
+        entry: prettier --check
+        language: node
+        types: [markdown]
+        exclude: ^ai-rendered/
+        stages: [pre-push]
+        additional_dependencies: ["prettier@3.6.2"]

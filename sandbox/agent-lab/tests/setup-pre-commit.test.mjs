@@ -34,30 +34,33 @@ test(
     execFileSync("git", ["init", checkout], { stdio: "pipe" });
     writeFileSync(
       join(checkout, ".pre-commit-config.yaml"),
-      `repos:
+      `default_install_hook_types: [pre-commit, pre-push]
+default_stages: [pre-commit, pre-push]
+repos:
   - repo: local
     hooks:
-      - id: render-fixture
-        name: render fixture
-        entry: node render.cjs
+      - id: check-fixture
+        name: check fixture
+        entry: node check.cjs
         language: system
         pass_filenames: false
         always_run: true
 `,
     );
-    writeFileSync(join(checkout, ".gitignore"), "generated/\n");
+    mkdirSync(join(checkout, "ai-rendered"));
+    writeFileSync(join(checkout, "ai-rendered/result.txt"), "Rendered.\n");
     writeFileSync(
-      join(checkout, "render.cjs"),
-      `if (process.env.RENDER_FAIL) process.exit(1);
-const fs = require("node:fs");
-fs.mkdirSync("generated", { recursive: true });
-fs.writeFileSync("generated/result.txt", "Rendered.\\n");
+      join(checkout, "check.cjs"),
+      `const fs = require("node:fs");
+if (process.env.CHECK_FAIL || fs.readFileSync("ai-rendered/result.txt", "utf8") !== "Rendered.\\n") process.exit(1);
 `,
     );
     for (let attempt = 0; attempt < 2; attempt++) {
       execFileSync("bash", [script], { cwd: tmpdir(), stdio: "pipe" });
     }
-    assert.ok(existsSync(join(checkout, ".git/hooks/pre-commit")));
+    for (const hook of ["pre-commit", "pre-push"]) {
+      assert.ok(existsSync(join(checkout, `.git/hooks/${hook}`)));
+    }
     execFileSync("git", ["add", "."], { cwd: checkout });
     const commit = [
       "-c",
@@ -71,7 +74,7 @@ fs.writeFileSync("generated/result.txt", "Rendered.\\n");
     ];
     execFileSync("git", commit, { cwd: checkout, stdio: "pipe" });
     assert.equal(
-      readFileSync(join(checkout, "generated/result.txt"), "utf8"),
+      readFileSync(join(checkout, "ai-rendered/result.txt"), "utf8"),
       "Rendered.\n",
     );
     const head = execFileSync("git", ["rev-parse", "HEAD"], {
@@ -80,7 +83,7 @@ fs.writeFileSync("generated/result.txt", "Rendered.\\n");
     });
     const failed = spawnSync("git", commit, {
       cwd: checkout,
-      env: { ...process.env, RENDER_FAIL: "1" },
+      env: { ...process.env, CHECK_FAIL: "1" },
       encoding: "utf8",
     });
     assert.equal(failed.status, 1, failed.stdout + failed.stderr);

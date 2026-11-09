@@ -1,0 +1,19 @@
+globs:
+  - ai-rendered/**/*.md
+ignores:
+  - ai-rendered/claude/plugins/mzizzi/skills/adversarial-review/references/adversarial-review.md
+  - ai-rendered/pi/packages/mzizzi/skills/adversarial-review/references/adversarial-review.md
+fix: false
+config:
+  MD013: false
+overrides:
+  - filter:
+      - ai-rendered/**/skills/*/SKILL.md
+      - ai-rendered/claude/plugins/*/agents/*.md
+      - ai-rendered/pi/packages/*/agents/*.md
+    combine: merge
+    config:
+      MD041:
+        front_matter_title: '^\s*name\s*:'
+      MD025:
+        front_matter_title: ""

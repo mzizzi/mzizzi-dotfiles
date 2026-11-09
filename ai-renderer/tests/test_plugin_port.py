@@ -4,9 +4,10 @@ import re
 import shutil
 import stat
 import tempfile
+import textwrap
 import unittest
 
-from test_pilot_skills import REPO, skill_document
+from test_pilot_skills import REPO, expected_pilot_body, skill_document
 from render_ai import Target, build
 
 
@@ -14,7 +15,7 @@ def renamed(name):
     return "adversarial-review" if name == "codex-adversarial-review" else name
 
 
-def expected_claude_body(body):
+def expected_claude_body(body, name):
     body = body.replace("codex-adversarial-review", "adversarial-review")
     replacements = {
         "Codex looks for what's missing, the pragmatic reviewer for what's excess. Start the pragmatic reviewer in the background, then run Codex:":
@@ -40,6 +41,25 @@ def expected_claude_body(body):
     }
     for original, replacement in replacements.items():
         body = body.replace(original, replacement)
+    body = expected_pilot_body(name, body)
+    fenced_examples = (
+        '    Agent(subagent_type: "mzizzi:pragmatic-reviewer", prompt: "Review the brainstorm at <path to the document>.", run_in_background: false)',
+        '    Skill(skill: "create-plan", args: "<plan dir path> — build plan.md from <brainstorm file path>")',
+        '    Brainstorm written: <brainstorm file path>\n    Create a plan with: /mzizzi:create-plan <brainstorm file path>',
+        '    Agent(subagent_type: "mzizzi:pragmatic-reviewer", prompt: "Review the plan at <target file path>. Also answer each item under its ## Open Questions: the option you would pick and why.")\n    Skill(skill: "adversarial-review", args: "--model gpt-6-astra --effort high --files <target file path> focus on feasibility, completeness, missing risks, and questionable assumptions. Right-size each recommendation to the problem — KISS/YAGNI/DRY balanced against the complexity the plan actually warrants; no scope or machinery the plan\'s stated problem does not require. Answer each item under Open Questions with the option you would pick and why.")',
+        '    /mzizzi:implement-plan <target file path>',
+        '    Skill(skill: "record-follow-ups", args: "<plan path> <the deferred proposals>")',
+        '    Skill(skill: "prepare-feature-branch", args: "<plan directory>")',
+        '    implement Phase 1 — the shared, glob-free core\n    implement Phase 2 — the batch CLI, and the deletions\n    implement Phase 3 — the dev-server plugin',
+        '    Skill(skill: "fix-all", args: "--plan <plan document path> --strictness=high --apply=all")',
+        '    <username>/<slug>',
+    )
+    for example in fenced_examples:
+        body = body.replace(example, "```text\n" + textwrap.dedent(example) + "\n```")
+    body = body.replace("\n```\nAgent(", "\n```text\nAgent(")
+    body = body.replace("\n```\nRead <skill-dir>", "\n```text\nRead <skill-dir>")
+    body = body.replace("\n```\nTaskUpdate", "\n```text\nTaskUpdate")
+    body = body.replace("\n```\nConcise, high level", "\n```markdown\nConcise, high level")
     return body
 
 
@@ -53,7 +73,7 @@ class PluginPortTests(unittest.TestCase):
 
     def package(self, target):
         kind = "plugins" if target == Target.CLAUDE else "packages"
-        return self.repo / "generated" / target / kind / "mzizzi"
+        return self.repo / "ai-rendered" / target / kind / "mzizzi"
 
     def test_all_claude_frontmatter_and_skill_bodies_match_original(self):
         original = REPO / "plugins/mzizzi"
@@ -71,7 +91,7 @@ class PluginPortTests(unittest.TestCase):
                         continue
                     self.assertEqual(metadata, expected_metadata)
                     if kind == "skills":
-                        self.assertEqual(body, expected_claude_body(expected_body))
+                        self.assertEqual(body, expected_claude_body(expected_body, source.parent.name))
             expected = {renamed(path.name) for path in (original / kind).iterdir()}
             self.assertEqual({path.name for path in (self.package(Target.CLAUDE) / kind).iterdir()}, expected)
 
@@ -106,8 +126,16 @@ class PluginPortTests(unittest.TestCase):
                                 for copy in (staging, output / relative):
                                     self.assertEqual(stat.S_IMODE(copy.stat().st_mode), stat.S_IMODE(original.stat().st_mode))
                             continue
+                        expected = original.read_bytes()
+                        if source.name == "fix-comments":
+                            headings = {
+                                "acceptable-comments.md": "Acceptable comments",
+                                "strictness-high.md": "High-strictness comment rules",
+                                "strictness-low.md": "Low-strictness comment rules",
+                            }
+                            expected = f"# {headings[relative.name]}\n\n".encode() + expected
                         for copy in (staging, output / relative):
-                            self.assertEqual(copy.read_bytes(), original.read_bytes())
+                            self.assertEqual(copy.read_bytes(), expected)
                             if os.name != "nt":
                                 self.assertEqual(stat.S_IMODE(copy.stat().st_mode), stat.S_IMODE(original.stat().st_mode))
 

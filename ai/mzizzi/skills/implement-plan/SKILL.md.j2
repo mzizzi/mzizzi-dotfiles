@@ -9,8 +9,7 @@ pi:
   disable-model-invocation: false
 ---{% if target == "pi" %}
 
-Resolve `<skill-dir>` to this skill's absolute directory. This workflow needs task tools, `pi-subagents`, and the worktree extension; stop if unavailable.
-{% endif %}
+Resolve `<skill-dir>` to this skill's absolute directory. This workflow needs task tools, `pi-subagents`, and the worktree extension; stop if unavailable.{% endif %}
 
 ## Step 0: Resolve the target and scope
 
@@ -22,7 +21,9 @@ Confirm the scope back to the user in one line before moving on, so a misread is
 
 ## Step 1: Prepare the feature branch
 
-{% if target == "claude" %}    Skill(skill: "prepare-feature-branch", args: "<plan directory>"){% else %}Read and follow {{ Skill("prepare-feature-branch") }} at `<skill-dir>/../prepare-feature-branch/SKILL.md` with arguments `<plan directory>`. Return here after branch preparation, including completed worktree entry, before Step 2.{% endif %}
+{% if target == "claude" %}```text
+Skill(skill: "prepare-feature-branch", args: "<plan directory>")
+```{% else %}Read and follow {{ Skill("prepare-feature-branch") }} at `<skill-dir>/../prepare-feature-branch/SKILL.md` with arguments `<plan directory>`. Return here after branch preparation, including completed worktree entry, before Step 2.{% endif %}
 
 {% if target == "claude" %}The branch keeps the diff mapped to the plan and off the trunk, and Step 4 reads the working-tree diff, so the baseline must be clean.{% else %}Prepare the branch before implementation; Step 4 reviews that checkout's working diff.{% endif %} The skill derives the name, reuses existing feature work for this plan or creates it, commits the plan document onto the branch, and announces the result. An untracked plan directory is expected there and needs no intervention; unrelated pending edits get put to the user as a choice, so relay whatever they decided rather than re-litigating it here.
 
@@ -38,9 +39,11 @@ The plan is the description of the work; the task list is a progress marker over
 
 **Use phase titles without hand-written task numbers.** `TaskCreate` assigns task ids:
 
-    implement Phase 1 — the shared, glob-free core
-    implement Phase 2 — the batch CLI, and the deletions
-    implement Phase 3 — the dev-server plugin
+```text
+implement Phase 1 — the shared, glob-free core
+implement Phase 2 — the batch CLI, and the deletions
+implement Phase 3 — the dev-server plugin
+```
 
 **Tail items:** review passes, summarize. One item for the review passes, not three — Step 4 hands them to `fix-all`, which seeds its own tasks. Seeding the tail before any code exists is what protects it — finishing the implementation doesn't end the run.
 
@@ -48,7 +51,7 @@ The plan is the description of the work; the task list is a progress marker over
 
 **Chain them.** Each task blocked by the one before it: implementation items in plan order, then the tail in step order, with the review-passes item blocked by the last implementation item. All in one message:
 
-```
+```text
 TaskUpdate {taskId: "2", addBlockedBy: ["1"]}
 TaskUpdate {taskId: "3", addBlockedBy: ["2"]}
 ```
@@ -72,8 +75,7 @@ Take the Step 2 items in chain order — plans order files so that later ones ca
 
 {% if target == "claude" %}- Delegate to mzizzi:standard sub-agents for implementation
   - At least one sub-agent per plan phase (multiple)
-  - Instruct sub-agents to hand off work to a new agent when >250k is used{% else %}- Use {{ Agent("standard") }}: delegate at least one child per phase. Enable `subagent` if needed:
-  `subagent({agent:"mzizzi.standard", task:"<phase, absolute plan path, scope, checks>", cwd:"<selected absolute cwd>", async:true, options:{context:"fresh"}})`.
+  - Instruct sub-agents to hand off work to a new agent when >250k is used{% else %}- Use {{ Agent("standard") }}: delegate at least one child per phase. Enable `subagent` if needed: `subagent({agent:"mzizzi.standard", task:"<phase, absolute plan path, scope, checks>", cwd:"<selected absolute cwd>", async:true, options:{context:"fresh"}})`.
 - Wait for native completion before dependent work. Keep all phases in this checkout; do not allocate child worktrees.
 - Ask children to hand off before context exhaustion. On child failure, report the blocker rather than silently replacing delegation with parent work.{% endif %}
 - Treat the plan's design and code sketches as intent, not rigid. If a better approach is obvious or the plan was incorrect then do the right thing and note the deviation for Step 5.
@@ -84,7 +86,9 @@ Leave the changes uncommitted on the Step 1 branch. All three passes ahead read 
 
 ## Step 4: Review passes
 
-{% if target == "claude" %}    Skill(skill: "fix-all", args: "--plan <plan document path> --strictness=high --apply=all"){% else %}Read and follow {{ Skill("fix-all") }} at `<skill-dir>/../fix-all/SKILL.md` with arguments `--plan <plan document path> --strictness=high --apply=all`. Use the same checkout and uncommitted diff. Return here afterward.{% endif %}
+{% if target == "claude" %}```text
+Skill(skill: "fix-all", args: "--plan <plan document path> --strictness=high --apply=all")
+```{% else %}Read and follow {{ Skill("fix-all") }} at `<skill-dir>/../fix-all/SKILL.md` with arguments `--plan <plan document path> --strictness=high --apply=all`. Use the same checkout and uncommitted diff. Return here afterward.{% endif %}
 
 `<plan document path>` is the file from Step 0. No `--base`: the implementation is still uncommitted. `--strictness=high` covers the long block comments and module headers fresh implementation work tends to produce. `--apply=all` fixes the large findings now rather than deferring them: the code is fresh and uncommitted, so an invasive edit is cheapest here.
 

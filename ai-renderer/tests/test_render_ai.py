@@ -29,13 +29,13 @@ class RendererTests(unittest.TestCase):
 
     def skill_output(self, target=Target.PI):
         if target == Target.PI:
-            return self.repo / "generated/pi/packages/mzizzi/skills/renderer-example"
-        return self.repo / "generated/claude/plugins/mzizzi/skills/renderer-example"
+            return self.repo / "ai-rendered/pi/packages/mzizzi/skills/renderer-example"
+        return self.repo / "ai-rendered/claude/plugins/mzizzi/skills/renderer-example"
 
     def snapshot(self):
         return {
             path.relative_to(self.repo): (path.read_bytes(), stat.S_IMODE(path.stat().st_mode))
-            for path in (self.repo / "generated").rglob("*") if path.is_file()
+            for path in (self.repo / "ai-rendered").rglob("*") if path.is_file()
         }
 
     def test_both_targets_match_expected_skill_and_manifests(self):
@@ -49,12 +49,32 @@ class RendererTests(unittest.TestCase):
                     (self.skill_output(target) / "references/example.txt").read_bytes(),
                     (self.source / "references/example.txt").read_bytes(),
                 )
-        pi_manifest = self.repo / "generated/pi/packages/mzizzi/package.json"
+        pi_manifest = self.repo / "ai-rendered/pi/packages/mzizzi/package.json"
         self.assertEqual(json.loads(pi_manifest.read_text()), {
             "name": "mzizzi-ai", "pi": {"skills": ["./skills"], "subagents": {"agents": ["./agents"]}},
         })
-        claude_manifest = self.repo / "generated/claude/plugins/mzizzi/.claude-plugin/plugin.json"
+        claude_manifest = self.repo / "ai-rendered/claude/plugins/mzizzi/.claude-plugin/plugin.json"
         self.assertEqual(json.loads(claude_manifest.read_text()), {"name": "mzizzi"})
+        self.assertFalse((self.repo / "generated").exists())
+
+    def test_new_output_root_leaves_retired_cache_untouched(self):
+        retired = self.repo / "generated/pi/packages/mzizzi"
+        retired.mkdir(parents=True)
+        cache = retired / "keep.txt"
+        cache.write_bytes(b"Retired local cache.\n")
+        build(self.repo)
+        self.assertEqual(
+            {path.name for path in (self.repo / "ai-rendered").iterdir()},
+            {"claude", "pi"},
+        )
+        self.assertTrue(all((self.repo / "ai-rendered" / target / MARKER).is_file() for target in Target))
+        self.assertEqual(list(retired.iterdir()), [cache])
+        self.assertEqual(cache.read_bytes(), b"Retired local cache.\n")
+        before = self.snapshot()
+        self.assertEqual(build(self.repo, check=True), [])
+        self.assertEqual(build(self.repo, check=True), [])
+        self.assertEqual(self.snapshot(), before)
+        self.assertEqual(cache.read_bytes(), b"Retired local cache.\n")
 
     def test_long_skill_and_agent_descriptions_stay_on_one_line(self):
         description = "A long description for loader compatibility. " * 10
@@ -91,8 +111,8 @@ class RendererTests(unittest.TestCase):
         other.mkdir(parents=True)
         (other / "SKILL.md.j2").write_text('---\ndescription: Claude only.\npi: false\n---\n')
         build(self.repo)
-        self.assertFalse((self.repo / "generated/pi/packages/other").exists())
-        self.assertTrue((self.repo / "generated/claude/plugins/other/.claude-plugin/plugin.json").is_file())
+        self.assertFalse((self.repo / "ai-rendered/pi/packages/other").exists())
+        self.assertTrue((self.repo / "ai-rendered/claude/plugins/other/.claude-plugin/plugin.json").is_file())
 
     def test_qualified_references_and_resource_templates(self):
         other = self.repo / "ai/other/skills/other-example"
@@ -106,7 +126,7 @@ class RendererTests(unittest.TestCase):
             (self.skill_output() / "references/link.md").read_text(),
             'See the `other-example` skill.\n',
         )
-        other_output = self.repo / "generated/claude/plugins/other/skills/other-example/SKILL.md"
+        other_output = self.repo / "ai-rendered/claude/plugins/other/skills/other-example/SKILL.md"
         self.assertIn("the `mzizzi:renderer-example` skill", other_output.read_text())
 
     def test_source_only_templates_render_without_becoming_resources(self):
@@ -196,7 +216,7 @@ class RendererTests(unittest.TestCase):
         (longest / "SKILL.md.j2").write_text('---\ndescription: Name limit example.\n---\n')
         try:
             build(self.repo)
-            output = self.repo / "generated/pi/packages/mzizzi/skills" / longest.name / "SKILL.md"
+            output = self.repo / "ai-rendered/pi/packages/mzizzi/skills" / longest.name / "SKILL.md"
             self.assertEqual(yaml.safe_load(output.read_text().split("---")[1])["name"], longest.name)
         finally:
             longest.rename(self.source)
@@ -217,7 +237,7 @@ class RendererTests(unittest.TestCase):
     def test_check_mode_reports_drift_without_writes(self):
         changes = build(self.repo, check=True)
         self.assertTrue(any("missing:" in change for change in changes))
-        self.assertFalse((self.repo / "generated").exists())
+        self.assertFalse((self.repo / "ai-rendered").exists())
         build(self.repo)
         self.assertEqual(build(self.repo, check=True), [])
         output = self.skill_output() / "SKILL.md"
@@ -241,16 +261,16 @@ class RendererTests(unittest.TestCase):
         self.assertEqual({path: value for path, value in self.snapshot().items() if path.parts[1] == "claude"}, claude)
         shutil.rmtree(self.repo / "ai/mzizzi")
         build(self.repo, targets=(Target.PI,))
-        self.assertEqual(list((self.repo / "generated/pi").iterdir()), [self.repo / "generated/pi" / MARKER])
+        self.assertEqual(list((self.repo / "ai-rendered/pi").iterdir()), [self.repo / "ai-rendered/pi" / MARKER])
 
     def test_unowned_output_is_not_replaced(self):
-        unowned = self.repo / "generated/pi"
+        unowned = self.repo / "ai-rendered/pi"
         unowned.mkdir(parents=True)
         (unowned / "keep.txt").write_text("Keep.\n")
         with self.assertRaisesRegex(RenderError, "unowned output"):
             build(self.repo)
         self.assertEqual((unowned / "keep.txt").read_text(), "Keep.\n")
-        self.assertFalse((self.repo / "generated/claude").exists())
+        self.assertFalse((self.repo / "ai-rendered/claude").exists())
 
     @unittest.skipIf(os.name == "nt", "Symlink creation needs privileges on Windows")
     def test_source_and_output_symlinks_are_rejected(self):
@@ -265,10 +285,10 @@ class RendererTests(unittest.TestCase):
         with self.assertRaisesRegex(RenderError, "output symlinks"):
             build(self.repo)
         link.unlink()
-        shutil.rmtree(self.repo / "generated")
+        shutil.rmtree(self.repo / "ai-rendered")
         external = self.repo / "external"
         external.mkdir()
-        (self.repo / "generated").symlink_to(external, target_is_directory=True)
+        (self.repo / "ai-rendered").symlink_to(external, target_is_directory=True)
         with self.assertRaisesRegex(RenderError, "output symlinks"):
             build(self.repo)
         self.assertEqual(list(external.iterdir()), [])
@@ -288,7 +308,7 @@ class RendererTests(unittest.TestCase):
             with self.assertRaisesRegex(OSError, "replacement failure"):
                 build(self.repo)
         self.assertEqual(self.snapshot(), before)
-        self.assertFalse(list((self.repo / "generated").glob(".ai-render-*")))
+        self.assertFalse(list((self.repo / "ai-rendered").glob(".ai-render-*")))
 
     def test_failed_recovery_preserves_backup_and_reports_its_path(self):
         build(self.repo)
@@ -308,7 +328,7 @@ class RendererTests(unittest.TestCase):
         with patch.object(Path, "rename", fail_replacement_and_recovery):
             with self.assertRaisesRegex(RenderError, "previous output remains at") as raised:
                 build(self.repo)
-        backup, = (self.repo / "generated").glob(".ai-render-*/old")
+        backup, = (self.repo / "ai-rendered").glob(".ai-render-*/old")
         self.assertIn(str(backup), str(raised.exception))
         self.assertEqual(
             {
@@ -334,6 +354,20 @@ class RendererTests(unittest.TestCase):
         self.assertEqual(self.snapshot(), before)
         checked = subprocess.run(command + ["--check"], cwd=renderer, capture_output=True, text=True)
         self.assertEqual(checked.returncode, 0, checked.stderr)
+        self.assertEqual(self.snapshot(), before)
+        self.template.write_text('---\ndescription: Changed example.\n---\nChanged.\n')
+        pi_only = subprocess.run(command + ["--target", "pi"], cwd=renderer, capture_output=True, text=True)
+        self.assertEqual(pi_only.returncode, 0, pi_only.stderr)
+        after = self.snapshot()
+        self.assertEqual(
+            {path: value for path, value in after.items() if path.parts[1] == "claude"},
+            {path: value for path, value in before.items() if path.parts[1] == "claude"},
+        )
+        self.assertIn("Changed.", (self.skill_output() / "SKILL.md").read_text())
+        self.assertFalse((self.repo / "generated").exists())
+        checked_pi = subprocess.run(command + ["--target", "pi", "--check"], cwd=renderer, capture_output=True, text=True)
+        self.assertEqual(checked_pi.returncode, 0, checked_pi.stderr)
+        self.assertEqual(self.snapshot(), after)
 
 
 if __name__ == "__main__":

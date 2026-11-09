@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import {
   mkdtempSync,
   mkdirSync,
@@ -9,7 +9,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join, relative, resolve } from "node:path";
 import { pathToFileURL, fileURLToPath } from "node:url";
 
 const repo = fileURLToPath(new URL("../../", import.meta.url));
@@ -41,31 +41,76 @@ try {
     pathToFileURL(join(core, "settings-manager.js"))
   );
   const { loadSkills } = await import(pathToFileURL(join(core, "skills.js")));
-  const packagePath = join(repo, "generated/pi/packages/mzizzi");
-  const agentDir = join(temporary, "agent");
+  const packagePath = join(repo, "ai-rendered/pi/packages/mzizzi");
+  const agentDir = join(temporary, "agent string");
   const existingPackage = join(temporary, "existing-package");
-  mkdirSync(agentDir);
+  const oldPackagePath = join(repo, "generated/pi/packages/mzizzi");
+  const setupScript = join(repo, "sandbox/agent-lab/bin/setup-pi.sh");
   mkdirSync(existingPackage);
   writeFileSync(
     join(existingPackage, "package.json"),
     JSON.stringify({ name: "existing-package", pi: {} }),
   );
-  writeFileSync(
-    join(agentDir, "settings.json"),
-    JSON.stringify({
-      defaultProvider: "chatgpt",
-      defaultModel: "gpt-6.1-sol",
-      defaultThinkingLevel: "high",
-      packages: [existingPackage],
-    }),
-  );
-  for (let boot = 0; boot < 2; boot++) {
-    execFileSync("pi", ["install", packagePath], {
-      cwd: temporary,
-      env: { ...process.env, PI_CODING_AGENT_DIR: agentDir },
-      stdio: "pipe",
+  const initialSettings = {
+    defaultProvider: "chatgpt",
+    defaultModel: "gpt-6.1-sol",
+    defaultThinkingLevel: "high",
+  };
+  for (const kind of ["string", "object", "relative string", "relative object", "duplicates"]) {
+    const profile = join(temporary, `agent ${kind}`);
+    mkdirSync(profile);
+    const source = kind.startsWith("relative") ? relative(profile, oldPackagePath) : oldPackagePath;
+    const oldEntry = kind.endsWith("object") ? { source } : source;
+    const settingsPath = join(profile, "settings.json");
+    const oldEntries = kind === "duplicates" ? [oldEntry, { source: relative(profile, oldPackagePath) }] : [oldEntry];
+    writeFileSync(settingsPath, JSON.stringify({
+      ...initialSettings, packages: [existingPackage, ...oldEntries],
+    }));
+    for (let boot = 0; boot < 2; boot++) {
+      execFileSync("bash", [setupScript], {
+        cwd: temporary,
+        env: { ...process.env, PI_CODING_AGENT_DIR: profile },
+        stdio: "pipe",
+      });
+    }
+    const saved = JSON.parse(readFileSync(settingsPath, "utf8"));
+    assert.deepEqual({
+      ...saved, packages: saved.packages.map((source) => resolve(profile, source)),
+    }, {
+      ...initialSettings, packages: [existingPackage, packagePath],
     });
+    const profileSettings = SettingsManager.create(temporary, profile);
+    const profileManager = new DefaultPackageManager({ cwd: temporary, agentDir: profile, settingsManager: profileSettings });
+    const profileResources = await profileManager.resolve();
+    assert.deepEqual(profileResources.installFailures ?? [], []);
+    const profileSkills = loadSkills({
+      cwd: temporary, agentDir: profile, includeDefaults: false,
+      skillPaths: profileResources.skills.filter((resource) => resource.enabled).map((resource) => resource.path),
+    });
+    assert.deepEqual(profileSkills.diagnostics, []);
+    assert.deepEqual(profileSkills.skills.map((skill) => skill.name).sort(), expectedPiSkills);
   }
+  for (const mixed of [false, true]) {
+    const profile = join(temporary, `restricted ${mixed}`);
+    mkdirSync(profile);
+    const settingsPath = join(profile, "settings.json");
+    const original = JSON.stringify({
+      ...initialSettings,
+      packages: [existingPackage, ...(mixed ? [oldPackagePath] : []), { source: oldPackagePath, skills: [] }],
+    }, null, 2) + "\n";
+    writeFileSync(settingsPath, original);
+    const stopped = spawnSync("bash", [setupScript], {
+      cwd: temporary,
+      env: { ...process.env, PI_CODING_AGENT_DIR: profile },
+      encoding: "utf8",
+    });
+    assert.equal(stopped.status, 1, stopped.stdout + stopped.stderr);
+    assert.match(stopped.stderr, /Change only that entry's source/);
+    assert.ok(stopped.stderr.includes(settingsPath));
+    assert.ok(stopped.stderr.includes(packagePath));
+    assert.equal(readFileSync(settingsPath, "utf8"), original);
+  }
+  console.log("Real Pi CLI setup migration, repeated starts, discovery, and restricted-object preflight passed.");
   const settingsManager = SettingsManager.create(temporary, agentDir);
   assert.deepEqual(
     settingsManager.getPackages().map((source) => resolve(agentDir, source)),
@@ -182,7 +227,7 @@ try {
   assert.equal(malformed.status, "invalid");
   console.log("Pi structured review outcome schema passed.");
 
-  const plugin = join(repo, "generated/claude/plugins/mzizzi");
+  const plugin = join(repo, "ai-rendered/claude/plugins/mzizzi");
   const env = { ...process.env, CLAUDE_CONFIG_DIR: join(temporary, "claude") };
   const validation = execFileSync(
     "claude",

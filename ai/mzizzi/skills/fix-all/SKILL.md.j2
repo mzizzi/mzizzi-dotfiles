@@ -9,8 +9,7 @@ pi:
   disable-model-invocation: false
 ---{% if target == "claude" %}{% else %}
 
-Resolve `<skill-dir>` to this skill's absolute directory.
-{% endif %}
+Resolve `<skill-dir>` to this skill's absolute directory.{% endif %}
 
 # Fix all
 
@@ -39,7 +38,9 @@ State what you parsed in one line before starting. Three passes run on whatever 
     Skill(skill: "fix-quality",     args: "[--base <ref>] [--plan <path>] [--apply=<value>]")
     Skill(skill: "fix-comments",    args: "[--base <ref>] [--strictness=<value>] [--apply=<value>]")
 {% else %}Read and follow {{ Skill("fix-correctness") }} from `<skill-dir>/../fix-correctness/SKILL.md` with arguments `[--base <ref>] [--plan <path>] [--apply=<value>]`.
+
 Read and follow {{ Skill("fix-quality") }} from `<skill-dir>/../fix-quality/SKILL.md` with arguments `[--base <ref>] [--plan <path>] [--apply=<value>]`.
+
 Read and follow {{ Skill("fix-comments") }} from `<skill-dir>/../fix-comments/SKILL.md` with arguments `[--base <ref>] [--strictness=<value>] [--apply=<value>]`.
 {% endif %}
 Omit any argument you didn't resolve.

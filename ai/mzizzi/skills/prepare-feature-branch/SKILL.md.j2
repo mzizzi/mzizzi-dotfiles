@@ -9,8 +9,7 @@ pi:
   disable-model-invocation: false
 ---{% if target == "pi" %}
 
-Keep `<skill-dir>` and the plan path absolute across worktree entry. Entry needs the worktree extension in an interactive parent session; stop if unavailable.
-{% endif %}
+Keep `<skill-dir>` and the plan path absolute across worktree entry. Entry needs the worktree extension in an interactive parent session; stop if unavailable.{% endif %}
 
 # Prepare Feature Branch
 
@@ -20,7 +19,9 @@ This is the single source of truth for the branch-naming convention. That matter
 
 ## Convention
 
-    <username>/<slug>
+```text
+<username>/<slug>
+```
 
 - `<username>` — local-part of `git config user.email` (`mhzizzi@gmail.com` → `mhzizzi`)
 - `<slug>` — plan directory basename with the leading `yyyymmdd-` stamp stripped (`20260713-oauth-token-refresh` → `oauth-token-refresh`)

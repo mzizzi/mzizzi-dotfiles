@@ -1,0 +1,53 @@
+#!/usr/bin/env node
+// Target-specific transport; input, prompt, outcome, and report logic are shared.
+import fs from "node:fs";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
+import { prepareReview, renderOutcome, checkOutcome, unavailable, fail } from "./lib/review.mjs";
+
+let prepared;
+try {
+  prepared = prepareReview(process.argv.slice(2));
+} catch (error) {
+  fail(error, 2);
+}
+
+if (prepared) {
+  let codex;
+  try {
+    const configDir = process.env.CLAUDE_CONFIG_DIR || path.join(process.env.USERPROFILE || process.env.HOME, ".claude");
+    const installedJson = path.join(configDir, "plugins/installed_plugins.json");
+    let pluginRoot;
+    try {
+      pluginRoot = JSON.parse(fs.readFileSync(installedJson, "utf8")).plugins["codex@openai-codex"][0].installPath;
+    } catch { /* Report the same missing-plugin outcome for absent or malformed registries. */ }
+    if (!pluginRoot || !fs.existsSync(path.join(pluginRoot, "scripts/lib/codex.mjs"))) {
+      throw new Error(`CODEX_NOT_INSTALLED: the openai-codex plugin is missing (looked in ${installedJson}).`);
+    }
+    try {
+      codex = await import(pathToFileURL(path.join(pluginRoot, "scripts/lib/codex.mjs")).href);
+      if (typeof codex.runAppServerTurn !== "function" || typeof codex.parseStructuredOutput !== "function") throw new Error("missing exports");
+    } catch (error) {
+      throw new Error(`CODEX_CONTRACT_CHANGED: ${error.message}`);
+    }
+  } catch (error) {
+    fail(error, 2);
+  }
+  if (codex) {
+    try {
+      const result = await codex.runAppServerTurn(prepared.repoRoot, {
+        prompt: prepared.prompt,
+        sandbox: "read-only",
+        outputSchema: prepared.outputSchema,
+        model: prepared.model,
+        effort: prepared.effort
+      });
+      const outcome = result.status !== 0 || !result.finalMessage
+        ? unavailable(result.error?.message || result.stderr || "Codex returned no report.")
+        : checkOutcome(codex.parseStructuredOutput(result.finalMessage).parsed);
+      process.stdout.write(renderOutcome(outcome, prepared.targetLabel, "Codex"));
+    } catch (error) {
+      fail(error);
+    }
+  }
+}

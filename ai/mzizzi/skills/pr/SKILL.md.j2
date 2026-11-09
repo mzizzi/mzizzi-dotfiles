@@ -7,8 +7,7 @@ pi:
   disable-model-invocation: false
 ---{% if target == "claude" %}{% else %}
 
-Resolve `<skill-dir>` to this skill's absolute directory.
-{% endif %}
+Resolve `<skill-dir>` to this skill's absolute directory.{% endif %}
 
 # Instructions
 
@@ -86,7 +85,7 @@ Follow this process when creating a new pull request:
 
 Use this template when the repository does not provide its own PR template:
 
-```
+```markdown
 Concise, high level, description of the changes made and the **why** of the PR goes here. Less is more. This is meant to quickly orient a human reviewer. LESS IS MORE.
 
 ## Related

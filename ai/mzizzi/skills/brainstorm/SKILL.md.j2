@@ -9,8 +9,7 @@ pi:
   disable-model-invocation: false
 ---{% if target == "claude" %}{% else %}
 
-Resolve `<skill-dir>` to this skill's absolute directory.
-{% endif %}
+Resolve `<skill-dir>` to this skill's absolute directory.{% endif %}
 
 # Brainstorm
 
@@ -100,7 +99,9 @@ On a continuation, **merge, don't replace**: carry the original decisions forwar
 
 Run a pragmatic review of the document:
 
-{% if target == "claude" %}    Agent(subagent_type: "mzizzi:pragmatic-reviewer", prompt: "Review the brainstorm at <path to the document>.", run_in_background: false)
+{% if target == "claude" %}```text
+Agent(subagent_type: "mzizzi:pragmatic-reviewer", prompt: "Review the brainstorm at <path to the document>.", run_in_background: false)
+```
 {% else %}Enable `subagent` with `subagents_enable` if needed. Start {{ Agent("pragmatic-reviewer") }} with fresh context:
 
 ```js
@@ -117,14 +118,17 @@ Otherwise, report the saved path and any `## Open questions`, then ask the Step 
 
 Only after **Create implementation plan**:
 
-{% if target == "claude" %}    Skill(skill: "create-plan", args: "<plan dir path> — build plan.md from <brainstorm file path>")
+{% if target == "claude" %}```text
+Skill(skill: "create-plan", args: "<plan dir path> — build plan.md from <brainstorm file path>")
+```
 {% else %}Read and follow {{ Skill("create-plan") }} from `<skill-dir>/../create-plan/SKILL.md` with arguments `<plan dir path> — build plan.md from <brainstorm file path>`.
 {% endif %}
 ## Signing off
 
 Whenever the skill exits without handing off to planning, end your final message with this message and nothing after it:
 
-    Brainstorm written: <brainstorm file path>
-{% if target == "claude" %}    Create a plan with: /mzizzi:create-plan <brainstorm file path>
-{% else %}    Create a plan with: /skill:create-plan <brainstorm file path>
-{% endif %}
+```text
+Brainstorm written: <brainstorm file path>
+{% if target == "claude" %}Create a plan with: /mzizzi:create-plan <brainstorm file path>
+{% else %}Create a plan with: /skill:create-plan <brainstorm file path>
+{% endif %}```

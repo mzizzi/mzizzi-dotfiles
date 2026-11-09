@@ -19,7 +19,7 @@ Safe to re-run any time, including after moving or re-cloning the repo -- it sel
 
 Markdown here is stored one logical line per paragraph -- editors soft-wrap it, so a one-word edit no longer reshuffles a paragraph's wrap points into a multi-line diff. Prettier does the reflowing and `.prettierrc` is the contract, read by the git hook and by any editor Prettier plugin alike. The hook is authoritative: it pins its own Prettier version, while an editor plugin uses whatever version it ships with, so the two can still disagree on output the pin has changed. If format-on-save keeps producing edits the hook then rewrites, match your editor's Prettier to the version pinned in `.pre-commit-config.yaml`.
 
-Enforcement is a [pre-commit](https://pre-commit.com) hook (`.pre-commit-config.yaml`), which builds its own node environment and installs the pinned Prettier -- there is no `package.json` or `node_modules` in this repo. That is a client-side hook and therefore best-effort: it does not exist on a clone that never ran the steps below, and `git commit --no-verify` skips it. There is no CI check backing it up.
+[pre-commit](https://pre-commit.com) manages local commit and push hooks. It installs isolated Python and Node dependencies pinned in [the hook configuration](.pre-commit-config.yaml). Manual rendering uses [the renderer requirements](ai-renderer/requirements.txt). Setup needs Python >=3.11 and Node >=22. No root `package.json` or `node_modules` is needed.
 
 Per machine, once:
 
@@ -27,15 +27,38 @@ Per machine, once:
 
 Per clone, once, from the repo root:
 
-    python -m pre_commit install
+    python -m pre_commit install --install-hooks
 
-Use `python -m pre_commit ...` rather than the `pre-commit` shim: a `--user` install puts the shim somewhere that is not necessarily on PATH. The generated git hook is unaffected -- it embeds an absolute path to the Python that installed it.
+This installs both `pre-commit` and `pre-push`. Existing clones must rerun this command to receive the push hook; repeating it is safe. Use `python -m pre_commit ...` rather than the `pre-commit` shim: a `--user` install puts the shim somewhere that is not necessarily on PATH. The generated git hook is unaffected -- it embeds an absolute path to the Python that installed it.
 
-To reformat everything by hand (after changing `.prettierrc`, say):
+To format authored Markdown by hand (after changing `.prettierrc`, say):
+
+    python -m pre_commit run prettier --all-files
+
+The commit hook formats selected authored Markdown first, then checks the AI candidate and all rendered Markdown. The push hook checks the AI candidate, all rendered Markdown, and selected authored Markdown without writing files. Neither hook stages files or writes rendered output. For the full checks:
 
     python -m pre_commit run --all-files
+    python -m pre_commit run --all-files --hook-stage pre-push
 
-When a commit genuinely needs to skip the check, prefer `SKIP=prettier git commit` over `--no-verify` -- it stays narrow if more hooks are added later.
+Manual runs see unstaged relevant files and require you to stage or restore them. Installed hooks can temporarily hide unstaged tracked changes; they validate the candidate, not every local edit.
+
+These are bypassable local hooks, not server-side enforcement or CI. Clones without installation and `git commit --no-verify` / `git push --no-verify` bypass them; `SKIP=<hook-id>` skips individual checks. Push validation covers the checked-out branch's current committed candidate, not arbitrary other branches, every ref in a multi-ref push, or every intermediate commit.
+
+### Rendered AI packages
+
+`ai/` owns authored templates/resources, `ai-renderer/` owns rendering and candidate checks, and committed `ai-rendered/` owns complete Claude plugins and Pi packages. Do not edit output directly or run a formatter's write mode on it. The ignored `generated/` directory is a retired local cache; it is not removed automatically.
+
+After changing a source, install the manual renderer dependencies and regenerate both targets:
+
+```bash
+python -m pip install -r ai-renderer/requirements.txt
+python ai-renderer/render_ai.py
+python ai-renderer/render_ai.py --check
+# Review the diff, then explicitly stage the intended source and output paths.
+git add ai/<changed-source> ai-rendered/<changed-output>
+```
+
+If output formatting or lint fails, fix the source and render again. The output checks cover every rendered Markdown file except the two exact vendored `adversarial-review/references/adversarial-review.md` copies. The [renderer documentation](ai-renderer/README.md) describes candidate checks and tool policy. Sandbox startup still renders before registering `ai-rendered/pi/packages/mzizzi`; production Claude plugins and marketplace loading remain unchanged.
 
 Two things worth knowing when writing markdown here:
 

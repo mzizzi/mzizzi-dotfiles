@@ -1,0 +1,78 @@
+---
+name: fix-correctness
+description: Review a change for correctness only — bugs, edge cases, error handling — then apply the trivial in-scope fixes and defer the rest as follow-ups. Use when a change needs a bug review acted on rather than just reported, e.g. "review this for bugs and fix them".
+argument-hint: '[--plan <path to plan.md>] [--apply=none|all] [--base <ref>]'
+allowed-tools: Read, Grep, Glob, Edit, Write, Bash, AskUserQuestion, Skill
+disable-model-invocation: false
+user-invocable: true
+---
+
+# Fix correctness
+
+Run a cross-model adversarial review of a change, then act on what it finds: apply the fixes that are trivial and belong in this round, defer the rest, report both. Correctness only — comment quality belongs to `/mzizzi:fix-comments`, reuse and simplification to `/mzizzi:fix-quality`. Work the steps in order.
+
+## 1. Resolve the arguments
+
+Parse `--base`, `--plan` and `--apply`. State the resolved target. The target is `git diff --merge-base <ref>` plus untracked files (`git ls-files --others --exclude-standard`). `<ref>` is `HEAD` when `--base` is omitted.
+
+If `git diff --stat --merge-base <ref>` and the untracked list are both empty, say there's nothing to review and stop.
+
+**`--plan <path>`** is optional. Given one, step 2 steers the review toward fidelity to that plan, and step 5 writes deferred findings into it. Without it, deferred findings stay in the report.
+
+**`--apply`** is optional. `none` — review and report, change nothing: steps 4 and 5 are skipped, so nothing is written, including to `--plan`. `all` — step 4 applies every valid finding instead of only the small ones.
+
+## 2. Run the review
+
+    Skill(skill: "adversarial-review", args: "--base <ref> focus on correctness, edge cases, error handling. Right-size each recommendation to the problem — KISS/YAGNI/DRY balanced against the complexity the change actually warrants; no guards, retries, or abstraction for failures this diff does not exhibit.")
+
+With `--plan`, append `, and whether the implementation faithfully follows the plan at <plan path>` to that focus text.
+
+On success the output is prose, not JSON: a `Verdict:` line and summary, a `Findings:` list (`- [severity] title (file:line-range)`, body, optional `Recommendation:`), and `Next steps:`. Hold it for step 3.
+
+**If the review is unavailable** (plugin not installed, authentication error, CLI unavailable, another runtime failure), it returns a failure reason instead of a report. Say it was unavailable and why, then stop — there are no findings to act on, and the rest of this skill has nothing to do.
+
+## 3. Triage the findings
+
+Three judgments per finding:
+
+1. **Valid or noise?** Discard overzealous flags — stylistic nits, concerns the plan addresses elsewhere, misreadings of the code. Say briefly why you discarded anything non-obvious, so the author can object.
+2. **Fix now or defer?** Fix-now belongs with this change: a correctness bug, a missing edge case central to what was just built. Defer is real but out of scope for keeping the round tight.
+3. **Trivial or needs thought?** Trivial is small, local, and obviously correct. Needs-thought means design decisions, many call sites, or non-obvious tradeoffs.
+
+When the fix-now/defer call is really a scope judgment the author should own, ask with AskUserQuestion rather than deciding for them.
+
+## 4. Apply what's trivial
+
+**Skip this step under `--apply=none`** — everything valid goes to the report as deferred instead.
+
+Apply every finding that is **valid AND fix-now AND trivial**. Everything else that's valid is deferred. Under `--apply=all`, apply everything valid — it raises the size ceiling, never the bar.
+
+Then run the project's verification — typecheck, tests, lint, whatever the repo defines. A "trivial" fix that broke something has to surface here, not in the author's next run. If something fails and the fix isn't immediately obvious, revert that finding and move it to the deferred list with the failure noted.
+
+## 5. Record what you deferred
+
+**Skip this step under `--apply=none`** — it writes nothing, `--plan` or not. Say in the report that the plan was left untouched, so nobody goes looking for entries that aren't there.
+
+**Without `--plan`** — deferred findings stay in the report below. Nothing is written anywhere.
+
+**With `--plan <path>`** — hand them to the skill that owns the format:
+
+    Skill(skill: "record-follow-ups", args: "<plan path> <the deferred findings>")
+
+Give it each finding's `file:line`, what the issue is, why you deferred it rather than fixing it, and the fix the reviewer proposed where that holds up. It shapes and places the entries, dedups against what the plan already carries, and reports back what it wrote.
+
+## 6. Report
+
+Open with the review's verdict and a one-line assessment: what it found and what you did about it.
+
+Every finding the review returned appears exactly once across the sections below — **Fixed**, **Fixed in weaker form**, **Deferred**, or **Discarded**. State the count the review reported, so the sections visibly reconcile against it. A finding that reaches the author in none of these states is one you dropped without deciding to.
+
+**Fixed** — one line each: `file:line`, what was wrong, what changed. Name the verification you ran and its result, quoting any failure.
+
+**Fixed in weaker form** — the outcome that otherwise hides inside **Fixed**: the edit you made is not one the review would recognize as its recommendation — half of a two-part fix, or a narrower change that leaves the reported failure reachable by another path. One line each: what was recommended, what you did instead, and why. If the remaining exposure is real, it belongs in **Deferred** too.
+
+**Deferred** — one line each: `file:line`, the issue, and why it wasn't fixed now. With `--plan`, say which of these landed in the plan, using the titles `record-follow-ups` reported.
+
+**Discarded** — what the review raised that you judged noise, one line each with the reason. Say this out loud; a reader who can't see what you rejected can't tell a careful triage from a shallow one.
+
+If the review found nothing, say so and stop. An empty result is a real one.

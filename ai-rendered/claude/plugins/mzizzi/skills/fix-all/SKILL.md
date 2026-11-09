@@ -1,0 +1,50 @@
+---
+name: fix-all
+description: Run the full review sweep over a change — fix-correctness, then fix-quality, then fix-comments — applying fixes and deferring the rest. Use when the user wants a change fully reviewed before committing or opening a PR, e.g. "review and clean this up".
+argument-hint: '[--apply=none|all] [--plan <path to plan.md>] [--strictness=high|low] [pr | --base <ref>]'
+allowed-tools: Read, Grep, Glob, Bash, Edit, Skill, TaskCreate, TaskUpdate, TaskList
+disable-model-invocation: false
+user-invocable: true
+---
+
+# Fix all
+
+Run the three fix skills over one change, in order, then check nothing broke. Each pass has its own argument surface, so this skill parses the union once and hands each pass only what it understands.
+
+## 1. Parse the arguments
+
+Arguments may appear in any order.
+
+- `--apply=none|all` — goes to all three. `none`: every pass reviews and reports, nothing is applied or written. `all`: each pass applies its large findings instead of deferring them.
+- `--plan <path>` — goes to fix-correctness and fix-quality, which write their deferred findings into that plan's Follow-ups. fix-comments has no such argument; don't pass it one.
+- `--strictness=high|low` — fix-comments only.
+- the **target**:
+  - omitted — the working tree.
+  - `--base <ref>` — forwarded to all three.
+  - `pr` — the checked-out PR branch against its base: `gh pr view --json baseRefName`, `git fetch origin <baseRefName>`, then forward `--base origin/<baseRefName>`.
+
+State what you parsed in one line before starting. Three passes run on whatever you resolved, so a misparse is much cheaper caught here.
+
+## 2. Run the passes
+
+Seed a task per pass plus one for verification, chained with blocked-by so the order is fixed while changing it is still free. Then run them in order, each with the arguments resolved above:
+
+    Skill(skill: "fix-correctness", args: "[--base <ref>] [--plan <path>] [--apply=<value>]")
+    Skill(skill: "fix-quality",     args: "[--base <ref>] [--plan <path>] [--apply=<value>]")
+    Skill(skill: "fix-comments",    args: "[--base <ref>] [--strictness=<value>] [--apply=<value>]")
+
+Omit any argument you didn't resolve.
+
+Correctness runs first so the later passes clean up code that's already right, and comments run last because the first two passes add narration of their own.
+
+Read each pass's report before starting the next. If fix-correctness stops without reviewing, stop and report its reason.
+
+## 3. Verify
+
+Skip this under `--apply=none`: nothing changed, so there's nothing to check.
+
+Run the project's tests and linters. Three passes editing the same files in sequence is exactly where a cleanup that was supposed to preserve behavior turns out not to.
+
+## 4. Report
+
+A section per pass — they answer different questions — then the verification you ran and its result, quoting any failure. With `--plan`, name the follow-ups the correctness and quality passes recorded, so the user sees what landed there without opening the file.
