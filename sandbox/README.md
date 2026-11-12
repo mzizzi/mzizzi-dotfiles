@@ -30,11 +30,18 @@ pi
 gh api user --jq .login                         # verify GitHub proxy authentication
 ```
 
-The clone starts from the committed ref; uncommitted files are readable at `/run/sandbox/source`. Bash history, Claude and pi sessions, and dcode threads are kept on the host in `%USERPROFILE%\.sandbox-state\agent-lab`, which `sbxenv.yaml` mounts. Claude Code uses the host Claude login, and Codex, dcode, and Pi use the host ChatGPT login, all through Docker's credential proxy; the sandbox only sees placeholder tokens. Don't log in inside the sandbox with `claude auth login`, dcode's `/auth`, or Pi's `/login`. Pi reaches the ChatGPT login through the kit's `chatgpt` provider in `~/.pi/agent/models.json`.
+The clone starts from the committed ref; uncommitted files are readable at `/run/sandbox/source`. Bash history, Claude and pi sessions, dcode threads, and the IntelliJ backend archive cache are kept on the host in `%USERPROFILE%\.sandbox-state\agent-lab`, which `sbxenv.yaml` mounts. Claude Code uses the host Claude login, and Codex, dcode, and Pi use the host ChatGPT login, all through Docker's credential proxy; the sandbox only sees placeholder tokens. Don't log in inside the sandbox with `claude auth login`, dcode's `/auth`, or Pi's `/login`. Pi reaches the ChatGPT login through the kit's `chatgpt` provider in `~/.pi/agent/models.json`.
 
-For IntelliJ remote development, run `sbx setup ssh` once on the host and save an SSH configuration for `agent-lab.sbx` using OpenSSH config authentication. The host needs Python 3 available as `python`. After each rebuild, `postCreate` refreshes the host-specific key entries IntelliJ 2026.2 needs in `~/.ssh/known_hosts`. The saved IntelliJ SSH configuration stays on the host across rebuilds. Select `/c/Users/Matt/code/mzizzi-dotfiles` as the remote project path; it is the private sandbox clone, not a read-write host mount.
+For IntelliJ remote development, run `sbx setup ssh` once on the host. The host needs Python 3 available as `python`. On each create, `postCreate` runs `agent-lab/bin/setup-intellij.py`, which prepares the newest IntelliJ IDEA installed on the host:
 
-The SSH setup script also runs on macOS with Python 3. The environment file still has Windows paths and a PowerShell network hook, so those need updating before using the full sandbox on macOS. If macOS only provides `python3`, change the SSH hook's lifecycle command to use it.
+- It refreshes the host-specific key entries IntelliJ's SSH client needs in `~/.ssh/known_hosts`.
+- It downloads the Linux backend for that IDE's exact build, checks it against the SHA-256 that JetBrains publishes, and caches it under the mounted `.sandbox-state` directory. A rebuild reuses the cached archive; a new host IDE build replaces it.
+- It unpacks the backend into the container next to the backends IntelliJ deploys, not onto the Windows mount.
+- It adds the `agent-lab.sbx` OpenSSH configuration (if missing) and a recent project for the workspace clone to that IDE's options directory, keeping each changed file's previous version as `<file>.bak`.
+
+Open the recent project from IntelliJ's Remote Development welcome screen; it starts the unpacked backend without downloading one or asking for a project path. The project is the private sandbox clone, not a read-write host mount. IntelliJ rewrites these options files from memory on exit, so the script skips them while IntelliJ is running and prints the command to rerun after quitting it. Rerunning is safe; every step is skipped when already done.
+
+The IntelliJ setup script also runs on macOS with Python 3. The environment file still has Windows paths and a PowerShell network hook, so those need updating before using the full sandbox on macOS. If macOS only provides `python3`, change the IntelliJ hook's lifecycle command to use it.
 
 `sbxenv.yaml` reads the host's `gh auth token` when creating the sandbox. The kit gives `gh` a proxy-managed `GH_TOKEN` and configures it as Git's HTTPS credential helper. The real token stays on the host. `gh auth login` inside the sandbox is unnecessary; `GH_TOKEN` takes precedence over stored GitHub CLI logins. To refresh the host login, run `gh auth login` on the host and then `sbx secret set github --sandbox agent-lab --command 'gh auth token'` to update the existing sandbox without rebuilding it.
 
@@ -56,7 +63,7 @@ Attention Control is one of those extensions. It loads the full prompt from `con
 
 For an older sandbox, move the generated `~/.pi/agent/APPEND_SYSTEM.md` aside before `/reload` if it contains only Attention Control. Keep any user-authored instructions. New sandboxes do not create this file.
 
-Run the setup tests from the repo root with `node --test sandbox/agent-lab/tests/*.test.mjs`.
+Run the setup tests from the repo root with `node --test sandbox/agent-lab/tests/*.test.mjs` and `python -m unittest discover -s sandbox/agent-lab/tests`.
 
 ## Traps
 
