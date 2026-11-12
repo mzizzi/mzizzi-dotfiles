@@ -110,7 +110,7 @@ export default function tasks(pi) {
 
   register(
     "TaskCreate",
-    "Create a task only for explicit task-tracking requests or long-horizon work that needs persistent state. Skip routine short work. Tasks track work; they do not execute it. Limit: 100 tasks.",
+    "Only on explicit request for task tracking. Create a task to track work. Limit: 100 tasks.",
     editable,
     ["subject", "description"],
     (params) => {
@@ -130,7 +130,7 @@ export default function tasks(pi) {
 
   register(
     "TaskList",
-    "List all tasks with status and up to five open blockers each. Output truncates at 48 KiB; use TaskGet for full task details.",
+    "Only on explicit request for task tracking. List task statuses and up to five open blockers each. Truncates at 48 KiB; use TaskGet for details.",
     {},
     [],
     listText,
@@ -138,7 +138,7 @@ export default function tasks(pi) {
 
   register(
     "TaskGet",
-    "Get one task, its description, and all dependency IDs.",
+    "Only on explicit request for task tracking. Get a task, its description, and all dependency IDs.",
     { taskId },
     ["taskId"],
     ({ taskId: id }) => {
@@ -150,7 +150,7 @@ export default function tasks(pi) {
 
   register(
     "TaskUpdate",
-    "Update a task. Set in_progress before work and completed after checks pass. Status deleted removes the task and its dependency edges. Open blockers produce warnings, not errors.",
+    "Only on explicit request for task tracking. Update a task: in_progress before work, completed after checks pass. Status deleted removes the task and dependency edges. Open blockers warn only.",
     {
       taskId,
       ...editable,
