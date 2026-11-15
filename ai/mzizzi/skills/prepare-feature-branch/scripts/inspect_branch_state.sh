@@ -39,6 +39,9 @@ slug="${slug#[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-}"   # strip the yyyymmdd-
 
 email="$(git config user.email || true)"
 username="${email%%@*}"
+if [[ "$email" =~ ^[0-9]+\+([^@]+)@users\.noreply\.github\.com$ ]]; then
+  username="${BASH_REMATCH[1]}"
+fi
 if [ -z "$username" ]; then
   echo "ERROR=no-git-user-email"
   exit 1

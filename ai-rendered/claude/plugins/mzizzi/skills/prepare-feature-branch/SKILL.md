@@ -19,7 +19,7 @@ This is the single source of truth for the branch-naming convention. That matter
 <username>/<slug>
 ```
 
-- `<username>` — local-part of `git config user.email` (`mhzizzi@gmail.com` → `mhzizzi`)
+- `<username>` — local-part of `git config user.email` (`mhzizzi@gmail.com` → `mhzizzi`). For GitHub noreply addresses of the form `<numeric-id>+<username>@users.noreply.github.com`, use only `<username>` (`354423602+super-crispy@users.noreply.github.com` → `super-crispy`). Legacy `<username>@users.noreply.github.com` addresses already use the username. Keep the local-part unchanged for other addresses, including plus-addresses.
 - `<slug>` — plan directory basename with the leading `yyyymmdd-` stamp stripped (`20260713-oauth-token-refresh` → `oauth-token-refresh`)
 
 The same string names the worktree, when the branch already lives in one.
