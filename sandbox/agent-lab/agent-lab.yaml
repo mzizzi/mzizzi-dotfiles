@@ -199,17 +199,17 @@ capabilities:
               }
             }
           mode: "0600"
-        # Pi's ChatGPT provider, keyed with the proxy's placeholder token like Codex above. Pi's
-        # built-in openai-codex provider reads the account ID from a JWT access token, so it
-        # rejects the placeholder. With no other provider logged in, plain `pi` starts on the
-        # first model listed. Limits, thinking levels and compat copy pi's openai-codex catalog.
+        # Keys pi's built-in openai-codex provider with the proxy's placeholder token like Codex
+        # above. The provider's own openai-codex-responses API reads the account ID from a JWT
+        # access token, so it rejects the placeholder; the models listed here use openai-responses
+        # instead. The provider's other models keep the built-in API and fail here. Limits,
+        # thinking levels and compat copy pi's openai-codex catalog.
         - path: /home/agent/.pi/agent/models.json
           overwrite: false
           content: |
             {
               "providers": {
-                "chatgpt": {
-                  "name": "ChatGPT",
+                "openai-codex": {
                   "baseUrl": "https://chatgpt.com/backend-api/codex",
                   "api": "openai-responses",
                   "apiKey": "oai-oat01-proxy-managed",

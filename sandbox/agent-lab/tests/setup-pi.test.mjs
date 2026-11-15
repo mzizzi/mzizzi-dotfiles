@@ -391,7 +391,7 @@ test("installs shared packages and the bundled style without an external prompt"
     ...JSON.parse(settings),
     packages: [...JSON.parse(settings).packages, join(repoRoot, "ai-rendered/pi/packages/mzizzi")],
   });
-  assert.equal(installedSettings.defaultProvider, "chatgpt");
+  assert.equal(installedSettings.defaultProvider, "openai-codex");
   assert.equal(installedSettings.defaultModel, "gpt-6.1-sol");
   assert.equal(installedSettings.defaultThinkingLevel, "high");
   assert.deepEqual(JSON.parse(readFileSync(subagentConfig, "utf8")), {

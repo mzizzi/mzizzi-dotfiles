@@ -129,8 +129,8 @@ export function prepareReview(argv, { native = false, cwd = process.cwd() } = {}
   let effort = options.effort;
   if (native) {
     model ??= "gpt-6-astra";
-    if (!["gpt-6-astra", "chatgpt/gpt-6-astra"].includes(model)) throw new Error(`Unsupported native review model: ${model}`);
-    model = "chatgpt/gpt-6-astra";
+    if (!["gpt-6-astra", "openai-codex/gpt-6-astra"].includes(model)) throw new Error(`Unsupported native review model: ${model}`);
+    model = "openai-codex/gpt-6-astra";
     effort ??= "high";
     if (!["off", "minimal", "low", "medium", "high", "xhigh", "max"].includes(effort)) throw new Error(`Unsupported native review effort: ${effort}`);
   }

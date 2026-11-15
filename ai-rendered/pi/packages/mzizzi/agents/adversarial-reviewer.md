@@ -2,7 +2,7 @@
 name: adversarial-reviewer
 description: Challenge plans and changes with an evidence-based adversarial review. Use the supplied review prompt and return the required structured outcome without changing target files.
 package: mzizzi
-model: chatgpt/gpt-6-astra
+model: openai-codex/gpt-6-astra
 thinking: high
 advertise: true
 defaultContext: fresh

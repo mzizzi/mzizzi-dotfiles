@@ -2,8 +2,8 @@
 name: simple
 description: Lowest-cost tier for well-scoped tasks — web searches, doc lookups, file search and extraction, summarization, running defined tests, image analysis, docs/text refactors, and small code edits that follow an existing pattern. Split mixed tasks so the lookup part runs here; everything else goes to standard.
 package: mzizzi
-model: chatgpt/gpt-6.1-sol
-thinking: medium
+model: openai-codex/gpt-6.1-sol
+thinking: high
 advertise: true
 defaultContext: fresh
 systemPromptMode: replace

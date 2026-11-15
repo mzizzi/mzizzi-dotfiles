@@ -22,12 +22,12 @@ const expectedClaudeSkills = readdirSync(
 const renameReview = (name) => name === "codex-adversarial-review" ? "adversarial-review" : name;
 const expectedPiSkills = expectedClaudeSkills.map(renameReview).sort();
 const expectedAgents = [
-  ["pragmatic-reviewer", "chatgpt/gpt-6-astra", "medium"],
-  ["standard", "chatgpt/gpt-6.1-sol", "high"],
-  ["complex", "chatgpt/gpt-6-astra", "medium"],
-  ["simple", "chatgpt/gpt-6.1-sol", "medium"],
-  ["delegator", "chatgpt/gpt-6.1-sol", "high"],
-  ["adversarial-reviewer", "chatgpt/gpt-6-astra", "high"],
+  ["pragmatic-reviewer", "openai-codex/gpt-6-astra", "medium"],
+  ["standard", "openai-codex/gpt-6.1-sol", "high"],
+  ["complex", "openai-codex/gpt-6-astra", "high"],
+  ["simple", "openai-codex/gpt-6.1-sol", "high"],
+  ["delegator", "openai-codex/gpt-6.1-sol", "high"],
+  ["adversarial-reviewer", "openai-codex/gpt-6-astra", "high"],
 ];
 try {
   const npmRoot = execFileSync("npm", ["root", "-g"], {
@@ -52,7 +52,7 @@ try {
     JSON.stringify({ name: "existing-package", pi: {} }),
   );
   const initialSettings = {
-    defaultProvider: "chatgpt",
+    defaultProvider: "openai-codex",
     defaultModel: "gpt-6.1-sol",
     defaultThinkingLevel: "high",
   };
@@ -116,7 +116,7 @@ try {
     settingsManager.getPackages().map((source) => resolve(agentDir, source)),
     [existingPackage, packagePath],
   );
-  assert.equal(settingsManager.getDefaultProvider(), "chatgpt");
+  assert.equal(settingsManager.getDefaultProvider(), "openai-codex");
   assert.equal(settingsManager.getDefaultModel(), "gpt-6.1-sol");
   assert.equal(settingsManager.getDefaultThinkingLevel(), "high");
   const manager = new DefaultPackageManager({

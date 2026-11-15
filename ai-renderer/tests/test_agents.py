@@ -28,10 +28,10 @@ class AgentTests(unittest.TestCase):
     def test_agents_preserve_instructions_and_target_settings(self):
         build(self.repo)
         cases = (
-            ("pragmatic-reviewer", "chatgpt/gpt-6-astra", "medium"),
-            ("standard", "chatgpt/gpt-6.1-sol", "high"),
-            ("complex", "chatgpt/gpt-6-astra", "medium"),
-            ("simple", "chatgpt/gpt-6.1-sol", "medium"),
+            ("pragmatic-reviewer", "openai-codex/gpt-6-astra", "medium"),
+            ("standard", "openai-codex/gpt-6.1-sol", "high"),
+            ("complex", "openai-codex/gpt-6-astra", "high"),
+            ("simple", "openai-codex/gpt-6.1-sol", "high"),
         )
         for name, model, thinking in cases:
             original = (REPO / "plugins/mzizzi/agents" / f"{name}.md").read_text()
@@ -61,7 +61,7 @@ class AgentTests(unittest.TestCase):
             with self.subTest(target=target):
                 _, metadata, body = self.output(target, "delegator").read_text().split("---", 2)
                 metadata = yaml.safe_load(metadata)
-                self.assertEqual(metadata["model"], "opus" if target == Target.CLAUDE else "chatgpt/gpt-6.1-sol")
+                self.assertEqual(metadata["model"], "opus" if target == Target.CLAUDE else "openai-codex/gpt-6.1-sol")
                 if target == Target.PI:
                     self.assertNotIn("experimental", metadata)
                     self.assertIs(metadata["allowNestedSubagents"], True)
@@ -93,7 +93,7 @@ class AgentTests(unittest.TestCase):
         self.assertFalse(self.output(Target.CLAUDE, "adversarial-reviewer").exists())
         _, metadata, body = self.output(Target.PI, "adversarial-reviewer").read_text().split("---", 2)
         metadata = yaml.safe_load(metadata)
-        self.assertEqual(metadata["model"], "chatgpt/gpt-6-astra")
+        self.assertEqual(metadata["model"], "openai-codex/gpt-6-astra")
         self.assertEqual(metadata["thinking"], "high")
         self.assertEqual(metadata["tools"], "read, grep, find, ls, bash")
         self.assertEqual(metadata["acceptanceRole"], "read-only")
