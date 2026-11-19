@@ -21,7 +21,7 @@ Run the bundled script with one review target:
 `--model` and `--effort` pick the Codex model and reasoning effort; anything else is focus text:
 
 ```bash
-node "<skill-dir>/scripts/run_review.mjs" --model gpt-6-astra --effort high --files plans/20260615-token-refresh/plan.md "focus on feasibility, completeness, missing risks, and questionable assumptions"
+node "<skill-dir>/scripts/run_review.mjs" --model <model> --effort high --files plans/20260615-token-refresh/plan.md "focus on feasibility, completeness, missing risks, and questionable assumptions"
 ```
 
 `<skill-dir>` is the directory this `SKILL.md` was loaded from.

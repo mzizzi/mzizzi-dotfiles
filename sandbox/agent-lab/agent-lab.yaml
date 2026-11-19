@@ -170,8 +170,8 @@ capabilities:
           overwrite: false
           content: |
             [models]
-            default = "openai_codex:gpt-6.1-sol"
-            auto_classifier = "openai_codex:gpt-6.1-sol"
+            default = "openai_codex:gpt-6.2-sol"
+            auto_classifier = "openai_codex:gpt-6.2-sol"
 
             # No Tavily key is configured, so dcode runs without web search.
             [warnings]

@@ -123,14 +123,14 @@ export function collectContext(options, cwd = process.cwd()) {
   };
 }
 
-export function prepareReview(argv, { native = false, cwd = process.cwd() } = {}) {
+export function prepareReview(argv, { nativeModel, cwd = process.cwd() } = {}) {
   const options = parseArguments(argv);
   let model = options.model;
   let effort = options.effort;
-  if (native) {
-    model ??= "gpt-6-astra";
-    if (!["gpt-6-astra", "openai-codex/gpt-6-astra"].includes(model)) throw new Error(`Unsupported native review model: ${model}`);
-    model = "openai-codex/gpt-6-astra";
+  if (nativeModel) {
+    model ??= nativeModel;
+    if (![nativeModel, `openai-codex/${nativeModel}`].includes(model)) throw new Error(`Unsupported native review model: ${model}`);
+    model = `openai-codex/${nativeModel}`;
     effort ??= "high";
     if (!["off", "minimal", "low", "medium", "high", "xhigh", "max"].includes(effort)) throw new Error(`Unsupported native review effort: ${effort}`);
   }
@@ -146,9 +146,9 @@ export function prepareReview(argv, { native = false, cwd = process.cwd() } = {}
       if (!(key in vars)) throw new Error(`Unknown review prompt variable: ${key}`);
       return vars[key];
     });
-  if (native) prompt = prompt.replace("You are Codex performing", "You are Astra performing");
+  if (nativeModel) prompt = prompt.replace("You are Codex performing", "You are Astra performing");
   prompt += "\n<completion_contract>\nReview without changing target files.\nReturn the shared outcome envelope. A complete review has status `complete`, the review in `report`, and reason null. If you cannot complete the review or cover its required scope, use status `unavailable`, report null, and a specific nonempty reason. Do not report approval for incomplete coverage.\n";
-  prompt += native
+  prompt += nativeModel
     ? "Your final action must call structured_output with the envelope as its value. Do not finish with prose or a JSON code block.\n"
     : "Return only the outcome envelope as JSON matching the provided schema.\n";
   prompt += "</completion_contract>\n";

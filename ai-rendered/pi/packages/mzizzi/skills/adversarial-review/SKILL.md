@@ -16,7 +16,7 @@ Never widen an empty or failed explicit-file scope.
 
 ## Run
 
-Default to `openai-codex/gpt-6-astra` at high thinking; accept `gpt-6-astra` as an alias. Reject unsupported choices without fallback.
+Default to `openai-codex/gpt-6.2-astra` at high thinking; accept `gpt-6.2-astra` as an alias. Reject unsupported choices without fallback.
 
 1. **Prepare.** Create `<review-dir>` outside the checkout with `mktemp -d`. Run the helper with the caller's arguments:
 

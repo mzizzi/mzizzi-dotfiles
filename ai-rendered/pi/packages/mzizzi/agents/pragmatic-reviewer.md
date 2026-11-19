@@ -2,7 +2,7 @@
 name: pragmatic-reviewer
 description: Reviews a plan, brainstorm, proposal, diff, or idea in a pragmatic way. Proposes simplifications and design revisions. Read-only; returns severity-ordered findings. Prompt it with the content to be reviewed.
 package: mzizzi
-model: openai-codex/gpt-6-astra
+model: openai-codex/gpt-6.2-astra
 thinking: medium
 advertise: true
 defaultContext: fresh

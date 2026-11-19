@@ -194,7 +194,7 @@ def parse_resource(text, resource, target):
     return f"---\n{frontmatter}---\n{body}".rstrip("\n") + "\n"
 
 
-def render_target(source, resources, target):
+def render_target(source, resources, target, models):
     environment = Environment(
         loader=FileSystemLoader(source),
         undefined=StrictUndefined,
@@ -242,6 +242,7 @@ def render_target(source, resources, target):
             template = environment.get_template(path.relative_to(source).as_posix())
             return template.render(
                 target=target,
+                models=models,
                 Skill=lambda identity: reference(identity, ResourceKind.SKILL),
                 Agent=lambda identity: reference(identity, ResourceKind.AGENT),
             )
@@ -367,7 +368,8 @@ def build(repo_root, targets=tuple(Target), check=False):
     if output.is_symlink():
         raise RenderError(f"{output}: output symlinks are not supported")
     resources = discover(source)
-    rendered = {target: render_target(source, resources, target) for target in targets}
+    models = json.loads((source / "models.json").read_text(encoding="utf-8"))
+    rendered = {target: render_target(source, resources, target, models) for target in targets}
     for target in targets:
         check_owned(output / target)
     if check:

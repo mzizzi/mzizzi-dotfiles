@@ -133,17 +133,17 @@ test("invalid base and non-repository fail without a request", () => {
   }
 });
 test("model and effort forwarding do not leak into focus", () => {
-  const model = native ? "gpt-6-astra" : "some-model";
+  const model = native ? "gpt-6.2-astra" : "some-model";
   const r = run(["--files", "target.md", "--model", model, "focus", "--effort", "medium", "words"]);
   assert.equal(r.status, 0, r.stderr);
-  assert.equal(r.prepared.model, native ? "openai-codex/gpt-6-astra" : model);
+  assert.equal(r.prepared.model, native ? "openai-codex/gpt-6.2-astra" : model);
   assert.equal(r.prepared.effort, "medium");
   assert.match(r.prepared.prompt, /User focus: focus words/);
 });
 test("defaults and target-specific delivery preserve the same outcome schema", () => {
   const r = run(["--files", "target.md"]);
   assert.deepEqual(r.prepared.outputSchema, outputSchema);
-  assert.equal(r.prepared.model, native ? "openai-codex/gpt-6-astra" : undefined);
+  assert.equal(r.prepared.model, native ? "openai-codex/gpt-6.2-astra" : undefined);
   assert.equal(r.prepared.effort, native ? "high" : undefined);
   assert.match(r.prepared.prompt, /Review without changing target files/);
   assert.match(r.prepared.prompt, /status `unavailable`/);
@@ -176,7 +176,7 @@ if (native) {
   test("native prepare needs no Codex plugin and rejects unsupported configuration", () => {
     assert.equal(run(["--files", "target.md"], { missingPlugin: true }).status, 0);
     for (const args of [["--model", "other"], ["--effort", "not-an-effort"]]) assert.equal(run(["--files", "target.md", ...args]).status, 2);
-    assert.equal(run(["--files", "target.md", "--model", "openai-codex/gpt-6-astra"]).status, 0);
+    assert.equal(run(["--files", "target.md", "--model", "openai-codex/gpt-6.2-astra"]).status, 0);
   });
   test("native unavailable command produces the common envelope", () => {
     const r = spawnSync(process.execPath, [script, "unavailable", "Cancelled by operator"], { encoding: "utf8" });

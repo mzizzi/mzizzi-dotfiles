@@ -6,7 +6,7 @@ import { prepareReview, renderOutcome, unavailable, fail } from "./lib/review.mj
 const [command, ...args] = process.argv.slice(2);
 try {
   if (command === "prepare") {
-    process.stdout.write(`${JSON.stringify(prepareReview(args, { native: true }), null, 2)}\n`);
+    process.stdout.write(`${JSON.stringify(prepareReview(args, { nativeModel: "gpt-6.2-astra" }), null, 2)}\n`);
   } else if (command === "render") {
     if (args.length !== 2) throw new Error("Usage: run_review.mjs render <prepared.json> <outcome.json>");
     const prepared = JSON.parse(fs.readFileSync(args[0], "utf8"));

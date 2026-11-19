@@ -1,3 +1,4 @@
+import json
 import os
 from pathlib import Path
 import re
@@ -9,6 +10,8 @@ import unittest
 
 from test_pilot_skills import REPO, expected_pilot_body, skill_document
 from render_ai import Target, build
+
+ASTRA = json.loads((REPO / "ai/models.json").read_text())["astra"]
 
 
 def renamed(name):
@@ -46,7 +49,7 @@ def expected_claude_body(body, name):
         '    Agent(subagent_type: "mzizzi:pragmatic-reviewer", prompt: "Review the brainstorm at <path to the document>.", run_in_background: false)',
         '    Skill(skill: "create-plan", args: "<plan dir path> — build plan.md from <brainstorm file path>")',
         '    Brainstorm written: <brainstorm file path>\n    Create a plan with: /mzizzi:create-plan <brainstorm file path>',
-        '    Agent(subagent_type: "mzizzi:pragmatic-reviewer", prompt: "Review the plan at <target file path>. Also answer each item under its ## Open Questions: the option you would pick and why.")\n    Skill(skill: "adversarial-review", args: "--model gpt-6-astra --effort high --files <target file path> focus on feasibility, completeness, missing risks, and questionable assumptions. Right-size each recommendation to the problem — KISS/YAGNI/DRY balanced against the complexity the plan actually warrants; no scope or machinery the plan\'s stated problem does not require. Answer each item under Open Questions with the option you would pick and why.")',
+        '    Agent(subagent_type: "mzizzi:pragmatic-reviewer", prompt: "Review the plan at <target file path>. Also answer each item under its ## Open Questions: the option you would pick and why.")\n    Skill(skill: "adversarial-review", args: "--model ' + ASTRA + ' --effort high --files <target file path> focus on feasibility, completeness, missing risks, and questionable assumptions. Right-size each recommendation to the problem — KISS/YAGNI/DRY balanced against the complexity the plan actually warrants; no scope or machinery the plan\'s stated problem does not require. Answer each item under Open Questions with the option you would pick and why.")',
         '    /mzizzi:implement-plan <target file path>',
         '    Skill(skill: "record-follow-ups", args: "<plan path> <the deferred proposals>")',
         '    Skill(skill: "prepare-feature-branch", args: "<plan directory>")',

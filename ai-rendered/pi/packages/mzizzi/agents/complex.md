@@ -2,7 +2,7 @@
 name: complex
 description: Use this agent for difficult tasks, ambiguous problems, complex debugging and coding, system design, or as an advisor when other agents get stuck on a task.
 package: mzizzi
-model: openai-codex/gpt-6-astra
+model: openai-codex/gpt-6.2-astra
 thinking: high
 advertise: true
 defaultContext: fresh

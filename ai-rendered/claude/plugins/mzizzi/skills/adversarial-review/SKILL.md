@@ -22,7 +22,7 @@ Never widen an empty or failed explicit-file scope.
 Run the helper synchronously with the caller's arguments and Bash timeout `600000` milliseconds. Requires `codex@openai-codex`.
 
 ```bash
-node "<skill-dir>/scripts/run_review.mjs" --model gpt-6-astra --effort high --files plans/example/plan.md "review focus"
+node "<skill-dir>/scripts/run_review.mjs" --model gpt-6.2-astra --effort high --files plans/example/plan.md "review focus"
 ```
 
 Without model/effort arguments, use Codex's configured defaults.

@@ -12,6 +12,10 @@ REPO = RENDERER.parent
 sys.path.insert(0, str(RENDERER))
 from render_ai import RenderError, Target, build
 
+MODELS = json.loads((REPO / "ai/models.json").read_text())
+SOL = f"openai-codex/{MODELS['sol']}"
+ASTRA = f"openai-codex/{MODELS['astra']}"
+
 
 class AgentTests(unittest.TestCase):
     def setUp(self):
@@ -28,10 +32,10 @@ class AgentTests(unittest.TestCase):
     def test_agents_preserve_instructions_and_target_settings(self):
         build(self.repo)
         cases = (
-            ("pragmatic-reviewer", "openai-codex/gpt-6-astra", "medium"),
-            ("standard", "openai-codex/gpt-6.1-sol", "high"),
-            ("complex", "openai-codex/gpt-6-astra", "high"),
-            ("simple", "openai-codex/gpt-6.1-sol", "high"),
+            ("pragmatic-reviewer", ASTRA, "medium"),
+            ("standard", SOL, "high"),
+            ("complex", ASTRA, "high"),
+            ("simple", SOL, "high"),
         )
         for name, model, thinking in cases:
             original = (REPO / "plugins/mzizzi/agents" / f"{name}.md").read_text()
@@ -61,7 +65,7 @@ class AgentTests(unittest.TestCase):
             with self.subTest(target=target):
                 _, metadata, body = self.output(target, "delegator").read_text().split("---", 2)
                 metadata = yaml.safe_load(metadata)
-                self.assertEqual(metadata["model"], "opus" if target == Target.CLAUDE else "openai-codex/gpt-6.1-sol")
+                self.assertEqual(metadata["model"], "opus" if target == Target.CLAUDE else SOL)
                 if target == Target.PI:
                     self.assertNotIn("experimental", metadata)
                     self.assertIs(metadata["allowNestedSubagents"], True)
@@ -93,7 +97,7 @@ class AgentTests(unittest.TestCase):
         self.assertFalse(self.output(Target.CLAUDE, "adversarial-reviewer").exists())
         _, metadata, body = self.output(Target.PI, "adversarial-reviewer").read_text().split("---", 2)
         metadata = yaml.safe_load(metadata)
-        self.assertEqual(metadata["model"], "openai-codex/gpt-6-astra")
+        self.assertEqual(metadata["model"], ASTRA)
         self.assertEqual(metadata["thinking"], "high")
         self.assertEqual(metadata["tools"], "read, grep, find, ls, bash")
         self.assertEqual(metadata["acceptanceRole"], "read-only")

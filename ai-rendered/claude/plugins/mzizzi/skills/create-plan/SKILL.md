@@ -39,7 +39,7 @@ The adversarial reviewer looks for what's missing, the pragmatic reviewer for wh
 
 ```text
 Agent(subagent_type: "mzizzi:pragmatic-reviewer", prompt: "Review the plan at <target file path>. Also answer each item under its ## Open Questions: the option you would pick and why.")
-Skill(skill: "adversarial-review", args: "--model gpt-6-astra --effort high --files <target file path> focus on feasibility, completeness, missing risks, and questionable assumptions. Right-size each recommendation to the problem — KISS/YAGNI/DRY balanced against the complexity the plan actually warrants; no scope or machinery the plan's stated problem does not require. Answer each item under Open Questions with the option you would pick and why.")
+Skill(skill: "adversarial-review", args: "--model gpt-6.2-astra --effort high --files <target file path> focus on feasibility, completeness, missing risks, and questionable assumptions. Right-size each recommendation to the problem — KISS/YAGNI/DRY balanced against the complexity the plan actually warrants; no scope or machinery the plan's stated problem does not require. Answer each item under Open Questions with the option you would pick and why.")
 ```
 
 Hold both reports for Step 4. If a review is unavailable, tell the user which one and why, and continue with the other; if both are, skip to Step 5.

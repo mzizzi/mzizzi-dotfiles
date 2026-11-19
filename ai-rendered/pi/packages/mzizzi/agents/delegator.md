@@ -2,7 +2,7 @@
 name: delegator
 description: Use to orchestrate work across many agents
 package: mzizzi
-model: openai-codex/gpt-6.1-sol
+model: openai-codex/gpt-6.2-sol
 thinking: high
 advertise: true
 defaultContext: fresh

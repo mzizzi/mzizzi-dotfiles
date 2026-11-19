@@ -21,13 +21,16 @@ const expectedClaudeSkills = readdirSync(
 ).sort();
 const renameReview = (name) => name === "codex-adversarial-review" ? "adversarial-review" : name;
 const expectedPiSkills = expectedClaudeSkills.map(renameReview).sort();
+const models = JSON.parse(readFileSync(join(repo, "ai/models.json"), "utf8"));
+const sol = `openai-codex/${models.sol}`;
+const astra = `openai-codex/${models.astra}`;
 const expectedAgents = [
-  ["pragmatic-reviewer", "openai-codex/gpt-6-astra", "medium"],
-  ["standard", "openai-codex/gpt-6.1-sol", "high"],
-  ["complex", "openai-codex/gpt-6-astra", "high"],
-  ["simple", "openai-codex/gpt-6.1-sol", "high"],
-  ["delegator", "openai-codex/gpt-6.1-sol", "high"],
-  ["adversarial-reviewer", "openai-codex/gpt-6-astra", "high"],
+  ["pragmatic-reviewer", astra, "medium"],
+  ["standard", sol, "high"],
+  ["complex", astra, "high"],
+  ["simple", sol, "high"],
+  ["delegator", sol, "high"],
+  ["adversarial-reviewer", astra, "high"],
 ];
 try {
   const npmRoot = execFileSync("npm", ["root", "-g"], {

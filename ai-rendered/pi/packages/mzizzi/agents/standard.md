@@ -2,7 +2,7 @@
 name: standard
 description: Default coding agent. Good at reasoning, debugging, coding, and orchestration. Step up to `complex` for the most critical or long-horizon work.
 package: mzizzi
-model: openai-codex/gpt-6.1-sol
+model: openai-codex/gpt-6.2-sol
 thinking: high
 advertise: true
 defaultContext: fresh

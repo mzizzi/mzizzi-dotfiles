@@ -1,6 +1,6 @@
 {
   "defaultProvider": "openai-codex",
-  "defaultModel": "gpt-6.1-sol",
+  "defaultModel": "gpt-6.2-sol",
   "defaultThinkingLevel": "high",
   "packages": [
     "git:github.com/nicobailon/pi-web-access@322e44fafc1aaa691779cdf2116584e67edd7645",

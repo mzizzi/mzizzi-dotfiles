@@ -24,6 +24,7 @@ class GitFixture(unittest.TestCase):
             shutil.copy2(REPO / "ai-renderer" / name, self.repo / "ai-renderer" / name)
         self.template = self.repo / "ai/example/skills/demo/SKILL.md.j2"
         self.template.parent.mkdir(parents=True)
+        shutil.copy2(REPO / "ai/models.json", self.repo / "ai/models.json")
         self.template.write_text("---\ndescription: Candidate fixture.\n---\n\n# Demo\n\nOriginal.\n")
         self.git("init", "-b", "main")
         self.git("config", "user.name", "Test")
