@@ -8,7 +8,7 @@ from dataclasses import dataclass
 import hashlib
 import json
 import os
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 import subprocess
 import sys
 import time
@@ -36,7 +36,7 @@ class InstalledIde:
     build: str  # e.g. 262.9437.185, from product-info.json buildNumber
     product_code: str  # one of IDEA_PRODUCT_CODES
     data_directory_name: str  # config directory name under the JetBrains config root
-    launcher: str  # launcher executable file name, used to detect a running instance
+    product_info: Path  # the install's product-info.json
 
     @property
     def build_key(self) -> tuple[int, ...]:
@@ -46,21 +46,18 @@ class InstalledIde:
     def backend_name(self) -> str:
         return f"idea-{self.product_code}-{self.build}"
 
+    @property
+    def backend_dir(self) -> str:
+        return f"{BACKEND_ROOT}/{self.backend_name}"
+
 
 def main() -> None:
     if sys.platform not in ("win32", "darwin"):
         raise SystemExit(f"Unsupported host platform: {sys.platform}")
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--sandbox", default=os.environ.get("SBX_SANDBOX_NAME", "agent-lab"))
+    add_sandbox_args(parser)
     parser.add_argument("--known-hosts", type=Path, default=Path.home() / ".ssh" / "known_hosts")
-    parser.add_argument(
-        "--state-dir",
-        type=Path,
-        help="host directory the sandbox mounts at the same path (default: ~/.sandbox-state/<sandbox>)",
-    )
-    args = parser.parse_args()
-    if args.state_dir is None:
-        args.state_dir = Path.home() / ".sandbox-state" / args.sandbox
+    args = parse_sandbox_args(parser)
 
     host = f"{args.sandbox}.sbx"
     refresh_known_hosts(host, args.known_hosts)
@@ -69,21 +66,31 @@ def main() -> None:
     if ide is None:
         print("No IntelliJ IDEA installation found; skipping the IntelliJ backend setup.")
         return
-    archive = cached_backend(ide, args.state_dir / "intellij", args.sandbox)
-    backend_dir = f"{BACKEND_ROOT}/{ide.backend_name}"
-    install_backend(args.sandbox, guest_path(archive), backend_dir)
+    prepare_backend(ide, args.sandbox, args.state_dir)
 
-    if ide_running(ide.launcher):
-        # IntelliJ writes its in-memory copy of these files on exit, which would drop the entry.
-        print(
-            f"WARNING: {ide.launcher} is running, so the IntelliJ SSH configuration and recent project for {host} "
-            f"were not written. Quit IntelliJ and rerun: python \"{Path(__file__).resolve()}\" "
-            f"--sandbox \"{args.sandbox}\" --known-hosts \"{args.known_hosts}\" --state-dir \"{args.state_dir}\""
-        )
-        return
-    workspace = sbx_exec(args.sandbox, "printenv", "WORKSPACE_DIR").stdout.strip()
     options_dir = config_root() / ide.data_directory_name / "options"
-    register_recent_project(options_dir, host, workspace, backend_dir, ide)
+    register_recent_project(options_dir, host, workspace_dir(args.sandbox), ide.backend_dir, ide)
+
+
+def add_sandbox_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--sandbox", default=os.environ.get("SBX_SANDBOX_NAME", "agent-lab"))
+    parser.add_argument(
+        "--state-dir",
+        type=Path,
+        help="host directory the sandbox mounts at the same path (default: ~/.sandbox-state/<sandbox>)",
+    )
+
+
+def parse_sandbox_args(parser: argparse.ArgumentParser) -> argparse.Namespace:
+    args = parser.parse_args()
+    if args.state_dir is None:
+        args.state_dir = Path.home() / ".sandbox-state" / args.sandbox
+    return args
+
+
+def prepare_backend(ide: InstalledIde, sandbox: str, state_dir: Path) -> None:
+    archive = cached_backend(ide, state_dir / "intellij", sandbox)
+    install_backend(sandbox, guest_path(archive), ide.backend_dir)
 
 
 def refresh_known_hosts(host: str, path: Path) -> None:
@@ -149,7 +156,7 @@ def latest_idea(product_infos: list[Path]) -> InstalledIde | None:
                 build=info["buildNumber"],
                 product_code=info["productCode"],
                 data_directory_name=info["dataDirectoryName"],
-                launcher=PurePosixPath(info["launch"][0]["launcherPath"]).name,
+                product_info=path,
             )
         )
     if not ides:
@@ -224,13 +231,8 @@ def sbx_exec(sandbox: str, *command: str, check: bool = True) -> subprocess.Comp
     return subprocess.run(["sbx", "exec", sandbox, *command], check=check, capture_output=True, text=True)
 
 
-def ide_running(launcher: str) -> bool:
-    if sys.platform == "win32":
-        result = subprocess.run(
-            ["tasklist", "/FI", f"IMAGENAME eq {launcher}", "/FO", "CSV", "/NH"], capture_output=True, text=True
-        )
-        return f'"{launcher.lower()}"' in result.stdout.lower()
-    return subprocess.run(["pgrep", "-x", launcher], capture_output=True).returncode == 0
+def workspace_dir(sandbox: str) -> str:
+    return sbx_exec(sandbox, "printenv", "WORKSPACE_DIR").stdout.strip()
 
 
 def register_recent_project(options_dir: Path, host: str, project_path: str, backend_dir: str, ide: InstalledIde) -> None:

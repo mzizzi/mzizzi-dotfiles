@@ -13,7 +13,7 @@ workspace:
   clone: true
 additionalWorkspaces:
   # Bash history, Claude and pi sessions, and dcode threads (see agent-lab/shell/state-dir.sh),
-  # and the IntelliJ backend archive cache (setup-intellij.py).
+  # and the IntelliJ backend archive cache (setup_intellij.py).
   - path: C:/Users/Matt/.sandbox-state/agent-lab
 sandboxOptions:
   skills: "off"
@@ -46,4 +46,4 @@ lifecycle:
       command: powershell -NoProfile -ExecutionPolicy Bypass -File ${{ env.fileDir }}/agent-lab/bin/network-open.ps1
     # The script's default --state-dir is the home-relative form of the additionalWorkspaces path above.
     - name: setup-intellij
-      command: python "${{ env.fileDir }}/agent-lab/bin/setup-intellij.py"
+      command: python "${{ env.fileDir }}/agent-lab/bin/setup_intellij.py"

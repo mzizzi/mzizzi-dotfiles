@@ -1,5 +1,4 @@
 import hashlib
-import importlib.util
 import io
 import json
 from pathlib import Path
@@ -10,19 +9,15 @@ import unittest
 from unittest import mock
 import xml.etree.ElementTree as ET
 
-SCRIPT = Path(__file__).resolve().parents[1] / "bin" / "setup-intellij.py"
-spec = importlib.util.spec_from_file_location("setup_intellij", SCRIPT)
-assert spec is not None and spec.loader is not None
-setup = importlib.util.module_from_spec(spec)
-sys.modules[spec.name] = setup
-spec.loader.exec_module(setup)
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "bin"))
+import setup_intellij as setup  # noqa: E402
 
-IDE = setup.InstalledIde(build="262.9437.185", product_code="IU", data_directory_name="IntelliJIdea2026.2", launcher="idea64.exe")
+IDE = setup.InstalledIde(build="262.9437.185", product_code="IU", data_directory_name="IntelliJIdea2026.2", product_info=Path("idea/product-info.json"))
 HOST = "agent-lab.sbx"
 CONFIG_ID = "11111111-1111-4111-8111-111111111111"
 OTHER_ID = "22222222-2222-4222-8222-222222222222"
 PROJECT = "/c/Users/example/code/mzizzi-dotfiles"
-BACKEND = f"{setup.BACKEND_ROOT}/{IDE.backend_name}"
+BACKEND = IDE.backend_dir
 
 # Modeled on the files IntelliJ IDEA 2026.2 writes.
 SSH_CONFIGS = f"""<application>
@@ -103,7 +98,7 @@ class LatestIdeaTest(unittest.TestCase):
             write_product_info(self.root, "pycharm", "PY", "265.1.1"),
         ]
         ide = setup.latest_idea(paths)
-        self.assertEqual(ide, setup.InstalledIde("263.7307.112", "IU", "new-data", "idea64.exe"))
+        self.assertEqual(ide, setup.InstalledIde("263.7307.112", "IU", "new-data", paths[1]))
 
     def test_compares_build_components_numerically(self):
         paths = [
@@ -176,7 +171,7 @@ class RegisterRecentProjectTest(unittest.TestCase):
     def test_new_build_replaces_backend_in_place(self):
         self.write_fixtures()
         self.register()
-        newer = setup.InstalledIde("263.7307.112", "IU", "IntelliJIdea2026.3", "idea64.exe")
+        newer = setup.InstalledIde("263.7307.112", "IU", "IntelliJIdea2026.3", Path("idea-new/product-info.json"))
         self.register(newer, BACKEND.replace(IDE.build, newer.build))
         (project,) = self.recent_projects(CONFIG_ID)
         self.assert_project(project, newer, BACKEND.replace(IDE.build, newer.build))
