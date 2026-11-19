@@ -14,7 +14,7 @@ args:
     pattern: '^[0-9]+\.[0-9]+\.[0-9]+$'
     buildArg: CODEX_VERSION
   piVersion:
-    default: "1.5.0"
+    default: "1.5.2"
     pattern: '^[0-9]+\.[0-9]+\.[0-9]+$'
     buildArg: PI_VERSION
   dcodeVersion:
@@ -207,7 +207,8 @@ capabilities:
         # above. The provider's own openai-codex-responses API reads the account ID from a JWT
         # access token, so it rejects the placeholder; the models listed here use openai-responses
         # instead. The provider's other models keep the built-in API and fail here. Limits,
-        # thinking levels and compat copy pi's openai-codex catalog.
+        # thinking levels and compat copy pi's openai-codex catalog; a model missing from it takes
+        # its context window from Codex's /models list and other fields from a sibling entry.
         - path: /home/agent/.pi/agent/models.json
           overwrite: false
           content: |
@@ -224,6 +225,24 @@ capabilities:
                     "supportsMidConvoSystemMessages": true
                   },
                   "models": [
+                    {
+                      "id": "gpt-6.2-sol",
+                      "name": "GPT-6.2 Sol",
+                      "reasoning": true,
+                      "thinkingLevelMap": {"off": null, "minimal": "low", "low": "low", "medium": "medium", "high": "high", "xhigh": "xhigh", "max": "max"},
+                      "input": ["text", "image"],
+                      "contextWindow": 500000,
+                      "maxTokens": 128000
+                    },
+                    {
+                      "id": "gpt-6.2-astra",
+                      "name": "GPT-6.2 Astra",
+                      "reasoning": true,
+                      "thinkingLevelMap": {"off": null, "minimal": "low", "low": "low", "medium": "medium", "high": "high", "xhigh": "xhigh", "max": "max"},
+                      "input": ["text", "image"],
+                      "contextWindow": 272000,
+                      "maxTokens": 128000
+                    },
                     {
                       "id": "gpt-6.1-sol",
                       "name": "GPT-6.1 Sol",

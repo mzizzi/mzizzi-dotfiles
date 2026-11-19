@@ -54,7 +54,7 @@ This is cwd switching, not filesystem isolation. Absolute paths, custom tools, f
 
 ### Compatibility and checks
 
-Host contract tests target Pi 1.5.0. The skill pilot uses pi-subagents 0.87.0 and the local task extension. Test newer versions before relying on them. Linux is the checked platform. Native Windows/Git Bash checks are outside the current sandbox scope.
+Host contract tests target Pi 1.5.2. The skill pilot uses pi-subagents 0.87.0 and the local task extension. Test newer versions before relying on them. Linux is the checked platform. Native Windows/Git Bash checks are outside the current sandbox scope.
 
 Real-host tests use a local scripted provider, disposable repositories, and Pi's actual runtime/file loader. They cover mixed batches, replacement, relative tools, tasks/history, dirty/detached paths, source subdirectories, path hops, queues, and failures. They make no model requests.
 

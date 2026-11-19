@@ -162,13 +162,11 @@ export default function tasks(pi) {
         type: "array",
         items: taskId,
         maxItems: 100,
-        uniqueItems: true,
       },
       addBlockedBy: {
         type: "array",
         items: taskId,
         maxItems: 100,
-        uniqueItems: true,
       },
     },
     ["taskId"],
