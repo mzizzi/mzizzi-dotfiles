@@ -11,7 +11,8 @@ sbx login                                       # once
 sbx secret set openai --oauth                   # once: ChatGPT login for Codex, dcode, and Pi
 sbx secret set anthropic --oauth                # once: Claude login for Claude Code
 gh auth status                                  # GitHub login on the host; run gh auth login if needed
-sbx env run sandbox                             # create (network open) if missing, attach
+.\bin\sbx.ps1                                   # create (network open) if missing, attach; or bin/sbx.sh
+.\bin\idea.ps1                                  # open the workspace in IntelliJ; or bin/idea.sh
 sbx env exec -it sandbox -- bash                # second shell
 .\sandbox\agent-lab\bin\network-restrict.ps1    # limit outbound to the kit allowlist
 .\sandbox\agent-lab\bin\network-open.ps1        # allow all outbound again
@@ -41,7 +42,7 @@ For IntelliJ remote development, run `sbx setup ssh` once on the host. The host 
 
 Open the recent project from IntelliJ's Remote Development welcome screen; it starts the unpacked backend without downloading one or asking for a project path. The project is the private sandbox clone, not a read-write host mount. The script can write these options files while IntelliJ is running; IntelliJ shows the new entries after a restart. Rerunning is safe; every step is skipped when already done.
 
-To open the workspace without the welcome screen, run `python sandbox\agent-lab\bin\open-intellij.py` on the host (Windows only) after the sandbox is created. It installs the backend if the host IDE changed and opens the host IDE's bundled JetBrains Client on the backend's join link. The script blocks until the client closes, then stops the backend. Join links work once, so each run starts a new backend and stops any backend already running.
+To open the workspace without the welcome screen, run `bin\idea.ps1` or `bin/idea.sh` on the host (Windows only) after the sandbox is created. Both run `agent-lab/bin/open-intellij.py`. It installs the backend if the host IDE changed and opens the host IDE's bundled JetBrains Client on the backend's join link. The script blocks until the client closes, then stops the backend. Join links work once, so each run starts a new backend and stops any backend already running.
 
 `sbx ports` cannot reach the guest's loopback, so the backend listens on every guest interface, and the script publishes its port on the host's `127.0.0.1` only. The client needs no inbound firewall access; if Windows asks, block it.
 
