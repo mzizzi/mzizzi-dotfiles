@@ -143,6 +143,10 @@ capabilities:
           user: agent
           env: [WORKSPACE_DIR, HTTP_PROXY, HTTPS_PROXY]
           description: Render and install the mzizzi Pi package and custom extensions
+        - command: 'bash /opt/agent-lab/clone-simracing.sh'
+          user: agent
+          env: [HTTP_PROXY, HTTPS_PROXY]
+          description: Clone the SimRacing repo if missing
       files:
         - path: /home/agent/.codex/config.toml
           overwrite: false
