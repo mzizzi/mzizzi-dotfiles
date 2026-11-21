@@ -12,7 +12,7 @@ Run `/reload` in Pi after setup or code changes. The setup script keeps unrelate
 
 ## Mzizzi Pi package
 
-The sandbox still registers `ai-rendered/pi/packages/mzizzi` as a local package on boot. That package provides skills and agent definitions, but not the Claude rules loader. Boot also links the extensions described above separately.
+Agent-lab and the SimRacing devcontainer install the pinned mzizzi Git package on startup. The devcontainer pulls dotfiles before setup, so a rebuild needs no manual Pi install. The startup script also links the local extensions described above.
 
 To try the Git package, set `PI_CODING_AGENT_DIR` to a separate Pi profile without the local mzizzi package registered. Replace `<commit>` with a reachable commit SHA containing the root Pi manifest:
 
