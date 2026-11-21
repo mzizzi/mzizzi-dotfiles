@@ -12,15 +12,9 @@ Run `/reload` in Pi after setup or code changes. The setup script keeps unrelate
 
 ## Mzizzi Pi package
 
-Agent-lab and the SimRacing devcontainer install the pinned mzizzi Git package on startup. The devcontainer pulls dotfiles before setup, so a rebuild needs no manual Pi install. The startup script also links the local extensions described above.
+The repository root is a Pi package. On every start, agent-lab and the SimRacing devcontainer run `setup-pi.sh`, which installs the root dependencies with `npm ci` and registers the checkout with `pi install <checkout>`. Pi then loads the package from the working tree, so it matches whatever the checkout holds. The devcontainer fast-forwards its dotfiles clone before setup. The script also links the local extensions described above.
 
-To try the Git package, set `PI_CODING_AGENT_DIR` to a separate Pi profile without the local mzizzi package registered. Replace `<commit>` with a reachable commit SHA containing the root Pi manifest:
-
-```sh
-pi install 'git:github.com/mzizzi/mzizzi-dotfiles@<commit>'
-```
-
-This installs `pi-code` as a dependency and loads only its Claude rules extension. Pi loads the skills directly. To discover the `mzizzi.*` agents, the profile also needs the separately installed `pi-subagents` extension. The Git package does not install it.
+The `pi-code` dependency supplies the Claude rules extension; the manifest loads only that extension. Pi loads the skills directly. To discover the `mzizzi.*` agents, the profile also needs the separately installed `pi-subagents` extension. This package does not install it.
 
 Unscoped rules from `~/.claude/rules/` (or the configured Claude directory) and from an approved project's `.claude/rules/` can reach the first model request. Approval persists as Pi project trust. An undecided project is not approved by a headless run.
 

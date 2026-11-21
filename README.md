@@ -58,7 +58,7 @@ python ai-renderer/render_ai.py --check
 git add ai/<changed-source> ai-rendered/<changed-output>
 ```
 
-If output formatting or lint fails, fix the source and render again. The output checks cover every rendered Markdown file except the two exact vendored `adversarial-review/references/adversarial-review.md` copies. The [renderer documentation](ai-renderer/README.md) describes candidate checks and tool policy. Sandbox startup installs the pinned [Pi Git package](config/pi/README.md#mzizzi-pi-package); production Claude plugins and marketplace loading remain unchanged.
+If output formatting or lint fails, fix the source and render again. The output checks cover every rendered Markdown file except the two exact vendored `adversarial-review/references/adversarial-review.md` copies. The [renderer documentation](ai-renderer/README.md) describes candidate checks and tool policy. Sandbox startup registers this checkout as the [mzizzi Pi package](config/pi/README.md#mzizzi-pi-package); production Claude plugins and marketplace loading remain unchanged.
 
 Two things worth knowing when writing markdown here:
 

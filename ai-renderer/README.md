@@ -98,4 +98,4 @@ node ai-rendered/claude/plugins/mzizzi/skills/adversarial-review/scripts/tests/t
 node ai-rendered/pi/packages/mzizzi/skills/adversarial-review/scripts/tests/test_run_review.mjs
 ```
 
-The sources are staging copies for the production plugin port. Sandbox startup installs committed resources from the pinned Git package; see [sandbox setup](../sandbox/README.md). Existing production Claude plugins and host settings stay unchanged. Reviewers receive instructions not to change target files. Model policy: Claude Fable/medium maps to Pi Astra/medium; Claude Opus 5.5/medium maps to Pi Sol 6.1/high. Set these explicitly in each agent template.
+The sources are staging copies for the production plugin port. Sandbox startup registers the checkout as a Pi package, so Pi loads the rendered resources in the working tree; see [sandbox setup](../sandbox/README.md). Existing production Claude plugins and host settings stay unchanged. Reviewers receive instructions not to change target files. Model policy: Claude Fable/medium maps to Pi Astra/medium; Claude Opus 5.5/medium maps to Pi Sol 6.1/high. Set these explicitly in each agent template.

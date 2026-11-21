@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import {
-  copyFileSync,
   mkdtempSync,
   mkdirSync,
   readFileSync,
@@ -12,13 +11,12 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, relative } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
-import { packageSource } from "../pi/mzizzi-package.mjs";
 import attentionControl from "../../../config/pi/extensions/attention-control/index.js";
 
-const repoRoot = fileURLToPath(new URL("../../../", import.meta.url));
+const repoRoot = resolve(fileURLToPath(new URL("../../../", import.meta.url)));
 const setupScript = join(repoRoot, "sandbox/agent-lab/bin/setup-pi.sh");
 const extension = join(repoRoot, "config/pi/extensions/attention-control");
 
@@ -28,8 +26,8 @@ function temporaryHome(t) {
   const bin = join(home, "bin");
   mkdirSync(bin);
   writeFileSync(
-    join(bin, "git"),
-    '#!/bin/sh\ntest "$1 $2" = "rev-parse HEAD" && head -1 fixture-head\n',
+    join(bin, "npm"),
+    '#!/bin/sh\nprintf "%s %s\\n" "$PWD" "$*" >> "$HOME/npm-calls.log"\nexit "${NPM_EXIT_STATUS:-0}"\n',
     { mode: 0o755 },
   );
   writeFileSync(
@@ -39,30 +37,17 @@ const fs = require("node:fs");
 const path = require("node:path");
 const args = process.argv.slice(2);
 fs.appendFileSync(path.join(process.env.HOME, "pi-installs.log"), args.join(" ") + "\\n");
-fs.appendFileSync(path.join(process.env.HOME, "pi-calls.jsonl"), JSON.stringify({args, cwd: process.cwd()}) + "\\n");
-const status = process.env.PI_EXIT_STATUS || process.env["PI_" + args[0].toUpperCase() + "_EXIT_STATUS"];
-if (status) process.exit(Number(status));
-if (args[0] === "install" && (process.env.PI_SKIP_REGISTRATION || args[1] !== ${JSON.stringify(packageSource)})) process.exit(0);
-if (args[0] === "remove" && process.env.PI_SKIP_REMOVAL) process.exit(0);
+if (process.env.PI_EXIT_STATUS) process.exit(Number(process.env.PI_EXIT_STATUS));
+if (args[0] !== "install") process.exit(2);
+if (process.env.PI_SKIP_REGISTRATION || !path.isAbsolute(args[1])) process.exit(0);
 const agentDir = process.env.PI_CODING_AGENT_DIR || path.join(process.env.HOME, ".pi/agent");
 fs.mkdirSync(agentDir, {recursive: true});
 const settingsPath = path.join(agentDir, "settings.json");
 const settings = fs.existsSync(settingsPath) ? JSON.parse(fs.readFileSync(settingsPath, "utf8")) : {};
 settings.packages ??= [];
 const source = (entry) => typeof entry === "string" ? entry : entry.source;
-if (args[0] === "remove") {
-  const removed = path.resolve(process.cwd(), args[1]);
-  settings.packages = settings.packages.filter((entry) => path.resolve(agentDir, source(entry)) !== removed);
-} else if (args[0] === "install") {
-  if (!settings.packages.some((entry) => source(entry) === args[1])) settings.packages.push(args[1]);
-  const [repo, sha] = args[1].slice(4).split("@");
-  const root = path.join(agentDir, "git", repo);
-  fs.mkdirSync(path.join(root, "node_modules/pi-code/extensions"), {recursive: true});
-  fs.writeFileSync(path.join(root, "fixture-head"), sha);
-  if (!process.env.PI_SKIP_DEPENDENCY) fs.writeFileSync(path.join(root, "node_modules/pi-code/extensions/claude-rules.ts"), "");
-} else {
-  process.exit(2);
-}
+if (settings.packages.some((entry) => path.resolve(agentDir, source(entry)) === args[1])) process.exit(0);
+settings.packages.push(path.relative(agentDir, args[1]));
 fs.writeFileSync(settingsPath, JSON.stringify(settings));
 `,
     { mode: 0o755 },
@@ -72,11 +57,10 @@ fs.writeFileSync(settingsPath, JSON.stringify(settings));
 
 function copySetup(script) {
   mkdirSync(dirname(script), { recursive: true });
-  copyFileSync(setupScript, script);
-  const module = "../pi/mzizzi-package.mjs";
-  mkdirSync(dirname(join(dirname(script), module)), { recursive: true });
-  copyFileSync(join(dirname(setupScript), module), join(dirname(script), module));
+  writeFileSync(script, readFileSync(setupScript));
 }
+
+const packagesOf = (agentDir) => JSON.parse(readFileSync(join(agentDir, "settings.json"), "utf8")).packages;
 
 function setup(home, script = setupScript, env = {}) {
   execFileSync("bash", [script], {
@@ -92,18 +76,22 @@ function setup(home, script = setupScript, env = {}) {
   });
 }
 
-test("installs the pinned Git package once across repeated boots", (t) => {
+test("installs dependencies and registers the checkout once across repeated boots", (t) => {
   const home = temporaryHome(t);
+  const agentDir = join(home, ".pi/agent");
   setup(home);
   setup(home);
-  assert.match(packageSource, /^git:github\.com\/mzizzi\/mzizzi-dotfiles@[0-9a-f]{40}$/);
-  assert.equal(readFileSync(join(home, "pi-installs.log"), "utf8").trim(), `install ${packageSource}`);
+  assert.deepEqual(packagesOf(agentDir), [relative(agentDir, repoRoot)]);
+  assert.deepEqual(
+    readFileSync(join(home, "npm-calls.log"), "utf8").trim().split("\n"),
+    Array(2).fill(`${repoRoot} ci --omit=dev --legacy-peer-deps --no-audit --no-fund`),
+  );
 });
 
-test("incomplete install leaves a fresh profile unregistered", (t) => {
+test("dependency install failure stops setup before registration", (t) => {
   const home = temporaryHome(t);
-  assert.throws(() => setup(home, setupScript, { PI_SKIP_DEPENDENCY: "1" }), /Incomplete mzizzi install/);
-  assert.throws(() => readFileSync(join(home, ".pi/agent/settings.json")), { code: "ENOENT" });
+  assert.throws(() => setup(home, setupScript, { NPM_EXIT_STATUS: "1" }));
+  assert.throws(() => readFileSync(join(home, "pi-installs.log")), { code: "ENOENT" });
 });
 
 test("reports package registration failure instead of completing setup", (t) => {
@@ -153,90 +141,53 @@ test("installs package and extensions in a custom Pi profile", (t) => {
   );
 });
 
-for (const entryKind of ["string", "source-only object", "relative string", "relative object", "duplicate registrations"]) {
-  test(`migrates an old ${entryKind} and preserves unrelated settings on repeated starts`, (t) => {
+for (const entryKind of ["Git", "string", "source-only object", "relative string", "relative object", "duplicate"]) {
+  test(`migrates an old ${entryKind} registration and preserves unrelated settings on repeated starts`, (t) => {
     const home = temporaryHome(t);
     const checkout = join(home, "checkout with spaces");
     const script = join(checkout, "sandbox/agent-lab/bin/setup-pi.sh");
     copySetup(script);
     const agentDir = join(home, "custom profile");
-    mkdirSync(agentDir);
+    const gitClone = join(agentDir, "git/github.com/mzizzi/mzizzi-dotfiles");
+    mkdirSync(gitClone, { recursive: true });
     const oldPath = join(checkout, entryKind.includes("relative") ? "ai-rendered" : "generated", "pi/packages/mzizzi");
-    const newPath = packageSource;
     const source = entryKind.startsWith("relative") ? relative(agentDir, oldPath) : oldPath;
-    const entry = entryKind.includes("object") ? { source } : source;
-    const unrelated = ["npm:unrelated", { source: join(home, "another checkout/generated/pi/packages/mzizzi"), skills: [] }];
-    const oldEntries = entryKind === "duplicate registrations" ? [entry, { source: relative(agentDir, oldPath) }] : [entry];
+    const entry = entryKind === "Git"
+      ? "git:github.com/mzizzi/mzizzi-dotfiles@7fde4e6f964f524ba65f61d9e5276e9c0f7e27fa"
+      : entryKind.includes("object") ? { source } : source;
+    const unrelated = [
+      "npm:unrelated",
+      "git:github.com/mzizzi/mzizzi-dotfiles-other",
+      { source: join(home, "another checkout/generated/pi/packages/mzizzi"), skills: [] },
+    ];
+    const oldEntries = entryKind === "duplicate" ? [entry, { source: relative(agentDir, oldPath) }] : [entry];
     const original = { theme: "dark", custom: { keep: true }, packages: [...unrelated, ...oldEntries] };
     const settingsPath = join(agentDir, "settings.json");
     writeFileSync(settingsPath, JSON.stringify(original));
 
     setup(home, script, { PI_CODING_AGENT_DIR: agentDir });
+    const migrated = readFileSync(settingsPath, "utf8");
     setup(home, script, { PI_CODING_AGENT_DIR: agentDir });
 
-    assert.deepEqual(JSON.parse(readFileSync(settingsPath, "utf8")), {
-      ...original, packages: [...unrelated, newPath],
+    assert.equal(readFileSync(settingsPath, "utf8"), migrated);
+    assert.deepEqual(JSON.parse(migrated), {
+      ...original, packages: [...unrelated, relative(agentDir, checkout)],
     });
-    const calls = readFileSync(join(home, "pi-calls.jsonl"), "utf8").trim().split("\n").map(JSON.parse);
-    assert.deepEqual(calls, [
-      { args: ["install", newPath], cwd: agentDir },
-      { args: ["remove", oldPath], cwd: agentDir },
-    ]);
+    assert.throws(() => readdirSync(gitClone), { code: "ENOENT" });
   });
 }
 
-for (const mixed of [false, true]) {
-  test(`rejects restricted old registrations before any CLI mutation${mixed ? " even after a simple old entry" : ""}`, (t) => {
-    const home = temporaryHome(t);
-    const agentDir = join(home, ".pi/agent");
-    mkdirSync(agentDir, { recursive: true });
-    const oldPath = join(repoRoot, "generated/pi/packages/mzizzi");
-    const packages = [...(mixed ? [oldPath] : []), { source: oldPath, skills: [] }];
-    const settingsPath = join(agentDir, "settings.json");
-    const original = JSON.stringify({ theme: "dark", packages }, null, 2) + "\n";
-    writeFileSync(settingsPath, original);
-
-    assert.throws(() => setup(home), (error) => {
-      assert.match(error.stderr.toString(), /Review restricted mzizzi package/);
-      assert.ok(error.stderr.toString().includes(settingsPath));
-      assert.ok(error.stderr.toString().includes(packageSource));
-      return true;
-    });
-    assert.equal(readFileSync(settingsPath, "utf8"), original);
-    assert.throws(() => readFileSync(join(home, "pi-installs.log")), { code: "ENOENT" });
-  });
-}
-
-for (const command of ["remove", "install"]) {
-  test(`propagates migration ${command} failures and repairs registration on retry`, (t) => {
-    const home = temporaryHome(t);
-    const agentDir = join(home, ".pi/agent");
-    mkdirSync(agentDir, { recursive: true });
-    const oldPath = join(repoRoot, "generated/pi/packages/mzizzi");
-    const newPath = packageSource;
-    const settingsPath = join(agentDir, "settings.json");
-    const original = { theme: "dark", packages: ["npm:unrelated", oldPath] };
-    writeFileSync(settingsPath, JSON.stringify(original));
-
-    assert.throws(() => setup(home, setupScript, { [`PI_${command.toUpperCase()}_EXIT_STATUS`]: "7" }), new RegExp(`pi ${command} failed \\(7\\)`));
-    const calls = readFileSync(join(home, "pi-installs.log"), "utf8").trim().split("\n");
-    assert.deepEqual(calls, command === "remove" ? [`install ${newPath}`, `remove ${oldPath}`] : [`install ${newPath}`]);
-    assert.deepEqual(JSON.parse(readFileSync(settingsPath, "utf8")), original);
-    setup(home);
-    assert.deepEqual(JSON.parse(readFileSync(settingsPath, "utf8")), {
-      ...original, packages: ["npm:unrelated", newPath],
-    });
-  });
-}
-
-test("rejects a successful removal that leaves the old registration", (t) => {
+test("repairs registration on retry after a failed install", (t) => {
   const home = temporaryHome(t);
   const agentDir = join(home, ".pi/agent");
   mkdirSync(agentDir, { recursive: true });
-  writeFileSync(join(agentDir, "settings.json"), JSON.stringify({
-    packages: [join(repoRoot, "generated/pi/packages/mzizzi")],
-  }));
-  assert.throws(() => setup(home, setupScript, { PI_SKIP_REMOVAL: "1" }), /Pi did not remove/);
+  const original = { theme: "dark", packages: ["npm:unrelated", join(repoRoot, "generated/pi/packages/mzizzi")] };
+  writeFileSync(join(agentDir, "settings.json"), JSON.stringify(original));
+
+  assert.throws(() => setup(home, setupScript, { PI_EXIT_STATUS: "7" }), /pi install failed \(7\)/);
+  assert.deepEqual(packagesOf(agentDir), ["npm:unrelated"]);
+  setup(home);
+  assert.deepEqual(packagesOf(agentDir), ["npm:unrelated", relative(agentDir, repoRoot)]);
 });
 
 test("installs the complete extension on first boot and tolerates repeated boots", (t) => {
@@ -321,7 +272,7 @@ test("installs multiple extension layouts without changing unrelated extensions"
   for (const name of ["bundled", "first.js", "second.ts"]) {
     assert.equal(readlinkSync(join(installed, name)), join(source, name));
   }
-  assert.equal(readFileSync(join(home, "pi-installs.log"), "utf8").trim(), `install ${packageSource}`);
+  assert.deepEqual(packagesOf(join(home, ".pi/agent")), [relative(join(home, ".pi/agent"), checkout)]);
   assert.equal(
     readFileSync(join(installed, "unrelated.js"), "utf8"),
     "Existing extension.\n",
@@ -371,7 +322,7 @@ test("installs shared packages and the bundled style without an external prompt"
   );
   assert.deepEqual(installedSettings, {
     ...JSON.parse(settings),
-    packages: [...JSON.parse(settings).packages, packageSource],
+    packages: [...JSON.parse(settings).packages, relative(agentDir, repoRoot)],
   });
   assert.equal(installedSettings.defaultProvider, "openai-codex");
   assert.equal(installedSettings.defaultThinkingLevel, "high");
@@ -388,7 +339,7 @@ test("installs shared packages and the bundled style without an external prompt"
     readFileSync(join(home, "pi-installs.log"), "utf8").trim().split("\n"),
     [
       ...JSON.parse(settings).packages.map((source) => `install ${source}`),
-      `install ${packageSource}`,
+      ...Array(2).fill(`install ${repoRoot}`),
     ],
   );
   const handlers = new Map();
@@ -408,27 +359,21 @@ test("installs shared packages and the bundled style without an external prompt"
   assert.equal(result.messages.at(-1).customType, "attention-control-reminder");
 });
 
-test("rebuild preserves the working local registration until startup installs the Git package", (t) => {
+test("rebuild replaces a Git registration with the checkout and removes its clone", (t) => {
   const home = temporaryHome(t);
-  const profile = join(home, ".pi/agent");
-  mkdirSync(profile, { recursive: true });
-  const settings = join(profile, "settings.json");
-  const old = join(repoRoot, "ai-rendered/pi/packages/mzizzi");
-  const base = join(repoRoot, "sandbox/agent-lab/pi/setup.sh");
-  const restricted = JSON.stringify({ packages: [{ source: old, skills: [] }] });
-  writeFileSync(settings, restricted);
-  assert.throws(() => setup(home, base), /Review restricted mzizzi package/);
-  assert.equal(readFileSync(settings, "utf8"), restricted);
-  writeFileSync(settings, JSON.stringify({ packages: [old] }));
-  setup(home, base);
-  const before = readFileSync(settings, "utf8");
-  assert.ok(JSON.parse(before).packages.includes(old));
-  assert.throws(() => setup(home, setupScript, { PI_INSTALL_EXIT_STATUS: "7" }), /pi install failed/);
-  assert.equal(readFileSync(settings, "utf8"), before);
+  const agentDir = join(home, ".pi/agent");
+  const gitClone = join(agentDir, "git/github.com/mzizzi/mzizzi-dotfiles");
+  mkdirSync(gitClone, { recursive: true });
+  writeFileSync(join(agentDir, "settings.json"), JSON.stringify({
+    packages: ["git:github.com/mzizzi/mzizzi-dotfiles@7fde4e6f964f524ba65f61d9e5276e9c0f7e27fa"],
+  }));
+  setup(home, join(repoRoot, "sandbox/agent-lab/pi/setup.sh"));
   setup(home);
-  const saved = JSON.parse(readFileSync(settings, "utf8")).packages;
-  assert.ok(!saved.includes(old));
-  assert.equal(saved.filter(spec => spec === packageSource).length, 1);
+  assert.deepEqual(packagesOf(agentDir), [
+    ...JSON.parse(readFileSync(join(repoRoot, "sandbox/agent-lab/pi/settings.json"), "utf8")).packages,
+    relative(agentDir, repoRoot),
+  ]);
+  assert.throws(() => readdirSync(gitClone), { code: "ENOENT" });
 });
 
 test("setup preserves user-authored append instructions", (t) => {

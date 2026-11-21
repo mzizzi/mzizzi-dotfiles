@@ -142,7 +142,7 @@ capabilities:
         - command: 'bash "$WORKSPACE_DIR/sandbox/agent-lab/bin/setup-pi.sh"'
           user: agent
           env: [WORKSPACE_DIR, HTTP_PROXY, HTTPS_PROXY]
-          description: Install the pinned mzizzi Pi package and link custom extensions
+          description: Register this checkout as the mzizzi Pi package and link custom extensions
         - command: 'bash /opt/agent-lab/clone-simracing.sh'
           user: agent
           env: [HTTP_PROXY, HTTPS_PROXY]
