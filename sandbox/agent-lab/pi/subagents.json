@@ -1,5 +1,6 @@
 {
   "globalConcurrencyLimit": 32,
   "maxActiveAsyncRunsPerSession": 8,
-  "maxSubagentSpawnsPerRun": 8
+  "maxSubagentSpawnsPerRun": 9007199254740991,
+  "timeoutMs": 2147483647
 }

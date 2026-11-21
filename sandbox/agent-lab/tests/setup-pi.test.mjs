@@ -363,7 +363,8 @@ test("installs shared packages and the bundled style without an external prompt"
   assert.deepEqual(JSON.parse(readFileSync(subagentConfig, "utf8")), {
     globalConcurrencyLimit: 32,
     maxActiveAsyncRunsPerSession: 8,
-    maxSubagentSpawnsPerRun: 8,
+    maxSubagentSpawnsPerRun: Number.MAX_SAFE_INTEGER,
+    timeoutMs: 2147483647,
   });
   assert.equal(
     readFileSync(subagentConfig, "utf8"),
