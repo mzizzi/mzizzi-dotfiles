@@ -79,7 +79,7 @@ With Claude, Pi, and `pi-subagents` installed:
 node ai-renderer/tests/check_ai_loaders.mjs
 ```
 
-This checks repeated local package installation and discovery without model requests. Pi agents need `pi-subagents`; core Pi alone does not load them. Renderer fixtures live under `tests/fixtures/source/`, outside the normal `ai/` sources.
+This checks local rendered package discovery without model requests. Pi agents need `pi-subagents`; core Pi alone does not load them. Renderer fixtures live under `tests/fixtures/source/`, outside the normal `ai/` sources.
 
 Pi now renders `prepare-feature-branch`, `implement-plan`, and `review-pr` as an interactive pilot. Install the user-level [worktree extension](../config/pi/README.md#worktrees-interactive-pilot) before use. Implementation also needs the local task extension and `pi-subagents`; other review workflows can use a conversation checklist without task tools. Human questions use plain text when no question tool exists.
 
@@ -98,4 +98,4 @@ node ai-rendered/claude/plugins/mzizzi/skills/adversarial-review/scripts/tests/t
 node ai-rendered/pi/packages/mzizzi/skills/adversarial-review/scripts/tests/test_run_review.mjs
 ```
 
-The sources are staging copies for the production plugin port. Sandbox startup renders and registers `ai-rendered/pi/packages/mzizzi` at a stable user-level path; see [sandbox setup](../sandbox/README.md). Existing production Claude plugins and host settings stay unchanged. Reviewers receive instructions not to change target files. Model policy: Claude Fable/medium maps to Pi Astra/medium; Claude Opus 5.5/medium maps to Pi Sol 6.1/high. Set these explicitly in each agent template.
+The sources are staging copies for the production plugin port. Sandbox startup installs committed resources from the pinned Git package; see [sandbox setup](../sandbox/README.md). Existing production Claude plugins and host settings stay unchanged. Reviewers receive instructions not to change target files. Model policy: Claude Fable/medium maps to Pi Astra/medium; Claude Opus 5.5/medium maps to Pi Sol 6.1/high. Set these explicitly in each agent template.
