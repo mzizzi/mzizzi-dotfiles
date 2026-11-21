@@ -12,7 +12,7 @@ Run `/reload` in Pi after setup or code changes. The setup script keeps unrelate
 
 ## Mzizzi Pi package
 
-The repository root is a Pi package. On every start, agent-lab and the SimRacing devcontainer run `setup-pi.sh`, which installs the root dependencies with `npm ci` and registers the checkout with `pi install <checkout>`. Pi then loads the package from the working tree, so it matches whatever the checkout holds. The devcontainer fast-forwards its dotfiles clone before setup. The script also links the local extensions described above.
+The repository root is a Pi package. On every start, agent-lab and the SimRacing devcontainer run `setup-pi.sh`, which installs the root dependencies with `npm ci` only when they are missing or out of date, so a start without network keeps the installed rules loader, and registers the checkout with `pi install <checkout>`. Pi then loads the package from the working tree, so it matches whatever the checkout holds. The devcontainer fast-forwards its dotfiles clone before setup. The script also links the local extensions described above.
 
 The `pi-code` dependency supplies the Claude rules extension; the manifest loads only that extension. Pi loads the skills directly. To discover the `mzizzi.*` agents, the profile also needs the separately installed `pi-subagents` extension. This package does not install it.
 

@@ -7,7 +7,14 @@ extensions_dir="$agent_dir/extensions"
 
 # Pi installs no dependencies for a local package, and the manifest loads the rules extension from
 # node_modules. The flags match Pi's dependency install for a Git package; ci keeps the lockfile.
-(cd "$repo_root" && npm ci --omit=dev --legacy-peer-deps --no-audit --no-fund)
+# ci deletes node_modules first, so it runs only when the manifest or lockfile changed and a start
+# without network keeps the installed loader. The stamp lives in node_modules and goes with it.
+deps_hash=$(cat "$repo_root/package.json" "$repo_root/package-lock.json" | sha256sum)
+stamp="$repo_root/node_modules/.setup-pi.sha256"
+if [[ ! -f "$stamp" || "$(<"$stamp")" != "$deps_hash" ]]; then
+    (cd "$repo_root" && npm ci --omit=dev --legacy-peer-deps --no-audit --no-fund)
+    printf '%s\n' "$deps_hash" > "$stamp"
+fi
 
 node --input-type=module - "$repo_root" "$agent_dir" <<'JS'
 import { spawnSync } from "node:child_process";
