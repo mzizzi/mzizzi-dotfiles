@@ -83,6 +83,8 @@ This checks repeated local package installation and discovery without model requ
 
 Pi now renders `prepare-feature-branch`, `implement-plan`, and `review-pr` as an interactive pilot. Install the user-level [worktree extension](../config/pi/README.md#worktrees-interactive-pilot) before use. Implementation also needs the local task extension and `pi-subagents`; other review workflows can use a conversation checklist without task tools. Human questions use plain text when no question tool exists.
 
+To delegate `implement-plan`, prepare the plan's feature checkout first. Start `mzizzi.standard` with that checkout as `cwd` and its tracked plan as the input. The child delegates phases and reviews there without switching the parent session. The checkout must start clean and have one writer. Normal depth and spawn limits still apply.
+
 Branch selection and the shared uncommitted diff stay unchanged. Worktree entry replaces the Pi session ID/file and pauses until completion. Finish all child work before switching. Worktrees stay after shutdown; PR cleanup refuses forced removal without approval. Dirty source plans absent from the destination need a transfer decision. Local runtime checks cover real terminal entry/return, one late-input race, child/supervisor coordination, and cwd-bound MCP reconnection. Full model-driven workflow checks remain pilot gates.
 
 The [quality review skill](../ai/mzizzi/skills/fix-quality/SKILL.md.j2) disables acceptance attestation per review call so it cannot replace the requested report. The shared `standard` agent also writes implementations, so this policy belongs to each review call rather than the agent's global settings. The skill owns the invocation and report contract.

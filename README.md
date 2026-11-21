@@ -1,6 +1,6 @@
 # mzizzi-dotfiles
 
-Personal Claude Code plugin marketplace and dotfiles.
+Personal Claude Code plugin marketplace and dotfiles. See [Pi package setup](config/pi/README.md#mzizzi-pi-package) for the rendered skills, agents, and Claude rules loader.
 
 ## Plugins
 
@@ -19,7 +19,7 @@ Safe to re-run any time, including after moving or re-cloning the repo -- it sel
 
 Markdown here is stored one logical line per paragraph -- editors soft-wrap it, so a one-word edit no longer reshuffles a paragraph's wrap points into a multi-line diff. Prettier does the reflowing and `.prettierrc` is the contract, read by the git hook and by any editor Prettier plugin alike. The hook is authoritative: it pins its own Prettier version, while an editor plugin uses whatever version it ships with, so the two can still disagree on output the pin has changed. If format-on-save keeps producing edits the hook then rewrites, match your editor's Prettier to the version pinned in `.pre-commit-config.yaml`.
 
-[pre-commit](https://pre-commit.com) manages local commit and push hooks. It installs isolated Python and Node dependencies pinned in [the hook configuration](.pre-commit-config.yaml). Manual rendering uses [the renderer requirements](ai-renderer/requirements.txt). Setup needs Python >=3.11 and Node >=22. No root `package.json` or `node_modules` is needed.
+[pre-commit](https://pre-commit.com) manages local commit and push hooks. It installs isolated Python and Node dependencies pinned in [the hook configuration](.pre-commit-config.yaml). Manual rendering uses [the renderer requirements](ai-renderer/requirements.txt). Setup needs Python >=3.11 and Node >=22. The hooks don't need an npm install in this checkout.
 
 Per machine, once:
 

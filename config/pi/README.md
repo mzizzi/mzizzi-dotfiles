@@ -10,6 +10,22 @@ bash sandbox/agent-lab/bin/setup-pi.sh
 
 Run `/reload` in Pi after setup or code changes. The setup script keeps unrelated installed extensions.
 
+## Mzizzi Pi package
+
+The sandbox still registers `ai-rendered/pi/packages/mzizzi` as a local package on boot. That package provides skills and agent definitions, but not the Claude rules loader. Boot also links the extensions described above separately.
+
+To try the Git package, set `PI_CODING_AGENT_DIR` to a separate Pi profile without the local mzizzi package registered. Replace `<commit>` with a reachable commit SHA containing the root Pi manifest:
+
+```sh
+pi install 'git:github.com/mzizzi/mzizzi-dotfiles@<commit>'
+```
+
+This installs `pi-code` as a dependency and loads only its Claude rules extension. Pi loads the skills directly. To discover the `mzizzi.*` agents, the profile also needs the separately installed `pi-subagents` extension. The Git package does not install it.
+
+Unscoped rules from `~/.claude/rules/` (or the configured Claude directory) and from an approved project's `.claude/rules/` can reach the first model request. Approval persists as Pi project trust. An undecided project is not approved by a headless run.
+
+For a scoped rule, the initial request lists the rule file and its path pattern, not the rule text. A successful native `read`, `edit`, or `write` on a matching path adds the rule text to the tool result. Read an existing file before editing it. Before creating a file or using Bash, read the matching rule file directly. The loader does not enforce rules before a tool runs.
+
 ## Attention Control
 
 `extensions/attention-control/style.md` is the complete, repo-managed Pi style. Edit it directly; the extension adds it to the system prompt automatically. No external checkout, host mount, generated prompt, or text filter is needed. The copy retains its upstream license and attribution in the extension directory.
@@ -68,4 +84,12 @@ Run from the repository root:
 node --test config/pi/tests/*.test.mjs sandbox/agent-lab/tests/*.test.mjs
 ```
 
-Runtime tests find the installed `pi` CLI. Without Pi they report a skip; set `PI_WORKTREE_HOST` to its `dist/index.js` to check another installation. An explicit invalid host path fails the suite.
+Worktree runtime tests find the installed `pi` CLI. Without Pi they report a skip; set `PI_WORKTREE_HOST` to its `dist/index.js` to check another installation. An explicit invalid host path fails the suite.
+
+The opt-in Claude rules package test needs `pi` on `PATH`, Python 3 with pseudo-terminal support, GitHub and npm access, and a full candidate commit SHA. For rollout verification, use the installed Pi in each target environment. A standalone install of the same version does not count.
+
+```sh
+PI_CLAUDE_RULES_CANDIDATE='<candidate-sha>' node --test config/pi/tests/claude-rules-package.test.mjs
+```
+
+For an unpublished commit, also set `PI_CLAUDE_RULES_CHECKOUT` to a separate disposable Git checkout whose `HEAD` is the candidate. The test rewrites the Git clone URL in its temporary home without changing the package source in Pi settings. The CLI and its SDK use disposable homes, profiles, and projects. Only the scripted provider receives model requests.

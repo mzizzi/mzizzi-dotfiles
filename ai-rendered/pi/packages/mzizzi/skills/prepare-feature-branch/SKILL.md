@@ -4,7 +4,7 @@ description: Put a plan's implementation work onto a <username>/<slug> feature b
 disable-model-invocation: false
 ---
 
-Keep `<skill-dir>` and the plan path absolute across worktree entry. Entry needs the worktree extension in an interactive parent session; stop if unavailable.
+Keep `<skill-dir>` and the plan path absolute. Only an interactive parent can use the worktree extension to enter another checkout. A delegated coordinator stays in its assigned checkout.
 
 # Prepare Feature Branch
 
@@ -42,6 +42,12 @@ Uncommitted changes are classified in the script, not here: the plan directory t
 When the fetch fails, the script prints git's error after the `KEY=value` lines. `TRUNK_BEHIND` is then counted against an old remote ref, so tell the user the count may be stale and why.
 
 If Git reports "Read-only file system", "Permission denied" under `.git`, or "dubious ownership", report the exact error and stop. Do not invent permission elevation, change ownership/trust settings, or use another workaround.
+
+### Delegated checkout check
+
+For a delegated `implement-plan`, the supervisor supplies exclusive use of a registered feature checkout as the child's `cwd` and the absolute plan path **inside that checkout**. The supervisor can reuse the feature worktree or prepare it before starting the child. Keep the parent's session in place. Resolve any branch, pending-edit or plan-transfer decision before delegation; do not silently copy a dirty plan.
+
+As the child, run Step 1 from the assigned checkout. Require `ACTION=stay`, the reported `WORKTREE_PATH` to resolve to the assigned checkout root, the plan to be tracked there, and `PLAN_DIR_DIRTY=no` and `OTHER_DIRTY=no`. On a mismatch, stop before mutation and report the expected branch and checkout to the supervisor. Do not switch branches, create worktrees, call `EnterWorktree`, or use a plan from the parent checkout. On success, report the branch and path and return to `implement-plan`. Steps 2–5 below are for the interactive parent.
 
 ## Step 2: Settle any pending edits
 

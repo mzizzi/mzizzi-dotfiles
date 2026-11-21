@@ -9,7 +9,7 @@ pi:
   disable-model-invocation: false
 ---{% if target == "pi" %}
 
-Resolve `<skill-dir>` to this skill's absolute directory. This workflow needs task tools, `pi-subagents`, and the worktree extension; stop if unavailable.{% endif %}
+Resolve `<skill-dir>` to this skill's absolute directory. This workflow needs task tools and `pi-subagents`. An interactive parent also needs the worktree extension. A delegated coordinator needs the nested `subagent` tool and must start in the prepared feature checkout; do not switch the parent session. Stop before edits if a required capability is missing.{% endif %}
 
 ## Step 0: Resolve the target and scope
 
@@ -23,7 +23,7 @@ Confirm the scope back to the user in one line before moving on, so a misread is
 
 {% if target == "claude" %}```text
 Skill(skill: "prepare-feature-branch", args: "<plan directory>")
-```{% else %}Read and follow {{ Skill("prepare-feature-branch") }} at `<skill-dir>/../prepare-feature-branch/SKILL.md` with arguments `<plan directory>`. Return here after branch preparation, including completed worktree entry, before Step 2.{% endif %}
+```{% else %}Read and follow {{ Skill("prepare-feature-branch") }} at `<skill-dir>/../prepare-feature-branch/SKILL.md` with arguments `<plan directory>`. In an interactive parent, return here after branch preparation, including completed worktree entry, before Step 2. In a subagent, use the delegated checkout check in that skill instead. Use the plan in the assigned checkout for every phase, review and follow-up. Send blocking decisions to the supervisor.{% endif %}
 
 {% if target == "claude" %}The branch keeps the diff mapped to the plan and off the trunk, and Step 4 reads the working-tree diff, so the baseline must be clean.{% else %}Prepare the branch before implementation; Step 4 reviews that checkout's working diff.{% endif %} The skill derives the name, reuses existing feature work for this plan or creates it, commits the plan document onto the branch, and announces the result. An untracked plan directory is expected there and needs no intervention; unrelated pending edits get put to the user as a choice, so relay whatever they decided rather than re-litigating it here.
 
