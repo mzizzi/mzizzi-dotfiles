@@ -55,6 +55,7 @@ class AgentTests(unittest.TestCase):
                             "advertise": True, "defaultContext": "fresh",
                             "systemPromptMode": "replace", "inheritProjectContext": True,
                             "inheritGlobalContext": True, "inheritSkills": True,
+                            **({"allowNestedSubagents": True} if name == "standard" else {}),
                         })
                         reference = "the `development-preferences` skill"
                     self.assertEqual(rendered_body, body.replace("the mzizzi:development-preferences skill", reference))

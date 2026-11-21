@@ -4,7 +4,7 @@ description: Turn a plan.md (or a subset of it) into working code, then run the 
 disable-model-invocation: false
 ---
 
-Resolve `<skill-dir>` to this skill's absolute directory. This workflow needs task tools, `pi-subagents`, and the worktree extension; stop if unavailable.
+Resolve `<skill-dir>` to this skill's absolute directory. This workflow needs task tools and `pi-subagents`. An interactive parent also needs the worktree extension. A delegated coordinator needs the nested `subagent` tool and must start in the prepared feature checkout; do not switch the parent session. Stop before edits if a required capability is missing.
 
 ## Step 0: Resolve the target and scope
 
@@ -16,7 +16,7 @@ Confirm the scope back to the user in one line before moving on, so a misread is
 
 ## Step 1: Prepare the feature branch
 
-Read and follow the `prepare-feature-branch` skill at `<skill-dir>/../prepare-feature-branch/SKILL.md` with arguments `<plan directory>`. Return here after branch preparation, including completed worktree entry, before Step 2.
+Read and follow the `prepare-feature-branch` skill at `<skill-dir>/../prepare-feature-branch/SKILL.md` with arguments `<plan directory>`. In an interactive parent, return here after branch preparation, including completed worktree entry, before Step 2. In a subagent, use the delegated checkout check in that skill instead. Use the plan in the assigned checkout for every phase, review and follow-up. Send blocking decisions to the supervisor.
 
 Prepare the branch before implementation; Step 4 reviews that checkout's working diff. The skill derives the name, reuses existing feature work for this plan or creates it, commits the plan document onto the branch, and announces the result. An untracked plan directory is expected there and needs no intervention; unrelated pending edits get put to the user as a choice, so relay whatever they decided rather than re-litigating it here.
 

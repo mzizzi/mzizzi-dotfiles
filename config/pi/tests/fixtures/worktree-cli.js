@@ -1,5 +1,5 @@
 import { appendFileSync, readFileSync } from "node:fs";
-import { response } from "./scripted-response.mjs";
+import { response, scriptedProvider } from "./scripted-response.mjs";
 
 export default function (pi) {
   const config = JSON.parse(
@@ -60,22 +60,9 @@ export default function (pi) {
   pi.on("agent_settled", (_event, ctx) => {
     if (finished) ctx.shutdown();
   });
-  pi.registerProvider("terminal-fixture", {
-    api: "openai-completions",
-    baseUrl: "http://invalid.test",
-    apiKey: "fixture-not-a-real-key",
-    models: [
-      {
-        id: "local",
-        name: "Local terminal fixture",
-        reasoning: false,
-        input: ["text"],
-        contextWindow: 100000,
-        maxTokens: 4096,
-        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-      },
-    ],
-    streamSimple(model, context) {
+  pi.registerProvider(
+    "terminal-fixture",
+    scriptedProvider("Local terminal fixture", (model, context) => {
       const messages = JSON.stringify(context.messages);
       const cancelled = messages.includes("CANCEL_TERMINAL_INPUT");
       const returned =
@@ -159,6 +146,6 @@ export default function (pi) {
         }
       }
       return response(content, model);
-    },
-  });
+    }),
+  );
 }

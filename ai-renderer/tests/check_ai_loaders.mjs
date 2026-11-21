@@ -11,16 +11,20 @@ import {
 import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
 import { pathToFileURL, fileURLToPath } from "node:url";
+import {
+  expectedMzizziAgents,
+  expectedMzizziSkills,
+} from "../../tests/support/mzizzi-inventory.mjs";
+import {
+  createSubagentsImporter,
+  resolveSubagentsRoot,
+} from "../../tests/support/pi-subagents-import.mjs";
 
 const repo = fileURLToPath(new URL("../../", import.meta.url));
+const expectedPiSkills = expectedMzizziSkills(repo);
 const temporary = mkdtempSync(join(tmpdir(), "ai-loader-check-"));
 const originalAgentDir = process.env.PI_CODING_AGENT_DIR;
 const originalPiRoot = process.env.PI_SUBAGENTS_PI_CODING_AGENT_PACKAGE_ROOT;
-const expectedClaudeSkills = readdirSync(
-  join(repo, "plugins/mzizzi/skills"),
-).sort();
-const renameReview = (name) => name === "codex-adversarial-review" ? "adversarial-review" : name;
-const expectedPiSkills = expectedClaudeSkills.map(renameReview).sort();
 const models = JSON.parse(readFileSync(join(repo, "ai/models.json"), "utf8"));
 const sol = `openai-codex/${models.sol}`;
 const astra = `openai-codex/${models.astra}`;
@@ -36,14 +40,21 @@ try {
   const npmRoot = execFileSync("npm", ["root", "-g"], {
     encoding: "utf8",
   }).trim();
-  const core = join(npmRoot, "@earendil-works/pi-coding-agent/dist/core");
-  const { DefaultPackageManager } = await import(
-    pathToFileURL(join(core, "package-manager.js"))
-  );
-  const { SettingsManager } = await import(
-    pathToFileURL(join(core, "settings-manager.js"))
-  );
-  const { loadSkills } = await import(pathToFileURL(join(core, "skills.js")));
+  const piRoot = join(npmRoot, "@earendil-works/pi-coding-agent");
+  const {
+    DefaultPackageManager,
+    SettingsManager,
+    getAgentDir,
+    loadSkills,
+    parseFrontmatter: parseYamlFrontmatter,
+  } = await import(pathToFileURL(join(piRoot, "dist/index.js")));
+  const hostAgentDir = getAgentDir();
+  const hostPackages = new DefaultPackageManager({
+    cwd: temporary,
+    agentDir: hostAgentDir,
+    settingsManager: SettingsManager.create(temporary, hostAgentDir),
+  });
+  const importSubagents = createSubagentsImporter(resolveSubagentsRoot(hostPackages));
   const packagePath = join(repo, "ai-rendered/pi/packages/mzizzi");
   const agentDir = join(temporary, "agent string");
   const existingPackage = join(temporary, "existing-package");
@@ -145,21 +156,14 @@ try {
   );
   console.log("Pi package and skill discovery passed.");
 
-  const { getAgentDir } = await import(
-    pathToFileURL(join(core, "../config.js"))
-  );
-  const subagents = join(getAgentDir(), "npm/node_modules/pi-subagents");
   process.env.PI_CODING_AGENT_DIR = agentDir;
-  const { discoverAgents } = await import(
-    pathToFileURL(join(subagents, "src/agents/agents.js"))
-  );
+  process.env.PI_SUBAGENTS_PI_CODING_AGENT_PACKAGE_ROOT = piRoot;
+  const { discoverAgents } = await importSubagents("src/agents/agents");
   const discovered = discoverAgents(temporary, "both", undefined, {
     globalNpmRoot: null,
   });
   assert.deepEqual(discovered.agentDiagnostics ?? [], []);
-  const { parseFrontmatter } = await import(
-    pathToFileURL(join(subagents, "src/agents/frontmatter.js"))
-  );
+  const { parseFrontmatter } = await importSubagents("src/agents/frontmatter");
   for (const [name, model, thinking] of expectedAgents) {
     const agent = discovered.agents.find(
       (agent) => agent.name === `mzizzi.${name}`,
@@ -179,7 +183,7 @@ try {
     assert.equal(agent.thinking, thinking);
     assert.equal(
       agent.allowNestedSubagents,
-      name === "delegator" ? true : undefined,
+      ["standard", "delegator"].includes(name) ? true : undefined,
     );
     if (name === "adversarial-reviewer") {
       assert.deepEqual(agent.tools, ["read", "grep", "find", "ls", "bash"]);
@@ -192,9 +196,7 @@ try {
   }
   console.log("Pi agent package discovery passed.");
 
-  const { resolveEffectiveAcceptance, formatAcceptancePrompt } = await import(
-    pathToFileURL(join(subagents, "src/runs/shared/acceptance.js"))
-  );
+  const { resolveEffectiveAcceptance, formatAcceptancePrompt } = await importSubagents("src/runs/shared/acceptance");
   const standard = discovered.agents.find((agent) => agent.name === "mzizzi.standard");
   const inferred = resolveEffectiveAcceptance({ acceptanceRole: standard.acceptanceRole, async: true });
   assert.equal(inferred.level, "attested");
@@ -209,10 +211,7 @@ try {
   );
   console.log("Pi read-only quality review acceptance policy passed.");
 
-  process.env.PI_SUBAGENTS_PI_CODING_AGENT_PACKAGE_ROOT = join(npmRoot, "@earendil-works/pi-coding-agent");
-  const { validateStructuredOutputValue } = await import(
-    pathToFileURL(join(subagents, "src/runs/shared/structured-output.js"))
-  );
+  const { validateStructuredOutputValue } = await importSubagents("src/runs/shared/structured-output");
   const { outputSchema } = await import(
     pathToFileURL(join(packagePath, "skills/adversarial-review/scripts/lib/review.mjs"))
   );
@@ -251,13 +250,11 @@ try {
       encoding: "utf8",
     },
   );
-  for (const name of expectedClaudeSkills.map(renameReview)) {
+  for (const name of expectedPiSkills) {
     assert.ok(inventory.includes(name), `Claude plugin must expose ${name}`);
   }
-  for (const [name] of expectedAgents) {
-    if (name !== "adversarial-reviewer") {
-      assert.ok(inventory.includes(name), `Claude plugin must expose ${name}`);
-    }
+  for (const name of expectedMzizziAgents(repo, "claude", parseYamlFrontmatter)) {
+    assert.ok(inventory.includes(name), `Claude plugin must expose ${name}`);
   }
   assert.ok(!inventory.includes("codex-adversarial-review"));
   assert.ok(!readdirSync(join(plugin, "agents")).includes("adversarial-reviewer.md"));

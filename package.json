@@ -1,0 +1,20 @@
+{
+  "name": "mzizzi-ai",
+  "private": true,
+  "dependencies": {
+    "pi-code": "1.10.2"
+  },
+  "pi": {
+    "extensions": [
+      "./node_modules/pi-code/extensions/claude-rules.ts"
+    ],
+    "skills": [
+      "./ai-rendered/pi/packages/mzizzi/skills"
+    ],
+    "subagents": {
+      "agents": [
+        "./ai-rendered/pi/packages/mzizzi/agents"
+      ]
+    }
+  }
+}

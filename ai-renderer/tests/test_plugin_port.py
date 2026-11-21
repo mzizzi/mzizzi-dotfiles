@@ -254,7 +254,12 @@ class PluginPortTests(unittest.TestCase):
         self.assertNotIn("rerun the same command with elevated permissions", prepare)
         self.assertNotIn("the worktree's diff is clean either way", prepare)
 
+        self.assertIn("Require `ACTION=stay`", prepare)
+        self.assertIn("`PLAN_DIR_DIRTY=no` and `OTHER_DIRTY=no`", prepare)
+        self.assertIn("stop before mutation", prepare)
         implementation = body("implement-plan")
+        self.assertIn("delegated checkout check", implementation)
+        self.assertIn("needs the nested `subagent` tool", implementation)
         self.assertLess(implementation.index("../prepare-feature-branch/SKILL.md"), implementation.index("## Step 2"))
         self.assertLess(implementation.index("TaskCreate"), implementation.index("subagent({"))
         self.assertLess(implementation.index("subagent({"), implementation.index("../fix-all/SKILL.md"))

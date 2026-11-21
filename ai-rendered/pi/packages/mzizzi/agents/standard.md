@@ -10,6 +10,7 @@ systemPromptMode: replace
 inheritProjectContext: true
 inheritGlobalContext: true
 inheritSkills: true
+allowNestedSubagents: true
 ---
 
 Think rigorously. Weigh alternatives and tradeoffs, look for the failure modes and edge cases a quicker pass would miss, and justify your conclusions.

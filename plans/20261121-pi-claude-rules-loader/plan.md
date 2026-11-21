@@ -42,6 +42,18 @@ Use upstream loading and trust without overrides. User rules and unscoped rules 
 3. Reuse the scripted provider from `config/pi/tests/worktree-runtime.test.mjs`, not its forced SDK trust result. Isolate user rules and trust storage in disposable homes. Use a project with `.claude/rules/` but no Pi project resources. Answer the loader's actual confirmation in separate fresh profiles. On approval, check that user and unscoped project bodies reach the first request, while the scoped rule contributes only a pointer. Check that its body stays absent after a non-matching read and appears after a matching read. On denial, check that user rules remain and neither project bodies nor pointers reach any request, even after a matching read. Check the undecided headless case without granting trust. Use distinct markers and no live model.
 4. Run the same check against the actual Pi CLI **and corresponding SDK** for agent-lab (1.5.2), the SimRacing devcontainer (1.6.0), and SimRacing sbx (1.5.0). Record the candidate SHA, host versions, and outcomes before adoption. A skip is not a pass. Hold adoption for any failing host; do not relax trust or silently enable other extensions to make it pass.
 
+#### Phase 2 verification
+
+Candidate `0f9b7a8682c6c1948ef3e709accd7110d0d0b9e3` was committed only in a disposable checkout. The test ran `pi install` with the canonical Git source and a local Git URL rewrite. It also installed managed `pi-subagents` at `52e68e9ef0e563d5c97b28519f9999f1b5fbbbea`.
+
+| Target environment | Result |
+| --- | --- |
+| agent-lab, Pi 1.5.2 | Passed. Real CLI install, interactive terminal approval, and undecided print mode; matching SDK extension paths, skills, agents, and approve, deny, and undecided request context. |
+| SimRacing devcontainer, Pi 1.6.0 | Not run — operator to verify. |
+| SimRacing sbx, Pi 1.5.0 | Not run — operator to verify. |
+
+Standalone npm installations of Pi 1.5.0 and 1.6.0 passed the Git install, SDK, interactive terminal approval, and print-mode checks. These fixture runs do not verify consumer environments. Hold adoption until the shipped checks pass and the checked commit is reachable upstream.
+
 ### Implementation Phase 3: Adopt the checked commit in managed profiles (separate rollout)
 
 1. After the checked package commit is available upstream, add its full `git:github.com/mzizzi/mzizzi-dotfiles@<commit>` string to `sandbox/agent-lab/pi/settings.json`. This later commit can name the earlier package commit without a self-reference. Keep the `pi-code` version only in the root manifest. The shared `pi/setup.sh` already installs string entries; it needs no package-object support. **Coordinate this step with SimRacing:** its sbx boot reapplies these settings from the updated marketplace checkout. Do not merge the settings change as part of Phase 1.

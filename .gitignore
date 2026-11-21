@@ -13,3 +13,4 @@
 
 venv/
 generated/
+/node_modules/

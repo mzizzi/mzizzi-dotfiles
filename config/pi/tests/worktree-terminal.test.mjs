@@ -8,9 +8,10 @@ import {
   symlinkSync,
   writeFileSync,
 } from "node:fs";
-import { basename, dirname, join } from "node:path";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
+import { piPackageRoot } from "./pi-host.mjs";
 import { fixture } from "./worktree-fixture.mjs";
 
 let cli;
@@ -77,10 +78,7 @@ for (const { race, childRoundTrip } of [
         agentDir,
         race,
         childRoundTrip,
-        hostRoot:
-          basename(dirname(realpathSync(cli))) === "bundle"
-            ? dirname(dirname(dirname(realpathSync(cli))))
-            : dirname(dirname(realpathSync(cli))),
+        hostRoot: piPackageRoot(realpathSync(cli)),
         events: join(f.dir, "terminal-events.jsonl"),
         terminalOutput: join(f.dir, "terminal-output.log"),
         command: [
@@ -112,6 +110,7 @@ for (const { race, childRoundTrip } of [
       const result = spawnSync(
         python,
         [
+          "-B",
           fileURLToPath(
             new URL("./fixtures/terminal-driver.py", import.meta.url),
           ),

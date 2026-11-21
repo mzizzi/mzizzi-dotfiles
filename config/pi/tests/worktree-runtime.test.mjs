@@ -20,7 +20,7 @@ import {
 } from "../extensions/worktree/transition.js";
 import { inspectCheckout } from "../extensions/worktree/git-worktree.js";
 import { fixture } from "./worktree-fixture.mjs";
-import { response } from "./fixtures/scripted-response.mjs";
+import { response, scriptedProvider } from "./fixtures/scripted-response.mjs";
 
 let hostPath = process.env.PI_WORKTREE_HOST;
 if (!hostPath) {
@@ -68,29 +68,16 @@ async function runtimeHarness(t, f, options = {}) {
     refreshOnCreate: false,
   });
   const responses = [];
-  modelRuntime.registerProvider("worktree-fixture", {
-    api: "openai-completions",
-    baseUrl: "http://invalid.test",
-    apiKey: "fixture-not-a-real-key",
-    streamSimple: (model, context) => {
+  modelRuntime.registerProvider(
+    "worktree-fixture",
+    scriptedProvider("Local fixture", (model, context) => {
       options.onRequest?.(context);
       return response(
         responses.shift() ?? [{ type: "text", text: "fixture complete" }],
         model,
       );
-    },
-    models: [
-      {
-        id: "local",
-        name: "Local fixture",
-        reasoning: false,
-        input: ["text"],
-        contextWindow: 100_000,
-        maxTokens: 4096,
-        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-      },
-    ],
-  });
+    }),
+  );
   const model = modelRuntime.getModel("worktree-fixture", "local");
   const events = [];
   const errors = [];
