@@ -20,6 +20,7 @@ import attentionControl from "../../../config/pi/extensions/attention-control/in
 
 const repoRoot = resolve(fileURLToPath(new URL("../../../", import.meta.url)));
 const setupScriptPath = "sandbox/agent-lab/bin/setup-pi.sh";
+const delegatorInstaller = "sandbox/agent-lab/pi/install-delegator.mjs";
 const dependencyInputs = ["package.json", "package-lock.json"];
 const npmCi = "ci --omit=dev --legacy-peer-deps --no-audit --no-fund";
 
@@ -68,11 +69,12 @@ fs.writeFileSync(settingsPath, JSON.stringify(settings));
 
 function copySetup(checkout) {
   const script = join(checkout, setupScriptPath);
-  mkdirSync(dirname(script), { recursive: true });
-  writeFileSync(script, readFileSync(join(repoRoot, setupScriptPath)));
-  for (const name of dependencyInputs) {
-    writeFileSync(join(checkout, name), readFileSync(join(repoRoot, name)));
+  for (const name of [setupScriptPath, delegatorInstaller, ...dependencyInputs]) {
+    const path = join(checkout, name);
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, readFileSync(join(repoRoot, name)));
   }
+  symlinkSync(join(repoRoot, "ai-rendered"), join(checkout, "ai-rendered"));
   return script;
 }
 
@@ -167,7 +169,7 @@ test("rejects malformed settings before any package CLI call", (t) => {
   });
 });
 
-test("installs package and extensions in a custom Pi profile", (t) => {
+test("installs package, extensions, and delegator in a custom Pi profile", (t) => {
   const home = temporaryHome(t);
   const agentDir = join(home, "custom profile");
   setup(home, { env: { PI_CODING_AGENT_DIR: agentDir } });
@@ -175,6 +177,8 @@ test("installs package and extensions in a custom Pi profile", (t) => {
     readlinkSync(join(agentDir, "extensions/worktree")),
     extensionOf(home, "worktree"),
   );
+  assert.match(readFileSync(join(agentDir, "APPEND_SYSTEM.md"), "utf8"), /^Keep this session focused/);
+  assert.equal(existsSync(join(home, ".pi/agent/APPEND_SYSTEM.md")), false);
 });
 
 for (const entryKind of ["Git", "string", "source-only object", "relative string", "relative object", "duplicate"]) {
@@ -324,7 +328,7 @@ test("replaces an outdated extension link", (t) => {
   assert.equal(readlinkSync(installed), extensionOf(home, "attention-control"));
 });
 
-test("installs shared packages and the bundled style without an external prompt", (t) => {
+test("installs shared packages, the delegator prompt, and the bundled style", (t) => {
   const home = temporaryHome(t);
   const bin = join(home, "bin");
   const subagentConfig = join(
@@ -343,9 +347,11 @@ test("installs shared packages and the bundled style without an external prompt"
   setup(home);
 
   const agentDir = join(home, ".pi/agent");
-  assert.throws(() => readFileSync(join(agentDir, "APPEND_SYSTEM.md")), {
-    code: "ENOENT",
-  });
+  const agent = readFileSync(join(repoRoot, "ai-rendered/pi/packages/mzizzi/agents/delegator.md"), "utf8");
+  assert.equal(
+    readFileSync(join(agentDir, "APPEND_SYSTEM.md"), "utf8"),
+    agent.split("\n---\n", 2)[1].trim() + "\n",
+  );
   const bundledStyle = readFileSync(extensionOf(home, "attention-control/style.md"), "utf8");
   const settings = readFileSync(
     join(repoRoot, "sandbox/agent-lab/pi/settings.json"),

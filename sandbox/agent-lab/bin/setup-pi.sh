@@ -51,3 +51,5 @@ for extension in "$repo_root/config/pi/extensions/"*; do
         ln -sfnT "$extension" "$extensions_dir/${extension##*/}"
     fi
 done
+
+node "$repo_root/sandbox/agent-lab/pi/install-delegator.mjs"

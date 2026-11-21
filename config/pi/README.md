@@ -20,6 +20,12 @@ Unscoped rules from `~/.claude/rules/` (or the configured Claude directory) and 
 
 For a scoped rule, the initial request lists the rule file and its path pattern, not the rule text. A successful native `read`, `edit`, or `write` on a matching path adds the rule text to the tool result. Read an existing file before editing it. Before creating a file or using Bash, read the matching rule file directly. The loader does not enforce rules before a tool runs.
 
+## Main-session delegator
+
+Setup seeds Pi's `APPEND_SYSTEM.md` from the rendered `mzizzi.delegator` prompt if the profile does not already have an append file. Once created, the file is yours to edit; setup does not overwrite it. Run `/reload` after changing it. A trusted project's `.pi/APPEND_SYSTEM.md` takes precedence.
+
+Fresh `pi-subagents` workers use their own prompts without the append file. A forked worker still inherits the parent's prompt. Use fresh context when workers should not get the delegator instructions.
+
 ## Attention Control
 
 `extensions/attention-control/style.md` is the complete, repo-managed Pi style. Edit it directly; the extension adds it to the system prompt automatically. No external checkout, host mount, generated prompt, or text filter is needed. The copy retains its upstream license and attribution in the extension directory.
@@ -28,7 +34,7 @@ Task tracking is opt-in for explicit requests or long-horizon work that needs pe
 
 The extension also adds a hidden reminder before each model request, including after tool calls. The reminder follows the conversation without changing existing messages or saved session history. It reinforces the style; it does not enforce response length.
 
-Style and extension changes take effect on `/reload`. Setup no longer creates `APPEND_SYSTEM.md` and leaves user-authored append files alone. If an older sandbox contains the generated Attention Control append file, move that file aside before `/reload`; otherwise the extension skips its bundled style to avoid a duplicate.
+Style and extension changes take effect on `/reload`. If an older sandbox has an append file that contains only the former generated Attention Control style, move it aside and rerun setup. The extension adds its own style once the old copy is gone.
 
 ## Tasks
 

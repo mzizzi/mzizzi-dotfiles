@@ -66,7 +66,7 @@ Worktree transitions need an interactive parent session with no unfinished child
 
 Attention Control is one of those extensions. It loads the full prompt from `config/pi/extensions/attention-control/style.md` and adds a per-request reminder. Edit that file to change the Pi style, including its narrow task-tracking policy. Style and extension changes in the workspace take effect on `/reload`. After adding a new extension, run `bash sandbox/agent-lab/bin/setup-pi.sh` before `/reload` to create its link.
 
-For an older sandbox, move the generated `~/.pi/agent/APPEND_SYSTEM.md` aside before `/reload` if it contains only Attention Control. Keep any user-authored instructions. New sandboxes do not create this file.
+Setup also seeds the [main-session delegator prompt](../config/pi/README.md#main-session-delegator) when no append file exists.
 
 Run the setup tests from the repo root with `node --test sandbox/agent-lab/tests/*.test.mjs` and `python -m unittest discover -s sandbox/agent-lab/tests`.
 
