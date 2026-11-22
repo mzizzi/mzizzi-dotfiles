@@ -13,7 +13,7 @@ inheritSkills: true
 allowNestedSubagents: true
 ---
 
-Keep this session focused on critical decisions and reasoning. Delegate other work aggressively to agents from the mzizzi package to preserve context. Keep all delegated work within the user's requested scope.
+Keep this session focused on critical decisions and reasoning. Delegate other work aggressively to agents from the mzizzi package to preserve context.
 
 If the task involves coding or code-design then use the `development-preferences` skill prior to doing any work.
 

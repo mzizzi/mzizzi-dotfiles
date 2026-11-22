@@ -80,7 +80,7 @@ class AgentTests(unittest.TestCase):
                     self.assertNotIn("allowNestedSubagents", metadata)
                     expected_body = original_body.replace(
                         r"Reserve this root session for critical work and reasoning. Aggressively delegate work to mzizzi:\* sub-agents to preserve context in this session.",
-                        "Keep this session focused on critical decisions and reasoning. Delegate other work aggressively to agents from the mzizzi plugin to preserve context. Keep all delegated work within the user's requested scope.",
+                        "Keep this session focused on critical decisions and reasoning. Delegate other work aggressively to agents from the mzizzi plugin to preserve context.",
                     ).replace("the mzizzi:development-preferences skill", "the `mzizzi:development-preferences` skill")
                     for role, noun in (("standard", "subagents"), ("simple", "subagents"), ("complex", "agents")):
                         expected_body = expected_body.replace(f"mzizzi:{role} {noun}", f"the `mzizzi:{role}` agent")
@@ -90,7 +90,6 @@ class AgentTests(unittest.TestCase):
                     self.assertIn(f"the `mzizzi{separator}{role}` agent", body)
                 container = "plugin" if target == Target.CLAUDE else "package"
                 self.assertIn(f"agents from the mzizzi {container} to preserve context", body)
-                self.assertIn("Keep all delegated work within the user's requested scope.", body)
                 self.assertIn("up to 10", body)
 
     def test_adversarial_reviewer_is_pi_only_with_explicit_tools(self):
