@@ -75,6 +75,8 @@ AGENT_CHOICES = {
     (Target.PI, "systemPromptMode"): {"replace", "append"},
     (Target.PI, "acceptanceRole"): {"read-only", "writer"},
 }
+MANIFEST = "manifest.yaml"
+CLAUDE_MANIFEST_FIELDS = {"description": str, "dependencies": list}
 
 
 class UniqueKeyLoader(yaml.SafeLoader):
@@ -145,6 +147,15 @@ def render_frontmatter(metadata):
     return text
 
 
+def check_fields(block, fields, label):
+    for key, value in block.items():
+        expected = fields.get(key)
+        if expected is None:
+            raise RenderError(f"unsupported {label} metadata: {key}")
+        if type(value) is not expected:
+            raise RenderError(f"{label}.{key} must be {expected.__name__}")
+
+
 def parse_resource(text, resource, target):
     lines = text.splitlines(keepends=True)
     if not lines or lines[0].strip() != "---":
@@ -168,12 +179,8 @@ def parse_resource(text, resource, target):
             continue
         if not isinstance(block, dict):
             raise RenderError(f"{metadata_target} metadata must be a mapping")
+        check_fields(block, fields[metadata_target], metadata_target)
         for key, value in block.items():
-            expected = fields[metadata_target].get(key)
-            if expected is None:
-                raise RenderError(f"unsupported {metadata_target} metadata: {key}")
-            if type(value) is not expected:
-                raise RenderError(f"{metadata_target}.{key} must be {expected.__name__}")
             if resource.kind == ResourceKind.AGENT:
                 if key == "experimental":
                     if value.keys() != {"cacheTtl"} or not isinstance(value["cacheTtl"], str) or not value["cacheTtl"].strip():
@@ -181,7 +188,7 @@ def parse_resource(text, resource, target):
                 choices = AGENT_CHOICES.get((metadata_target, key))
                 if choices is not None and value not in choices:
                     raise RenderError(f"{metadata_target}.{key} must be one of {', '.join(sorted(choices))}")
-                if expected is str and not value.strip():
+                if type(value) is str and not value.strip():
                     raise RenderError(f"{metadata_target}.{key} must be nonempty text")
     if metadata.get(target) is False:
         return None
@@ -194,7 +201,32 @@ def parse_resource(text, resource, target):
     return f"---\n{frontmatter}---\n{body}".rstrip("\n") + "\n"
 
 
-def render_target(source, resources, target, models):
+def load_claude_manifest(path):
+    try:
+        metadata = yaml.load(path.read_text(encoding="utf-8"), Loader=UniqueKeyLoader)
+        if not isinstance(metadata, dict):
+            raise RenderError("manifest must be a mapping")
+        unknown = metadata.keys() - {Target.CLAUDE}
+        if unknown:
+            raise RenderError(f"unsupported manifest metadata: {', '.join(sorted(unknown))}")
+        claude = metadata.get(Target.CLAUDE, {})
+        if not isinstance(claude, dict):
+            raise RenderError("claude manifest metadata must be a mapping")
+        check_fields(claude, CLAUDE_MANIFEST_FIELDS, "claude manifest")
+        for key, value in claude.items():
+            if type(value) is str and not value.strip():
+                raise RenderError(f"claude.{key} must be nonempty text")
+        for dependency in claude.get("dependencies", []):
+            if not isinstance(dependency, dict) or dependency.keys() != {"name", "marketplace"}:
+                raise RenderError("claude.dependencies entries must map name and marketplace to nonempty text")
+            if not all(isinstance(value, str) and value.strip() for value in dependency.values()):
+                raise RenderError("claude.dependencies entries must map name and marketplace to nonempty text")
+    except (RenderError, yaml.YAMLError, UnicodeError) as error:
+        raise RenderError(f"{path}: {error}") from error
+    return claude
+
+
+def render_target(source, resources, manifests, target, models):
     environment = Environment(
         loader=FileSystemLoader(source),
         undefined=StrictUndefined,
@@ -283,7 +315,7 @@ def render_target(source, resources, target, models):
     for namespace in sorted({resource.namespace for resource in included}):
         if target == Target.CLAUDE:
             path = Path("plugins") / namespace / ".claude-plugin/plugin.json"
-            manifest = {"name": namespace}
+            manifest = {"name": namespace, **manifests.get(namespace, {})}
         else:
             path = Path("packages") / namespace / "package.json"
             pi = {}
@@ -368,8 +400,9 @@ def build(repo_root, targets=tuple(Target), check=False):
     if output.is_symlink():
         raise RenderError(f"{output}: output symlinks are not supported")
     resources = discover(source)
+    manifests = {path.parent.name: load_claude_manifest(path) for path in sorted(source.glob(f"*/{MANIFEST}"))}
     models = json.loads((source / "models.json").read_text(encoding="utf-8"))
-    rendered = {target: render_target(source, resources, target, models) for target in targets}
+    rendered = {target: render_target(source, resources, manifests, target, models) for target in targets}
     for target in targets:
         check_owned(output / target)
     if check:

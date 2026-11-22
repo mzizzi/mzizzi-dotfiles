@@ -39,6 +39,9 @@ class RendererTests(unittest.TestCase):
         }
 
     def test_both_targets_match_expected_skill_and_manifests(self):
+        (self.repo / "ai/mzizzi/manifest.yaml").write_text(
+            "claude:\n  description: Example.\n  dependencies:\n    - name: tool\n      marketplace: market\n"
+        )
         build(self.repo)
         for target in Target:
             with self.subTest(target=target):
@@ -54,7 +57,9 @@ class RendererTests(unittest.TestCase):
             "name": "mzizzi-ai", "pi": {"skills": ["./skills"], "subagents": {"agents": ["./agents"]}},
         })
         claude_manifest = self.repo / "ai-rendered/claude/plugins/mzizzi/.claude-plugin/plugin.json"
-        self.assertEqual(json.loads(claude_manifest.read_text()), {"name": "mzizzi"})
+        self.assertEqual(json.loads(claude_manifest.read_text()), {
+            "name": "mzizzi", "description": "Example.", "dependencies": [{"name": "tool", "marketplace": "market"}],
+        })
         self.assertFalse((self.repo / "generated").exists())
 
     def test_new_output_root_leaves_retired_cache_untouched(self):
