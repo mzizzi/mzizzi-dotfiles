@@ -8,7 +8,7 @@ Resolve `<skill-dir>` to this skill's absolute directory.
 
 # Auto-brainstorm
 
-Run the `brainstorm` skill with an interviewee agent instead of the user. This skill overrides brainstorm: send questions to the interviewee and choose menu options yourself (see Ending).
+Run the `brainstorm` skill with an interviewee agent instead of the user. This skill overrides brainstorm: send questions to the interviewee, never to the user or the harness's user-question tool, and choose menu options yourself (see Ending).
 
 Read and follow the `brainstorm` skill from `<skill-dir>/../brainstorm/SKILL.md` with arguments `<the arguments this skill was given, without --agent or --max-reviews>`.
 
