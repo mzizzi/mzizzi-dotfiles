@@ -2,7 +2,7 @@ import shutil
 import subprocess
 
 from git_fixture import GitFixture
-from test_render_ai import REPO
+from renderer_test_support import REPO
 from render_ai import build
 
 
@@ -107,7 +107,7 @@ class InstalledHookTests(GitFixture):
         self.commit()
         self.template.write_text(self.template.read_text() + "\nSource-only drift.\n")
         self.git("add", "ai")
-        message = self.failed_commit("check-ai", contains=("changed:", "python ai-renderer/render_ai.py"))
+        message = self.failed_commit("check-ai", contains=("changed:", "ai-renderer/README.md"))
         self.assertNotIn("check rendered Markdown formatting", message, "Candidate fail_fast must stop later hooks")
         self.render_and_stage()
         self.commit("Explicit repair")

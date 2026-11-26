@@ -61,7 +61,10 @@ def check(repo_root: Path, *, push: bool = False) -> list[str]:
         return errors
     changes = build(repo_root, check=True)
     if changes:
-        return [*changes, "Run python ai-renderer/render_ai.py, review, and stage the intended source and output; then retry."]
+        return [
+            *changes,
+            "Render the packages as shown in ai-renderer/README.md, then review and stage the intended source and output.",
+        ]
     return []
 
 

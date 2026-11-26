@@ -11,9 +11,7 @@ from unittest.mock import patch
 
 import yaml
 
-RENDERER = Path(__file__).resolve().parent.parent
-REPO = RENDERER.parent
-sys.path.insert(0, str(RENDERER))
+from renderer_test_support import RENDERER, REPO, snapshot_files
 from render_ai import MARKER, RenderError, Target, build
 
 
@@ -33,10 +31,7 @@ class RendererTests(unittest.TestCase):
         return self.repo / "ai-rendered/claude/plugins/mzizzi/skills/renderer-example"
 
     def snapshot(self):
-        return {
-            path.relative_to(self.repo): (path.read_bytes(), stat.S_IMODE(path.stat().st_mode))
-            for path in (self.repo / "ai-rendered").rglob("*") if path.is_file()
-        }
+        return snapshot_files(self.repo / "ai-rendered", relative_to=self.repo)
 
     def test_both_targets_match_expected_skill_and_manifests(self):
         (self.repo / "ai/mzizzi/manifest.yaml").write_text(
@@ -336,10 +331,7 @@ class RendererTests(unittest.TestCase):
         backup, = (self.repo / "ai-rendered").glob(".ai-render-*/old")
         self.assertIn(str(backup), str(raised.exception))
         self.assertEqual(
-            {
-                path.relative_to(backup): (path.read_bytes(), stat.S_IMODE(path.stat().st_mode))
-                for path in backup.rglob("*") if path.is_file()
-            },
+            snapshot_files(backup),
             before,
         )
 

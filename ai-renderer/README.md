@@ -1,21 +1,22 @@
 # AI resource renderer
 
-Render shared skills and agents from authored `ai/` sources into complete committed packages under `ai-rendered/claude/plugins/` and `ai-rendered/pi/packages/`. `ai-renderer/` owns transformation and checks; `ai-rendered/` is consumable output, not an editing location. The retired `generated/` cache stays ignored and is never removed automatically. Production `plugins/`, marketplace registration, and Windows Claude loading remain unchanged.
+Render shared skills and agents into Claude plugins and Pi packages, or render a consumer repository's native project skills. Use Python >=3.11 and install the [renderer requirements](requirements.txt). Run `python ai-renderer/render_ai.py --help` for options. Explicit paths resolve from the caller's working directory.
 
-## Run
+## Dotfiles packages
 
-Use Python >=3.11. Hooks and real-tool tests also need pre-commit and Node >=22:
+Run from the dotfiles root:
 
 ```bash
 python -m pip install -r ai-renderer/requirements.txt
-python ai-renderer/render_ai.py
-python ai-renderer/render_ai.py --check
-python -m unittest discover -s ai-renderer/tests
+python ai-renderer/render_ai.py --layout package --input ai --output ai-rendered/claude --target claude
+python ai-renderer/render_ai.py --layout package --input ai --output ai-rendered/pi --target pi
+python ai-renderer/render_ai.py --layout package --input ai --output ai-rendered/claude --target claude --check
+python ai-renderer/render_ai.py --layout package --input ai --output ai-rendered/pi --target pi --check
 ```
 
-Run `python ai-renderer/render_ai.py --help` for options. Paths resolve from the script, not the working directory.
+Review the source and output diff and stage only intended paths. See `--help` for the script-relative package invocation. Do not edit `ai-rendered/` directly. The retired `generated/` cache stays ignored and is never removed automatically. Production `plugins/`, marketplace registration, and Windows Claude loading remain unchanged.
 
-## Sources
+### Package sources
 
 - Skills: `ai/<namespace>/skills/<name>/SKILL.md.j2`, with supporting files beside it.
 - Agents: `ai/<namespace>/agents/<name>.md.j2`.
@@ -23,7 +24,33 @@ Run `python ai-renderer/render_ai.py --help` for options. Paths resolve from the
 - Skill-only template fragments: `_templates/` inside the skill directory. Jinja can include them; the renderer does not emit that directory.
 - Frontmatter: shared description plus explicit `claude` and `pi` blocks. `TARGET_FIELDS`, `AGENT_FIELDS`, and `AGENT_CHOICES` in `render_ai.py` define supported metadata.
 
-Use `Skill("name")` and `Agent("name")` for references; qualify another namespace as `"namespace:name"`. Helpers render names, not invocations or preloads. Templates receive `target` (`claude` or `pi`). Set a target block to `false` to omit that resource; references to omitted resources fail generation. The renderer renders `.j2` files and copies other skill resources unchanged. Unknown references, unsupported metadata, multiline frontmatter fields, collisions, and symlinks stop generation.
+Use `Skill("name")` and `Agent("name")` for references; qualify another namespace as `"namespace:name"`. Helpers render names, not invocations or preloads. Includes and model aliases come from the package input root.
+
+## Native project skills
+
+Pin the renderer in the consumer repository's setup and install its requirements. From the consumer checkout, with `renderer` pointing to the pinned script:
+
+```bash
+python "$renderer" --input ai/project/skills --output .claude/skills --target claude
+python "$renderer" --input ai/project/skills --output .pi/skills --target pi
+```
+
+Put each template at `<input>/<name>/SKILL.md.j2` and supporting files beside it. Includes resolve from the input root, so `{% include "<name>/_templates/" ~ target ~ ".md.j2" %}` can select target-specific text without emitting the `_templates/` directory. Output is a native skills tree, with no agents, plugin manifests, or package settings. Use bare `Skill("name")` references within the input catalog. Use target-specific text for external skills and agents; the renderer does not check whether they are installed. Project templates have no model aliases.
+
+Both layouts render `.j2` files and copy other skill resources unchanged. Set a target block to `false` to omit that resource. Unknown references, references from included resources to omitted resources, unsupported metadata, multiline frontmatter fields, collisions, and symlinks stop generation.
+
+Keep generated text and ownership markers at LF in the worktree. For example, add these rules to the consumer's `.gitattributes`:
+
+```gitattributes
+.claude/skills/** text=auto eol=lf
+.pi/skills/** text=auto eol=lf
+```
+
+Give copied text files the same checkout line endings in the input and output trees. Mark binary assets explicitly if Git does not detect them as binary.
+
+Use a separate output tree for each harness. Output must not overlap the input or go through a symlink or junction. An absent or empty tree can be generated; a nonempty tree must already have the project ownership marker. The renderer replaces the entire marked tree, including untracked files without sources.
+
+For migration, move skill files to the input and other maintained files outside the output. Move the old output aside in a disposable worktree, then render and review the replacement. Use `--check` in CI or hooks to report drift without writing. If it reports drift, inspect the paths and move any manual files you want to keep out of the output before you render. Neither command stages files; the consumer owns Git policy.
 
 ## Commit and push checks
 
@@ -38,7 +65,7 @@ The [hook configuration](../.pre-commit-config.yaml) pins isolated Python and No
 
 Commit order: format selected authored Markdown, check the AI candidate, check all output Markdown formatting, then lint all output Markdown. Push order: check the AI candidate against `HEAD`, check all output formatting and lint, then check selected authored Markdown. Candidate failure stops downstream hooks. No AI hook renders in write mode, stages files, or formats output in write mode.
 
-`check_ai.py` requires relevant tracked files to match the index before calling `build(..., check=True)`. It rejects untracked files at all relevant paths, including ignored resources, and unsupported `assume-unchanged` / `skip-worktree` flags on relevant tracked files. Relevant paths include both trees, renderer/check implementation and requirements, hook/Markdown configuration, `.gitattributes`, and `.gitignore`; the exact policy lives in `check_ai.py`. POSIX checks compare executable bits even with `core.filemode=false`; Windows retains the renderer's platform behavior. Unrelated local files are allowed.
+`check_ai.py` requires relevant tracked files to match the index before checking the rendered package trees. It rejects untracked files at all relevant paths, including ignored resources, and unsupported `assume-unchanged` / `skip-worktree` flags on relevant tracked files. Relevant paths include both trees, renderer/check implementation and requirements, hook/Markdown configuration, `.gitattributes`, and `.gitignore`; the exact policy lives in `check_ai.py`. POSIX checks compare executable bits even with `core.filemode=false`; Windows retains the renderer's platform behavior. Unrelated local files are allowed.
 
 Push checks additionally require relevant index files to match `HEAD`: staging repaired output does not repair a stale committed candidate. Installed hooks may hide unstaged tracked edits temporarily; they check the visible candidate, not every hidden local edit. Manual all-files runs do not hide those edits and report a stage-or-restore error:
 
@@ -47,17 +74,7 @@ python -m pre_commit run --all-files
 python -m pre_commit run --all-files --hook-stage pre-push
 ```
 
-Repair stale output explicitly:
-
-```bash
-python ai-renderer/render_ai.py
-python ai-renderer/render_ai.py --check
-git diff -- ai/ ai-rendered/
-# Stage only intended paths after review.
-git add ai/<changed-source> ai-rendered/<changed-output>
-```
-
-For output formatting/lint failures, fix authored templates/resources and render again. Never hand-edit output or run `prettier --write` on it. Commit the reviewed repair before retrying a push. Clear unsupported flags with `git update-index --no-assume-unchanged --no-skip-worktree -- <path>`. Stage intended new resources, including deliberately ignored resources, or remove unintended files from the source/output trees.
+Use the [package commands above](#dotfiles-packages) to repair stale output. For output formatting/lint failures, fix authored templates/resources and render again. Never hand-edit output or run `prettier --write` on it. Commit the reviewed repair before retrying a push. Clear unsupported flags with `git update-index --no-assume-unchanged --no-skip-worktree -- <path>`. Stage intended new resources, including deliberately ignored resources, or remove unintended files from the source/output trees.
 
 These local hooks can be bypassed with `--no-verify`, `SKIP`, or missing installation. Push checks cover the normal checked-out-branch workflow only, not arbitrary other branches, all refs in a multi-ref push, or every intermediate commit. They are not server-side enforcement or CI.
 
@@ -74,13 +91,20 @@ Other references remain checked. Rendering still compares exact bytes and modes 
 
 ## Check loaders
 
-With Claude, Pi, and `pi-subagents` installed:
+With pre-commit and Node >=22 installed, run the Python suite:
+
+```bash
+python -m unittest discover -s ai-renderer/tests
+```
+
+With Claude and Pi installed, check local package and native project discovery without model requests. The package check also needs `pi-subagents`; core Pi alone does not load package agents. The project check renders a disposable trusted checkout and uses `PYTHON` if the renderer dependencies are installed in a different interpreter.
 
 ```bash
 node ai-renderer/tests/check_ai_loaders.mjs
+node ai-renderer/tests/check_project_loaders.mjs
 ```
 
-This checks local rendered package discovery without model requests. Pi agents need `pi-subagents`; core Pi alone does not load them. Renderer fixtures live under `tests/fixtures/source/`, outside the normal `ai/` sources.
+Renderer fixtures live under `tests/fixtures/`, outside the normal `ai/` sources.
 
 Pi now renders `prepare-feature-branch`, `implement-plan`, and `review-pr` as an interactive pilot. Install the user-level [worktree extension](../config/pi/README.md#worktrees-interactive-pilot) before use. Implementation also needs the local task extension and `pi-subagents`; other review workflows can use a conversation checklist without task tools. Human questions use plain text when no question tool exists.
 
