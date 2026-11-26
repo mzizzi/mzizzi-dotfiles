@@ -33,13 +33,13 @@ Write the document at `<dir>/audit.md`. Not `plan.md` — that name is a contrac
 
 ## 3. Partition the corpus by skill family
 
-Group sessions by which skill family they exercise, reading `plugins/mzizzi/skills/` for the current inventory. One analyst per family, so each holds a coherent slice instead of a random sample.
+Group sessions by which skill family they exercise, reading `ai/mzizzi/skills/` for the current inventory. One analyst per family, so each holds a coherent slice instead of a random sample.
 
 Build the session list for each family first, by grepping for the skill's invocation markers. An analyst handed a file list works; an analyst told to "find relevant sessions" spends its context searching.
 
 ## 4. Fan out the analysts
 
-Get the dates each skill file changed in **one** history query over `plugins/mzizzi/skills/`, not one per file — there are dozens of files and every result lands in your context.
+Get the dates each skill file changed in **one** history query over `ai/mzizzi/skills/`, not one per file — there are dozens of files and every result lands in your context.
 
 Spawn one `mzizzi:standard` or `mzizzi:simple` agent per family, all in a single message so they run concurrently, up to 10 at a time. If the partition yields more families than that, batch them rather than merging families into slices too broad to hold.
 

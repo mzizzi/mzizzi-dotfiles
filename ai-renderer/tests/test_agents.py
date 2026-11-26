@@ -29,7 +29,7 @@ class AgentTests(unittest.TestCase):
         packages = "plugins" if target == Target.CLAUDE else "packages"
         return self.repo / "ai-rendered" / target / packages / "mzizzi/agents" / f"{name}.md"
 
-    def test_agents_preserve_instructions_and_target_settings(self):
+    def test_pi_agents_mirror_claude_instructions_with_target_settings(self):
         build(self.repo)
         cases = (
             ("pragmatic-reviewer", ASTRA, "medium"),
@@ -38,27 +38,21 @@ class AgentTests(unittest.TestCase):
             ("simple", SOL, "high"),
         )
         for name, model, thinking in cases:
-            original = (REPO / "plugins/mzizzi/agents" / f"{name}.md").read_text()
-            _, metadata, body = original.split("---", 2)
-            for target in Target:
-                with self.subTest(agent=name, target=target):
-                    _, rendered_metadata, rendered_body = self.output(target, name).read_text().split("---", 2)
-                    actual = yaml.safe_load(rendered_metadata)
-                    if target == Target.CLAUDE:
-                        self.assertEqual(actual, yaml.safe_load(metadata))
-                        reference = "the `mzizzi:development-preferences` skill"
-                    else:
-                        self.assertEqual(actual, {
-                            "name": name, "package": "mzizzi",
-                            "description": yaml.safe_load(metadata)["description"],
-                            "model": model, "thinking": thinking,
-                            "advertise": True, "defaultContext": "fresh",
-                            "systemPromptMode": "replace", "inheritProjectContext": True,
-                            "inheritGlobalContext": True, "inheritSkills": True,
-                            **({"allowNestedSubagents": True} if name == "standard" else {}),
-                        })
-                        reference = "the `development-preferences` skill"
-                    self.assertEqual(rendered_body, body.replace("the mzizzi:development-preferences skill", reference))
+            with self.subTest(agent=name):
+                _, claude_metadata, claude_body = self.output(Target.CLAUDE, name).read_text().split("---", 2)
+                _, pi_metadata, pi_body = self.output(Target.PI, name).read_text().split("---", 2)
+                self.assertEqual(yaml.safe_load(pi_metadata), {
+                    "name": name, "package": "mzizzi",
+                    "description": yaml.safe_load(claude_metadata)["description"],
+                    "model": model, "thinking": thinking,
+                    "advertise": True, "defaultContext": "fresh",
+                    "systemPromptMode": "replace", "inheritProjectContext": True,
+                    "inheritGlobalContext": True, "inheritSkills": True,
+                    **({"allowNestedSubagents": True} if name == "standard" else {}),
+                })
+                self.assertEqual(pi_body, claude_body.replace(
+                    "the `mzizzi:development-preferences` skill", "the `development-preferences` skill",
+                ))
 
     def test_delegator_has_portable_roles_and_native_nested_delegation(self):
         build(self.repo)
@@ -75,16 +69,7 @@ class AgentTests(unittest.TestCase):
                     self.assertIn("below 150k tokens", body)
                     self.assertIn("not runtime-enforced caps", body)
                 else:
-                    _, original, original_body = (REPO / "plugins/mzizzi/agents/delegator.md").read_text().split("---", 2)
-                    self.assertEqual(metadata, yaml.safe_load(original))
                     self.assertNotIn("allowNestedSubagents", metadata)
-                    expected_body = original_body.replace(
-                        r"Reserve this root session for critical work and reasoning. Aggressively delegate work to mzizzi:\* sub-agents to preserve context in this session.",
-                        "Keep this session focused on critical decisions and reasoning. Delegate other work aggressively to agents from the mzizzi plugin to preserve context.",
-                    ).replace("the mzizzi:development-preferences skill", "the `mzizzi:development-preferences` skill")
-                    for role, noun in (("standard", "subagents"), ("simple", "subagents"), ("complex", "agents")):
-                        expected_body = expected_body.replace(f"mzizzi:{role} {noun}", f"the `mzizzi:{role}` agent")
-                    self.assertEqual(body, expected_body)
                 for role in ("standard", "simple", "complex"):
                     separator = ":" if target == Target.CLAUDE else "."
                     self.assertIn(f"the `mzizzi{separator}{role}` agent", body)

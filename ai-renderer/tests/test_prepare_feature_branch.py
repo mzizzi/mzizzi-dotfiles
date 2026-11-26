@@ -9,7 +9,6 @@ SCRIPTS = [
     REPO / root / "skills/prepare-feature-branch/scripts/inspect_branch_state.sh"
     for root in (
         "ai/mzizzi",
-        "plugins/mzizzi",
         "ai-rendered/claude/plugins/mzizzi",
         "ai-rendered/pi/packages/mzizzi",
     )

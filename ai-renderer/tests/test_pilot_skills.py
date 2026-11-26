@@ -1,8 +1,6 @@
 from datetime import datetime
-import os
 from pathlib import Path
 import shutil
-import stat
 import subprocess
 import sys
 import tempfile
@@ -15,21 +13,10 @@ REPO = RENDERER.parent
 sys.path.insert(0, str(RENDERER))
 from render_ai import Target, build
 
-PILOTS = ("development-preferences", "create-plan-dir")
-
 
 def skill_document(path):
     _, frontmatter, body = path.read_text().split("---", 2)
     return yaml.safe_load(frontmatter), body
-
-
-def expected_pilot_body(name, body):
-    if name == "create-plan-dir":
-        body = body.replace(
-            "    <plans-base>/yyyymmdd-short-description/",
-            "```text\n<plans-base>/yyyymmdd-short-description/\n```",
-        )
-    return body
 
 
 class PilotSkillTests(unittest.TestCase):
@@ -43,38 +30,6 @@ class PilotSkillTests(unittest.TestCase):
     def skill_output(self, target, name):
         package_type = "plugins" if target == Target.CLAUDE else "packages"
         return self.repo / "ai-rendered" / target / package_type / "mzizzi/skills" / name
-
-    def test_pilots_preserve_instructions_metadata_and_resources(self):
-        for name in PILOTS:
-            original = REPO / "plugins/mzizzi/skills" / name
-            metadata, body = skill_document(original / "SKILL.md")
-            body = expected_pilot_body(name, body)
-            staging = self.repo / "ai/mzizzi/skills" / name
-            self.assertEqual(skill_document(staging / "SKILL.md.j2")[1], body)
-            resources = {
-                path.relative_to(original): path
-                for path in original.rglob("*") if path.is_file() and path.name != "SKILL.md"
-            }
-            for target in Target:
-                with self.subTest(skill=name, target=target):
-                    output = self.skill_output(target, name)
-                    rendered_metadata, rendered_body = skill_document(output / "SKILL.md")
-                    expected_metadata = metadata if target == Target.CLAUDE else {
-                        key: metadata[key] for key in ("name", "description", "disable-model-invocation")
-                    }
-                    self.assertEqual(rendered_metadata, expected_metadata)
-                    self.assertEqual(rendered_body, body)
-                    self.assertEqual(
-                        {path.relative_to(output) for path in output.rglob("*") if path.is_file()},
-                        {Path("SKILL.md"), *resources},
-                    )
-                    for relative, source in resources.items():
-                        for copy in (staging / relative, output / relative):
-                            self.assertEqual(copy.read_bytes(), source.read_bytes())
-                            if os.name != "nt":
-                                self.assertEqual(
-                                    stat.S_IMODE(copy.stat().st_mode), stat.S_IMODE(source.stat().st_mode),
-                                )
 
     def test_plan_script_uses_nearest_plans_and_is_repeatable(self):
         (self.repo / "plans").mkdir()

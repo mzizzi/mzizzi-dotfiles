@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Wires the local claude CLI to always load this repo's plugins/mzizzi
+    Wires the local claude CLI to always load this repo's rendered mzizzi
     plugin via --plugin-dir, without installing it from a Claude Code
     marketplace. Safe to re-run any time.
 .EXAMPLE
@@ -15,7 +15,7 @@ param(
 
 $ScriptDir      = $PSScriptRoot
 $RepoRoot       = [System.IO.Path]::GetFullPath((Join-Path $ScriptDir '..\..'))
-$PluginDir      = Join-Path $RepoRoot 'plugins\mzizzi'
+$PluginDir      = Join-Path $RepoRoot 'ai-rendered\claude\plugins\mzizzi'
 $PluginManifest = Join-Path $PluginDir '.claude-plugin\plugin.json'
 $ShimPath       = Join-Path $ScriptDir 'claude-shim.ps1'
 $ShimPattern    = [regex]::Escape('claude-shim.ps1')
@@ -110,7 +110,7 @@ $newLines       = $remainingLines + $DotSourceLine
 
 Set-ProfileLines $newLines
 
-Write-Host "claude now always loads plugins/mzizzi via --plugin-dir."
+Write-Host "claude now always loads ai-rendered/claude/plugins/mzizzi via --plugin-dir."
 Write-Host "Profile updated: $PROFILE"
 Write-Host "Open a new PowerShell window (or run '. `$PROFILE') for the change to take effect."
 exit 0

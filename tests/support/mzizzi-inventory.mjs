@@ -2,11 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 export function expectedMzizziSkills(checkout) {
-  return readdirSync(join(checkout, "plugins/mzizzi/skills"))
-    .map((name) =>
-      name === "codex-adversarial-review" ? "adversarial-review" : name,
-    )
-    .sort();
+  return readdirSync(join(checkout, "ai/mzizzi/skills")).sort();
 }
 
 export function expectedMzizziAgents(checkout, target, parseFrontmatter) {

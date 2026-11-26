@@ -24,7 +24,7 @@ sbx env rm sandbox                              # discards the clone; fetch firs
 Inside the sandbox:
 
 ```bash
-claude --plugin-dir "$WORKSPACE_DIR/plugins/mzizzi"
+claude --plugin-dir "$WORKSPACE_DIR/ai-rendered/claude/plugins/mzizzi"
 codex
 dcode
 pi

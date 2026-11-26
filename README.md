@@ -4,12 +4,12 @@ Personal Claude Code plugin marketplace and dotfiles. See [Pi package setup](con
 
 ## Plugins
 
-- `plugins/mzizzi` — planning and review workflow skills (brainstorm, create-plan, create-plan-dir, retro). Published via `.claude-plugin/marketplace.json` for anyone installing it the normal way through a Claude Code marketplace.
+- `ai-rendered/claude/plugins/mzizzi` — planning and review workflow skills and the agent tiers. Rendered from `ai/mzizzi/` by `ai-renderer/`; edit the sources, not the output (see [AI resource sources](ai/README.md)). Published via `.claude-plugin/marketplace.json` for anyone installing it the normal way through a Claude Code marketplace.
 - `plugins/mzizzi-claude` — tools for maintaining Claude Code setups (audit-skills). Depends on `mzizzi` for its agent tiers and `create-plan-dir`.
 
 ## Windows setup
 
-`scripts/windows/install.ps1` wires the local `claude` CLI to always load this repo's `plugins/mzizzi` plugin straight from this checkout (via a PowerShell profile function), without installing it from a marketplace -- useful when iterating on the plugin's own skills. Run once from the repo root:
+`scripts/windows/install.ps1` wires the local `claude` CLI to always load this repo's rendered `ai-rendered/claude/plugins/mzizzi` plugin straight from this checkout (via a PowerShell profile function), without installing it from a marketplace -- useful when iterating on the plugin's own skills. Run once from the repo root:
 
     .\scripts\windows\install.ps1
 
