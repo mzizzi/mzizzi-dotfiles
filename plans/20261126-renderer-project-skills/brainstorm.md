@@ -38,7 +38,7 @@ python "$renderer" --input ai/simracing/skills --output .pi/skills --target pi
 
 - **Question:** What does dotfiles ship, and what does SimRacing decide?
 - **Decision:** Ship the script and its existing requirements. SimRacing pins the tool revision and provides the environment through its own setup. It runs the CLI from its own hook or CI and commits the generated skill trees. Support both explicit render and read-only check. Neither command stages files or defines Git candidate policy. No renderer downloader, Python distribution, or reusable hook package is needed for this use.
-- **Why:** SimRacing already uses local system hooks. Dotfiles' `check_ai.py` checks paths and Git state for dotfiles, not for consumers. Document `--check` as the read-only check. If it reports drift, inspect the paths and preserve any manual files before rendering explicitly. An automatic repair can remove an untracked note before the hook reports failure. SimRacing can still choose a write hook; it owns any pre-write checks and the decision to stop the commit.
+- **Why:** SimRacing already uses local system hooks. The renderer's Git candidate mode checks paths and Git state for dotfiles, not for consumers. Document `--check` as the read-only check. If it reports drift, inspect the paths and preserve any manual files before rendering explicitly. An automatic repair can remove an untracked note before the hook reports failure. SimRacing can still choose a write hook; it owns any pre-write checks and the decision to stop the commit.
 
 ### Check layout, compatibility, and consumer use separately
 

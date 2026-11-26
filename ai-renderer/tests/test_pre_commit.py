@@ -122,18 +122,18 @@ class InstalledHookTests(GitFixture):
         ignored.unlink()
         self.commit("Tracked complete output")
 
-    def test_untracked_checker_and_markdown_config_block_real_commit_and_push(self):
+    def test_untracked_renderer_and_markdown_config_block_real_commit_and_push(self):
         self.commit()
         self.remote()
         self.git("push", "origin", "main")
-        for relative in ("ai-renderer/check_ai.py", ".markdownlint-cli2.yaml"):
+        for relative in ("ai-renderer/render_ai.py", ".markdownlint-cli2.yaml"):
             with self.subTest(path=relative):
                 self.git("rm", "--cached", relative)
                 self.failed_commit("check-ai", contains=(relative, "untracked AI file"))
                 self.bypass_commit()
                 self.failed_push("check-ai-push", contains=(relative, "untracked AI file"))
                 self.git("add", relative)
-                self.commit("Include required checker input")
+                self.commit("Include required candidate input")
                 self.git("push", "origin", "main")
 
     def test_partial_staging_restores_unstaged_source_and_output_on_pass_and_failure(self):

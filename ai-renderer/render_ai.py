@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import argparse
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 import json
@@ -10,6 +10,7 @@ from pathlib import Path, PureWindowsPath
 import re
 import shutil
 import stat
+import subprocess
 import sys
 import tempfile
 
@@ -25,6 +26,11 @@ class Target(StrEnum):
 class Layout(StrEnum):
     PROJECT = "project"
     PACKAGE = "package"
+
+
+class CandidateStage(StrEnum):
+    COMMIT = "commit"
+    PUSH = "push"
 
 
 class RenderError(ValueError):
@@ -569,13 +575,70 @@ def build(repo_root, targets=tuple(Target), check=False):
     )
 
 
+DOTFILES_CANDIDATE_PATHS = (
+    "ai/", "ai-rendered/", "ai-renderer/render_ai.py", "ai-renderer/requirements.txt",
+    ".pre-commit-config.yaml", ".prettierrc", ".prettierignore", ".markdownlint-cli2.yaml",
+    ".gitattributes", ".gitignore",
+)
+
+
+def git_records(repo_root: Path, *args: str) -> list[str]:
+    command = ["git", "--no-optional-locks", "-c", "diff.autoRefreshIndex=false"]
+    if sys.platform != "win32":
+        command += ["-c", "core.filemode=true"]
+    result = subprocess.run([*command, *args], cwd=repo_root, capture_output=True)
+    if result.returncode:
+        detail = os.fsdecode(result.stderr).strip()
+        raise RenderError(f"Git candidate check failed ({' '.join(args[:2])}): {detail}")
+    return [os.fsdecode(item) for item in result.stdout.split(b"\0") if item]
+
+
+def check_git_state(repo_root: Path, stage: CandidateStage) -> list[str]:
+    errors = []
+    for entry in git_records(repo_root, "ls-files", "-v", "-z", "--", *DOTFILES_CANDIDATE_PATHS):
+        flag, path = entry[0], entry[2:]
+        if flag.islower() or flag.upper() == "S":
+            errors.append(
+                f"{path!r}: unsupported assume-unchanged/skip-worktree index flag; "
+                "clear it with git update-index --no-assume-unchanged --no-skip-worktree -- <path>"
+            )
+    for path in git_records(repo_root, "ls-files", "--others", "-z", "--", *DOTFILES_CANDIDATE_PATHS):
+        errors.append(f"{path!r}: untracked AI file (including ignored files); stage the intended file or remove it")
+    # Unlike --name-only, --numstat compares content even when stat data is stale,
+    # without needing to refresh the index. Disable renames for one path per record.
+    diff_options = ("--no-ext-diff", "--no-textconv", "--no-renames", "--numstat", "-z")
+    for entry in git_records(repo_root, "diff", *diff_options, "--", *DOTFILES_CANDIDATE_PATHS):
+        path = entry.split("\t", 2)[2]
+        errors.append(f"{path!r}: relevant worktree file differs from the index; stage or restore it before checking")
+    if stage == CandidateStage.PUSH:
+        for entry in git_records(repo_root, "diff", "--cached", *diff_options, "HEAD", "--", *DOTFILES_CANDIDATE_PATHS):
+            path = entry.split("\t", 2)[2]
+            errors.append(f"{path!r}: push candidate differs from HEAD; commit the intended source and output before pushing")
+    return errors
+
+
+def check_candidate(repo_root: Path, stage: CandidateStage) -> int:
+    errors = check_git_state(repo_root, stage)
+    if not errors:
+        errors = build(repo_root, check=True)
+        if errors:
+            errors.append(
+                "Render the packages as shown in ai-renderer/README.md, then review and stage the intended source and output."
+            )
+    if errors:
+        print("AI candidate check failed:\n" + "\n".join(errors), file=sys.stderr)
+        return 1
+    print("AI candidate and rendered output are current.")
+    return 0
+
+
 def path_arg(value):
     if not value:
         raise argparse.ArgumentTypeError("path must not be empty")
     return Path(value)
 
 
-def main():
+def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Render native project skills or AI packages for Claude and Pi.",
         epilog="Pass --input, --output, and --target together for an explicit build. "
@@ -585,9 +648,15 @@ def main():
     parser.add_argument("--output", type=path_arg, help="Exact generated directory, relative to the working directory unless absolute.")
     parser.add_argument("--target", type=Target, choices=list(Target), help="Target harness (both in a default package build).")
     parser.add_argument("--layout", type=Layout, choices=list(Layout), help="Source and output layout (project for explicit paths unless specified).")
-    parser.add_argument("--check", action="store_true", help="Report missing, changed, or stale output without writes.")
-    args = parser.parse_args()
+    parser.add_argument("--check", action="store_true", help="Report missing, changed, or stale output without writes or Git checks.")
+    parser.add_argument(
+        "--check-candidate", type=CandidateStage, choices=list(CandidateStage),
+        help="Check the dotfiles package candidate against the Git index (and HEAD for push). Use on its own.",
+    )
+    args = parser.parse_args(argv)
     explicit = args.input is not None or args.output is not None or args.layout is not None
+    if args.check_candidate is not None and (explicit or args.target is not None or args.check):
+        parser.error("--check-candidate cannot be combined with --input, --output, --layout, --target, or --check")
     if explicit and (args.input is None or args.output is None or args.target is None):
         parser.error("explicit rendering requires --input, --output, and --target together")
     try:
@@ -596,11 +665,10 @@ def main():
                 args.input, {args.target: args.output}, layout=args.layout or Layout.PROJECT, check=args.check,
             )
         else:
-            changes = build(
-                Path(__file__).resolve().parent.parent,
-                targets=(args.target,) if args.target else tuple(Target),
-                check=args.check,
-            )
+            repo_root = Path(__file__).resolve().parent.parent
+            if args.check_candidate is not None:
+                return check_candidate(repo_root, args.check_candidate)
+            changes = build(repo_root, targets=(args.target,) if args.target else tuple(Target), check=args.check)
     except (RenderError, OSError) as error:
         print(f"error: {error}", file=sys.stderr)
         return 1

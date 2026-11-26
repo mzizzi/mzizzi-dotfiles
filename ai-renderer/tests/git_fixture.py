@@ -19,7 +19,7 @@ class GitFixture(unittest.TestCase):
                      ".markdownlint-cli2.yaml", ".gitattributes", ".gitignore"):
             shutil.copy2(REPO / name, self.repo / name)
         (self.repo / "ai-renderer").mkdir()
-        for name in ("render_ai.py", "check_ai.py", "requirements.txt"):
+        for name in ("render_ai.py", "requirements.txt"):
             shutil.copy2(REPO / "ai-renderer" / name, self.repo / "ai-renderer" / name)
         self.template = self.repo / "ai/example/skills/demo/SKILL.md.j2"
         self.template.parent.mkdir(parents=True)
