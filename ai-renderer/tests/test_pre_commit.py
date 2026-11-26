@@ -2,7 +2,7 @@ import shutil
 import subprocess
 
 from git_fixture import GitFixture
-from renderer_test_support import REPO
+from renderer_test_support import REPO, snapshot_files
 from render_ai import build
 
 
@@ -28,7 +28,6 @@ class InstalledHookTests(GitFixture):
         remote = self.repo.parent / "remote.git"
         self.git("init", "--bare", str(remote))
         self.git("remote", "add", "origin", str(remote))
-        return remote
 
     def remote_refs(self):
         return self.git("ls-remote", "origin").stdout
@@ -60,7 +59,6 @@ class InstalledHookTests(GitFixture):
         return result
 
     def bypass_commit(self):
-        # Only to construct invalid committed candidates in this disposable repo.
         self.git("-c", f"core.hooksPath={self.repo / '.git/no-hooks'}", "commit", "-m", "Invalid fixture")
 
     def render_and_stage(self):
@@ -108,7 +106,7 @@ class InstalledHookTests(GitFixture):
         self.template.write_text(self.template.read_text() + "\nSource-only drift.\n")
         self.git("add", "ai")
         message = self.failed_commit("check-ai", contains=("changed:", "ai-renderer/README.md"))
-        self.assertNotIn("check rendered Markdown formatting", message, "Candidate fail_fast must stop later hooks")
+        self.assertNotIn("check rendered Markdown formatting", message, "Staged check failure must stop later hooks")
         self.render_and_stage()
         self.commit("Explicit repair")
 
@@ -122,19 +120,11 @@ class InstalledHookTests(GitFixture):
         ignored.unlink()
         self.commit("Tracked complete output")
 
-    def test_untracked_renderer_and_markdown_config_block_real_commit_and_push(self):
+    def test_untracked_markdown_config_blocks_deletion_only_commit(self):
         self.commit()
-        self.remote()
-        self.git("push", "origin", "main")
-        for relative in ("ai-renderer/render_ai.py", ".markdownlint-cli2.yaml"):
-            with self.subTest(path=relative):
-                self.git("rm", "--cached", relative)
-                self.failed_commit("check-ai", contains=(relative, "untracked AI file"))
-                self.bypass_commit()
-                self.failed_push("check-ai-push", contains=(relative, "untracked AI file"))
-                self.git("add", relative)
-                self.commit("Include required candidate input")
-                self.git("push", "origin", "main")
+        path = ".markdownlint-cli2.yaml"
+        self.git("rm", "--cached", path)
+        self.failed_commit("check-ai", contains=(path, "untracked AI file"))
 
     def test_partial_staging_restores_unstaged_source_and_output_on_pass_and_failure(self):
         self.commit()
@@ -156,21 +146,26 @@ class InstalledHookTests(GitFixture):
         self.failed_commit("check-ai", contains=("changed:", "Unstaged files detected"))
         self.assertEqual(self.template.read_bytes(), source_before)
 
-    def test_real_push_rejects_stale_head_and_staged_repair_then_clean_retry(self):
+    def test_real_push_runs_markdown_checks_but_allows_committed_render_drift(self):
         self.commit()
         self.remote()
-        self.git("push", "origin", "main")
+        self.git("push", "--no-verify", "origin", "main")
         self.template.write_text(self.template.read_text() + "\nCommitted source-only drift.\n")
-        self.git("add", "ai")
+        (self.repo / "README.md").write_text("# Authored\n")
+        self.git("add", "ai", "README.md")
         self.bypass_commit()
-        self.failed_push("check-ai-push", contains=("changed:",))
-        self.render_and_stage()
-        self.failed_push("check-ai-push", contains=("push candidate differs from HEAD",))
-        self.commit("Commit repaired candidate")
-        self.git("push", "origin", "main")
-        self.assertIn(self.git("rev-parse", "HEAD").stdout.strip(), self.remote_refs())
 
-    def test_real_commit_and_push_reject_formatting_and_lint_after_candidate_passes(self):
+        self.assertTrue(build(self.repo, check=True), "The bypassed commit must contain render drift")
+        trees = (self.repo / "ai", self.repo / "ai-rendered")
+        before = [snapshot_files(tree) for tree in trees]
+        push = self.git("push", "origin", "main")
+        output = push.stdout + push.stderr
+        for hook in ("check rendered Markdown formatting", "lint rendered Markdown", "check authored Markdown formatting"):
+            self.assertRegex(output, rf"{hook}.*Passed")
+        self.assertIn(self.git("rev-parse", "HEAD").stdout.strip(), self.remote_refs())
+        self.assertEqual([snapshot_files(tree) for tree in trees], before)
+
+    def test_real_commit_and_push_reject_output_formatting_and_lint(self):
         self.commit()
         self.remote()
         self.git("push", "origin", "main")
@@ -182,9 +177,9 @@ class InstalledHookTests(GitFixture):
             with self.subTest(hook=hook):
                 self.template.write_text(original.split("# Demo", 1)[0] + body)
                 self.render_and_stage()
-                self.failed_commit(hook, contains=("check AI commit candidate", "Passed", detail))
+                self.failed_commit(hook, contains=(detail,))
                 self.bypass_commit()
-                self.failed_push(hook, contains=("check AI push candidate", "Passed", detail))
+                self.failed_push(hook, contains=(detail,))
                 self.template.write_text(original)
                 self.render_and_stage()
                 self.commit("Fix authored template and render")

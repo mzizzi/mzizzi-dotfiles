@@ -28,11 +28,6 @@ class Layout(StrEnum):
     PACKAGE = "package"
 
 
-class CandidateStage(StrEnum):
-    COMMIT = "commit"
-    PUSH = "push"
-
-
 class RenderError(ValueError):
     pass
 
@@ -575,7 +570,7 @@ def build(repo_root, targets=tuple(Target), check=False):
     )
 
 
-DOTFILES_CANDIDATE_PATHS = (
+DOTFILES_STAGED_CHECK_PATHS = (
     "ai/", "ai-rendered/", "ai-renderer/render_ai.py", "ai-renderer/requirements.txt",
     ".pre-commit-config.yaml", ".prettierrc", ".prettierignore", ".markdownlint-cli2.yaml",
     ".gitattributes", ".gitignore",
@@ -589,36 +584,34 @@ def git_records(repo_root: Path, *args: str) -> list[str]:
     result = subprocess.run([*command, *args], cwd=repo_root, capture_output=True)
     if result.returncode:
         detail = os.fsdecode(result.stderr).strip()
-        raise RenderError(f"Git candidate check failed ({' '.join(args[:2])}): {detail}")
+        raise RenderError(f"Git staged check failed ({' '.join(args[:2])}): {detail}")
     return [os.fsdecode(item) for item in result.stdout.split(b"\0") if item]
 
 
-def check_git_state(repo_root: Path, stage: CandidateStage) -> list[str]:
+def check_git_state(repo_root: Path) -> list[str]:
     errors = []
-    for entry in git_records(repo_root, "ls-files", "-v", "-z", "--", *DOTFILES_CANDIDATE_PATHS):
+    for entry in git_records(repo_root, "ls-files", "-v", "-z", "--", *DOTFILES_STAGED_CHECK_PATHS):
         flag, path = entry[0], entry[2:]
         if flag.islower() or flag.upper() == "S":
             errors.append(
                 f"{path!r}: unsupported assume-unchanged/skip-worktree index flag; "
                 "clear it with git update-index --no-assume-unchanged --no-skip-worktree -- <path>"
             )
-    for path in git_records(repo_root, "ls-files", "--others", "-z", "--", *DOTFILES_CANDIDATE_PATHS):
+    for path in git_records(repo_root, "ls-files", "--others", "-z", "--", *DOTFILES_STAGED_CHECK_PATHS):
         errors.append(f"{path!r}: untracked AI file (including ignored files); stage the intended file or remove it")
     # Unlike --name-only, --numstat compares content even when stat data is stale,
     # without needing to refresh the index. Disable renames for one path per record.
-    diff_options = ("--no-ext-diff", "--no-textconv", "--no-renames", "--numstat", "-z")
-    for entry in git_records(repo_root, "diff", *diff_options, "--", *DOTFILES_CANDIDATE_PATHS):
+    for entry in git_records(
+        repo_root, "diff", "--no-ext-diff", "--no-textconv", "--no-renames", "--numstat", "-z",
+        "--", *DOTFILES_STAGED_CHECK_PATHS,
+    ):
         path = entry.split("\t", 2)[2]
         errors.append(f"{path!r}: relevant worktree file differs from the index; stage or restore it before checking")
-    if stage == CandidateStage.PUSH:
-        for entry in git_records(repo_root, "diff", "--cached", *diff_options, "HEAD", "--", *DOTFILES_CANDIDATE_PATHS):
-            path = entry.split("\t", 2)[2]
-            errors.append(f"{path!r}: push candidate differs from HEAD; commit the intended source and output before pushing")
     return errors
 
 
-def check_candidate(repo_root: Path, stage: CandidateStage) -> int:
-    errors = check_git_state(repo_root, stage)
+def check_staged(repo_root: Path) -> int:
+    errors = check_git_state(repo_root)
     if not errors:
         errors = build(repo_root, check=True)
         if errors:
@@ -626,9 +619,9 @@ def check_candidate(repo_root: Path, stage: CandidateStage) -> int:
                 "Render the packages as shown in ai-renderer/README.md, then review and stage the intended source and output."
             )
     if errors:
-        print("AI candidate check failed:\n" + "\n".join(errors), file=sys.stderr)
+        print("Staged AI check failed:\n" + "\n".join(errors), file=sys.stderr)
         return 1
-    print("AI candidate and rendered output are current.")
+    print("Staged AI files and rendered output are current.")
     return 0
 
 
@@ -650,13 +643,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--layout", type=Layout, choices=list(Layout), help="Source and output layout (project for explicit paths unless specified).")
     parser.add_argument("--check", action="store_true", help="Report missing, changed, or stale output without writes or Git checks.")
     parser.add_argument(
-        "--check-candidate", type=CandidateStage, choices=list(CandidateStage),
-        help="Check the dotfiles package candidate against the Git index (and HEAD for push). Use on its own.",
+        "--check-staged", action="store_true",
+        help="Require relevant dotfiles worktree files to match the Git index and rendered packages to match their sources. Use on its own.",
     )
     args = parser.parse_args(argv)
     explicit = args.input is not None or args.output is not None or args.layout is not None
-    if args.check_candidate is not None and (explicit or args.target is not None or args.check):
-        parser.error("--check-candidate cannot be combined with --input, --output, --layout, --target, or --check")
+    if args.check_staged and (explicit or args.target is not None or args.check):
+        parser.error("--check-staged cannot be combined with --input, --output, --layout, --target, or --check")
     if explicit and (args.input is None or args.output is None or args.target is None):
         parser.error("explicit rendering requires --input, --output, and --target together")
     try:
@@ -666,8 +659,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
         else:
             repo_root = Path(__file__).resolve().parent.parent
-            if args.check_candidate is not None:
-                return check_candidate(repo_root, args.check_candidate)
+            if args.check_staged:
+                return check_staged(repo_root)
             changes = build(repo_root, targets=(args.target,) if args.target else tuple(Target), check=args.check)
     except (RenderError, OSError) as error:
         print(f"error: {error}", file=sys.stderr)
