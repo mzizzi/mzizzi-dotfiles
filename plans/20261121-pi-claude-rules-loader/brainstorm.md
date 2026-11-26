@@ -28,7 +28,7 @@ Make Pi use existing `.claude/rules/` files in mzizzi-dotfiles and, later, SimRa
 
 - **Question:** What evidence is enough before consumers switch to the Git package?
 - **Decision:** Run an opt-in smoke in a disposable Pi profile. Install the dotfiles Git package at a candidate ref and check that Pi installs the real pinned `pi-code` dependency. Check that only its rules entrypoint starts and the existing rendered skills and agents still resolve. Use a scripted provider to check user rules, approved unscoped rules, scoped bodies after matching native reads, and the negative cases for non-matching reads and denied trust. No live model calls or network-dependent ordinary tests.
-- **Why:** The Git fixture proved the installation and selection mechanism on Pi 1.5.2, not compatibility with the actual dependency. `config/pi/tests/worktree-runtime.test.mjs` provides a local scripted-provider pattern. Before rollout, check the shipped Pi versions: agent-lab 1.5.2, SimRacing devcontainer 1.6.0, and SimRacing sbx 1.5.0. If a shipped version fails, update that version through its normal owner or hold that rollout.
+- **Why:** The Git fixture proved the installation and selection mechanism on Pi 1.5.2, not compatibility with the actual dependency. `config/pi/tests/worktree-runtime.test.mjs` provides a local scripted-provider pattern. Before rollout, check the shipped Pi versions: agent-lab 1.6.0, SimRacing devcontainer 1.6.0, and SimRacing sbx 1.5.0. If a shipped version fails, update that version through its normal owner or hold that rollout.
 
 ### Move consumers to the same package after the dotfiles change
 

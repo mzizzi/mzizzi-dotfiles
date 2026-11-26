@@ -40,7 +40,7 @@ Use upstream loading and trust without overrides. User rules and unscoped rules 
 1. Add an opt-in test at `config/pi/tests/claude-rules-package.test.mjs`. Use an explicit candidate Git ref and a disposable home, Pi profile, and project outside the source checkout. Install the package through the real `pi install` command. Use the actual pinned dependency, not a mock. A candidate may use a local Git URL rewrite to a committed checkout; use the canonical Git source in settings in either case. Skip ordinary offline runs; an explicitly requested check must fail on missing prerequisites or install errors.
 2. Check the installed version and the active extension paths, not just `pi list`. Exactly one entrypoint from `pi-code` may load. Check skills from the installed Git checkout and `mzizzi.*` agent discovery with the managed `pi-subagents` revision. Reuse the Phase 1 test loader and the existing resource inventory. Do not repeat renderer or model-metadata tests here.
 3. Reuse the scripted provider from `config/pi/tests/worktree-runtime.test.mjs`, not its forced SDK trust result. Isolate user rules and trust storage in disposable homes. Use a project with `.claude/rules/` but no Pi project resources. Answer the loader's actual confirmation in separate fresh profiles. On approval, check that user and unscoped project bodies reach the first request, while the scoped rule contributes only a pointer. Check that its body stays absent after a non-matching read and appears after a matching read. On denial, check that user rules remain and neither project bodies nor pointers reach any request, even after a matching read. Check the undecided headless case without granting trust. Use distinct markers and no live model.
-4. Run the same check against the actual Pi CLI **and corresponding SDK** for agent-lab (1.5.2), the SimRacing devcontainer (1.6.0), and SimRacing sbx (1.5.0). Record the candidate SHA, host versions, and outcomes before adoption. A skip is not a pass. Hold adoption for any failing host; do not relax trust or silently enable other extensions to make it pass.
+4. Run the same check against the actual Pi CLI **and corresponding SDK** for agent-lab (1.6.0), the SimRacing devcontainer (1.6.0), and SimRacing sbx (1.5.0). Record the candidate SHA, host versions, and outcomes before adoption. A skip is not a pass. Hold adoption for any failing host; do not relax trust or silently enable other extensions to make it pass.
 
 #### Phase 2 verification
 
@@ -49,6 +49,7 @@ Candidate `0f9b7a8682c6c1948ef3e709accd7110d0d0b9e3` was committed only in a dis
 | Target environment | Result |
 | --- | --- |
 | agent-lab, Pi 1.5.2 | Passed. Real CLI install, interactive terminal approval, and undecided print mode; matching SDK extension paths, skills, agents, and approve, deny, and undecided request context. |
+| agent-lab, Pi 1.6.0 | Passed. Candidate `ce6e76e9b6356051e5cd604287a09a8ac5f4172f` from GitHub with the same `pi-subagents` revision; same opt-in test, all subtests passed. agent-lab now ships 1.6.0. |
 | SimRacing devcontainer, Pi 1.6.0 | Not run — operator to verify. |
 | SimRacing sbx, Pi 1.5.0 | Not run — operator to verify. |
 
