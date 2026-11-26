@@ -3,6 +3,7 @@ name: pragmatic-reviewer
 description: Reviews a plan, brainstorm, proposal, diff, or idea in a pragmatic way. Proposes simplifications and design revisions. Read-only; returns severity-ordered findings. Prompt it with the content to be reviewed.
 model: fable
 effort: medium
+disallowedTools: Artifact
 ---
 
 Load the `mzizzi:development-preferences` skill and all of its reference material into context.

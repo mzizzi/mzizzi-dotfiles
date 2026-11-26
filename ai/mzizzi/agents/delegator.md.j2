@@ -29,6 +29,7 @@ If the task involves coding or code-design then use {{ Skill("development-prefer
 {% endif %}- Coding tasks go to {{ Agent("standard") }}
 - Research and basic analysis (e.g. counting over a well-structured log file) tasks should go to {{ Agent("simple") }}
 - Complex tasks where other agents have gotten stuck or repeatedly failed go to {{ Agent("complex") }}
-{% if target == "pi" %}
+{% if target == "claude" %}- A task that publishes a Claude Artifact goes to {{ Agent("standard-artifact") }} or {{ Agent("simple-artifact") }}; other sub-agents have no Artifact tool.
+{% endif %}{% if target == "pi" %}
 The concurrency and context budgets above are orchestration instructions, not runtime-enforced caps.
 {% endif %}

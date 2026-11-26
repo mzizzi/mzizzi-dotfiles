@@ -77,6 +77,33 @@ class AgentTests(unittest.TestCase):
                 self.assertIn(f"agents from the mzizzi {container} to preserve context", body)
                 self.assertIn("up to 10", body)
 
+    def test_claude_sub_agents_disallow_artifact_except_artifact_variants(self):
+        build(self.repo)
+
+        def claude(name):
+            _, metadata, body = self.output(Target.CLAUDE, name).read_text().split("---", 2)
+            return yaml.safe_load(metadata), body
+
+        for name in ("standard", "simple", "complex", "pragmatic-reviewer"):
+            with self.subTest(agent=name):
+                self.assertEqual(claude(name)[0]["disallowedTools"], "Artifact")
+        self.assertNotIn("disallowedTools", claude("delegator")[0])
+        for base in ("standard", "simple"):
+            with self.subTest(agent=f"{base}-artifact"):
+                base_metadata, base_body = claude(base)
+                metadata, body = claude(f"{base}-artifact")
+                self.assertNotIn("disallowedTools", metadata)
+                self.assertEqual(
+                    (metadata["model"], metadata["effort"]), (base_metadata["model"], base_metadata["effort"]),
+                )
+                self.assertEqual(body, base_body)
+                self.assertFalse(self.output(Target.PI, f"{base}-artifact").exists())
+        _, delegator = claude("delegator")
+        self.assertIn(
+            "goes to the `mzizzi:standard-artifact` agent or the `mzizzi:simple-artifact` agent", delegator,
+        )
+        self.assertNotIn("Artifact", self.output(Target.PI, "delegator").read_text())
+
     def test_adversarial_reviewer_is_pi_only_with_explicit_tools(self):
         build(self.repo)
         self.assertFalse(self.output(Target.CLAUDE, "adversarial-reviewer").exists())

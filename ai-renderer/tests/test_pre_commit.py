@@ -79,7 +79,7 @@ class InstalledHookTests(GitFixture):
             )
             output = result.stdout + result.stderr
             self.assertEqual(result.returncode, 0, output)
-            self.assertIn("Linting: 69 files", output)
+            self.assertIn("Linting: 71 files", output)
             self.assertIn("Summary: 0 issues in 0 files", output)
         after = self.snapshot()
         self.assertEqual(after[0], before[0])
