@@ -5,10 +5,6 @@
     {
       "name": "codex",
       "marketplace": "openai-codex"
-    },
-    {
-      "name": "skill-creator",
-      "marketplace": "claude-plugins-official"
     }
   ]
 }
