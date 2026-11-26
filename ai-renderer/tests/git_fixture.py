@@ -1,12 +1,11 @@
 import os
 from pathlib import Path
 import shutil
-import stat
 import subprocess
 import tempfile
 import unittest
 
-from test_render_ai import REPO
+from renderer_test_support import REPO, snapshot_files
 from render_ai import build
 
 
@@ -20,7 +19,7 @@ class GitFixture(unittest.TestCase):
                      ".markdownlint-cli2.yaml", ".gitattributes", ".gitignore"):
             shutil.copy2(REPO / name, self.repo / name)
         (self.repo / "ai-renderer").mkdir()
-        for name in ("render_ai.py", "check_ai.py", "requirements.txt"):
+        for name in ("render_ai.py", "requirements.txt"):
             shutil.copy2(REPO / "ai-renderer" / name, self.repo / "ai-renderer" / name)
         self.template = self.repo / "ai/example/skills/demo/SKILL.md.j2"
         self.template.parent.mkdir(parents=True)
@@ -46,8 +45,7 @@ class GitFixture(unittest.TestCase):
         return (
             self.git("write-tree").stdout,
             (self.repo / ".git/index").read_bytes(),
-            {path.relative_to(self.repo): (path.read_bytes(), stat.S_IMODE(path.stat().st_mode))
-             for path in (self.repo / "ai-rendered").rglob("*") if path.is_file()},
+            snapshot_files(self.repo / "ai-rendered", relative_to=self.repo),
         )
 
     def commit(self, message="Candidate", *, success=True):

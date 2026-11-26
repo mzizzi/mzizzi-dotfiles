@@ -16,7 +16,7 @@ repos:
         additional_dependencies: ["prettier@3.6.2"]
       - id: check-ai
         name: check AI commit candidate
-        entry: python ai-renderer/check_ai.py
+        entry: python ai-renderer/render_ai.py --check-candidate commit
         language: python
         additional_dependencies: ["Jinja2==3.1.6", "PyYAML==6.0.3"]
         pass_filenames: false
@@ -25,7 +25,7 @@ repos:
         stages: [pre-commit]
       - id: check-ai-push
         name: check AI push candidate
-        entry: python ai-renderer/check_ai.py --push
+        entry: python ai-renderer/render_ai.py --check-candidate push
         language: python
         additional_dependencies: ["Jinja2==3.1.6", "PyYAML==6.0.3"]
         pass_filenames: false

@@ -19,6 +19,7 @@ import {
   createSubagentsImporter,
   resolveSubagentsRoot,
 } from "../../tests/support/pi-subagents-import.mjs";
+import { resolvePiSdk } from "./pi-loader-support.mjs";
 
 const repo = fileURLToPath(new URL("../../", import.meta.url));
 const expectedPiSkills = expectedMzizziSkills(repo);
@@ -37,17 +38,14 @@ const expectedAgents = [
   ["adversarial-reviewer", astra, "high"],
 ];
 try {
-  const npmRoot = execFileSync("npm", ["root", "-g"], {
-    encoding: "utf8",
-  }).trim();
-  const piRoot = join(npmRoot, "@earendil-works/pi-coding-agent");
+  const { root: piRoot, entry } = resolvePiSdk();
   const {
     DefaultPackageManager,
     SettingsManager,
     getAgentDir,
     loadSkills,
     parseFrontmatter: parseYamlFrontmatter,
-  } = await import(pathToFileURL(join(piRoot, "dist/index.js")));
+  } = await import(entry);
   const hostAgentDir = getAgentDir();
   const hostPackages = new DefaultPackageManager({
     cwd: temporary,

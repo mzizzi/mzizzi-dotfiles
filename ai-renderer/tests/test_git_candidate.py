@@ -1,28 +1,46 @@
+from contextlib import redirect_stderr
+from io import StringIO
 import subprocess
 import sys
 from unittest.mock import patch
 
 from git_fixture import GitFixture
-from check_ai import RELEVANT_PATHS, check, check_git_state, main
-from render_ai import RenderError, build
+from renderer_test_support import snapshot_files
+from render_ai import DOTFILES_CANDIDATE_PATHS, CandidateStage, build, main
 
 
 class CandidateTests(GitFixture):
-    def assert_rejected(self, expected, *, push=False):
+    def cli(self, *args, cwd=None):
+        return subprocess.run(
+            [sys.executable, str(self.repo / "ai-renderer/render_ai.py"), *args],
+            cwd=self.repo if cwd is None else cwd, capture_output=True, text=True,
+        )
+
+    def assert_current(self, stage=CandidateStage.COMMIT, *, cwd=None):
+        result = self.cli("--check-candidate", stage, cwd=cwd)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("AI candidate and rendered output are current", result.stdout)
+
+    def assert_rejected(self, expected, *, stage=CandidateStage.COMMIT):
         before = self.snapshot()
-        errors = check(self.repo, push=push)
-        self.assertTrue(any(expected in error for error in errors), errors)
+        result = self.cli("--check-candidate", stage)
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn(expected, result.stderr)
         self.assertEqual(self.snapshot(), before, "Checks must not change output or the index")
-        return errors
+        return result.stderr
 
     def test_initial_index_and_clean_head_pass(self):
-        self.assertEqual(check(self.repo), [])
+        self.assert_current()
         self.commit()
-        self.assertEqual(check(self.repo, push=True), [])
+        self.assert_current(CandidateStage.PUSH)
 
     def test_unstaged_canonical_new_output_is_not_a_candidate(self):
         self.git("rm", "--cached", "-r", "ai-rendered")
-        self.assertEqual(build(self.repo, check=True), [])
+        before = self.snapshot()
+        result = self.cli("--check")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("AI output is current", result.stdout)
+        self.assertEqual(self.snapshot(), before)
         self.assert_rejected("untracked AI file")
 
     def test_untracked_and_ignored_sources_are_rejected(self):
@@ -31,7 +49,7 @@ class CandidateTests(GitFixture):
                 path = self.template.parent / filename
                 path.write_text("Untracked.\n")
                 errors = self.assert_rejected(repr(path.relative_to(self.repo).as_posix()))
-                self.assertTrue(any("untracked AI file" in error for error in errors), errors)
+                self.assertIn("untracked AI file", errors)
                 path.unlink()
 
     def test_extra_and_deleted_output(self):
@@ -63,13 +81,13 @@ class CandidateTests(GitFixture):
         self.assert_rejected("stale:")
         build(self.repo)
         self.git("add", "ai-rendered")
-        self.assertEqual(check(self.repo), [])
+        self.assert_current()
 
     def test_partially_staged_source_and_output(self):
         self.template.write_text(self.template.read_text() + "\nStaged.\n")
         build(self.repo)
         self.git("add", "ai", "ai-rendered")
-        self.assertEqual(check(self.repo), [])
+        self.assert_current()
         self.template.write_text(self.template.read_text() + "\nUnstaged.\n")
         self.assert_rejected("stage or restore")
         self.git("add", "ai")
@@ -77,7 +95,7 @@ class CandidateTests(GitFixture):
         build(self.repo)
         self.assert_rejected("stage or restore")
         self.git("add", "ai-rendered")
-        self.assertEqual(check(self.repo), [])
+        self.assert_current()
 
     def test_relevant_index_flags_are_rejected_even_for_unchanged_files(self):
         self.commit()
@@ -86,10 +104,10 @@ class CandidateTests(GitFixture):
                 self.git("update-index", f"--{flag}", "ai-renderer/render_ai.py")
                 self.assert_rejected("unsupported assume-unchanged/skip-worktree")
                 self.git("update-index", f"--no-{flag}", "ai-renderer/render_ai.py")
-        self.assertEqual(check(self.repo), [])
+        self.assert_current()
 
     def test_all_relevant_configuration_and_implementation_paths_are_checked(self):
-        for relative in RELEVANT_PATHS:
+        for relative in DOTFILES_CANDIDATE_PATHS:
             if relative.endswith("/"):
                 continue
             with self.subTest(path=relative):
@@ -98,12 +116,12 @@ class CandidateTests(GitFixture):
                 path.write_bytes(before + b"\n")
                 self.assert_rejected(relative)
                 path.write_bytes(before)
-        self.assertEqual(check(self.repo), [])
+        self.assert_current()
 
     def test_untracked_relevant_inputs_fail_commit_and_push_even_when_ignored(self):
         self.commit()
         exclude = self.repo / ".git/info/exclude"
-        for relative in RELEVANT_PATHS:
+        for relative in DOTFILES_CANDIDATE_PATHS:
             if relative.endswith("/"):
                 continue
             with self.subTest(path=relative):
@@ -111,14 +129,14 @@ class CandidateTests(GitFixture):
                 self.commit("Omit relevant input")
                 for ignored in (False, True):
                     exclude.write_text(f"/{relative}\n" if ignored else "")
-                    for push in (False, True):
-                        with self.subTest(ignored=ignored, push=push):
-                            errors = self.assert_rejected(repr(relative), push=push)
-                            self.assertTrue(any("untracked AI file" in error for error in errors), errors)
+                    for stage in CandidateStage:
+                        with self.subTest(ignored=ignored, stage=stage):
+                            errors = self.assert_rejected(repr(relative), stage=stage)
+                            self.assertIn("untracked AI file", errors)
                 exclude.write_text("")
                 self.git("add", "-f", relative)
                 self.commit("Restore relevant input")
-        self.assertEqual(check(self.repo, push=True), [])
+        self.assert_current(CandidateStage.PUSH)
 
     def test_unrelated_local_changes_and_flags_are_allowed(self):
         unrelated = self.repo / "unrelated.txt"
@@ -127,8 +145,9 @@ class CandidateTests(GitFixture):
         self.commit()
         unrelated.write_text("Dirty.\n")
         (self.repo / "untracked.txt").write_text("Not an AI input.\n")
+        (self.repo / "ai-renderer/local-notes.txt").write_text("Not a renderer input.\n")
         self.git("update-index", "--assume-unchanged", "unrelated.txt")
-        self.assertEqual(check(self.repo, push=True), [])
+        self.assert_current(CandidateStage.PUSH)
 
     def test_posix_executable_changes_override_core_filemode_false(self):
         if sys.platform == "win32":
@@ -146,29 +165,50 @@ class CandidateTests(GitFixture):
         self.commit()
         build(self.repo)
         self.git("add", "ai-rendered")
-        self.assertEqual(check(self.repo), [])
-        self.assert_rejected("push candidate differs from HEAD", push=True)
+        self.assert_current()
+        self.assert_rejected("push candidate differs from HEAD", stage=CandidateStage.PUSH)
 
-    def test_failed_git_commands_and_renderer_failures_are_actionable(self):
-        with patch("check_ai.subprocess.run", return_value=subprocess.CompletedProcess([], 128, b"", b"fatal: fixture error")):
-            with self.assertRaisesRegex(RenderError, "Git candidate check failed.*fixture error"):
-                check_git_state(self.repo)
-            self.assertEqual(main([]), 1)
-        with patch("check_ai.check_git_state", return_value=[]), patch("check_ai.build", side_effect=RenderError("broken template")):
-            self.assertEqual(main([]), 1)
-        with patch("check_ai.check", side_effect=OSError("git unavailable")):
-            self.assertEqual(main(["--push"]), 1)
+    def test_failed_git_commands_are_actionable(self):
+        self.assert_rejected("Git candidate check failed (diff --cached)", stage=CandidateStage.PUSH)
+        with patch("render_ai.subprocess.run", side_effect=OSError("git unavailable")), redirect_stderr(StringIO()) as stderr:
+            self.assertEqual(main(["--check-candidate", "commit"]), 1)
+        self.assertIn("error: git unavailable", stderr.getvalue())
 
     def test_candidate_errors_stop_before_renderer(self):
         self.template.write_text("Not valid metadata.\n")
-        with patch("check_ai.build") as render:
-            self.assert_rejected("stage or restore")
-            render.assert_not_called()
+        with (
+            patch("render_ai.__file__", str(self.repo / "ai-renderer/render_ai.py")),
+            patch("render_ai.build") as render,
+            redirect_stderr(StringIO()) as stderr,
+        ):
+            self.assertEqual(main(["--check-candidate", "commit"]), 1)
+        self.assertIn("stage or restore", stderr.getvalue())
+        render.assert_not_called()
+        self.git("add", "ai")
+        self.assert_rejected("expected YAML frontmatter")
 
-    def test_cli_uses_script_root_not_working_directory(self):
-        result = subprocess.run(
-            [sys.executable, str(self.repo / "ai-renderer/check_ai.py")],
-            cwd=self.repo.parent, capture_output=True, text=True,
-        )
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertIn("AI candidate and rendered output are current", result.stdout)
+    def test_cli_uses_script_root_not_working_directory_without_writes(self):
+        before = snapshot_files(self.repo)
+        self.assert_current(cwd=self.repo.parent)
+        self.assertEqual(snapshot_files(self.repo), before)
+
+    def test_cli_rejects_mixed_candidate_and_render_options(self):
+        before = self.snapshot()
+        for stage in CandidateStage:
+            for flags in (
+                ("--input", "ai"), ("--output", "ai-rendered/pi"), ("--layout", "package"),
+                ("--target", "pi"), ("--check",),
+                ("--input", "ai", "--output", "ai-rendered/pi", "--target", "pi"),
+            ):
+                with self.subTest(stage=stage, flags=flags):
+                    result = self.cli("--check-candidate", stage, *flags)
+                    self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+                    self.assertIn("--check-candidate cannot be combined", result.stderr)
+        self.assertEqual(self.snapshot(), before)
+
+    def test_cli_requires_valid_candidate_stage(self):
+        for args in ((), ("unknown",)):
+            with self.subTest(args=args):
+                result = self.cli("--check-candidate", *args)
+                self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+                self.assertIn("usage:", result.stderr)
