@@ -3,6 +3,7 @@ name: delegator
 description: Use to orchestrate work across many agents
 model: opus
 effort: medium
+disallowedTools: Artifact
 experimental: {cacheTtl: 1h}
 ---
 
@@ -16,4 +17,4 @@ If the task involves coding or code-design then use the `mzizzi:development-pref
 - Coding tasks go to the `mzizzi:standard` agent
 - Research and basic analysis (e.g. counting over a well-structured log file) tasks should go to the `mzizzi:simple` agent
 - Complex tasks where other agents have gotten stuck or repeatedly failed go to the `mzizzi:complex` agent
-- A task that publishes a Claude Artifact goes to the `mzizzi:standard-artifact` agent or the `mzizzi:simple-artifact` agent; other sub-agents have no Artifact tool.
+- A task that publishes a Claude Artifact goes to the `mzizzi:standard-artifact` agent or the `mzizzi:simple-artifact` agent; this session and other sub-agents have no Artifact tool.

@@ -77,17 +77,16 @@ class AgentTests(unittest.TestCase):
                 self.assertIn(f"agents from the mzizzi {container} to preserve context", body)
                 self.assertIn("up to 10", body)
 
-    def test_claude_sub_agents_disallow_artifact_except_artifact_variants(self):
+    def test_claude_agents_disallow_artifact_except_artifact_variants(self):
         build(self.repo)
 
         def claude(name):
             _, metadata, body = self.output(Target.CLAUDE, name).read_text().split("---", 2)
             return yaml.safe_load(metadata), body
 
-        for name in ("standard", "simple", "complex", "pragmatic-reviewer"):
+        for name in ("delegator", "standard", "simple", "complex", "pragmatic-reviewer"):
             with self.subTest(agent=name):
                 self.assertEqual(claude(name)[0]["disallowedTools"], "Artifact")
-        self.assertNotIn("disallowedTools", claude("delegator")[0])
         for base in ("standard", "simple"):
             with self.subTest(agent=f"{base}-artifact"):
                 base_metadata, base_body = claude(base)
