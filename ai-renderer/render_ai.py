@@ -72,7 +72,7 @@ TARGET_FIELDS = {
 }
 
 AGENT_FIELDS = {
-    Target.CLAUDE: {"model": str, "effort": str, "experimental": dict},
+    Target.CLAUDE: {"model": str, "effort": str, "disallowedTools": str, "experimental": dict},
     Target.PI: {
         "model": str, "thinking": str,
         "advertise": bool, "defaultContext": str, "systemPromptMode": str,

@@ -70,7 +70,7 @@ class MarkdownCheckTests(unittest.TestCase):
     def test_real_corpus_passes_both_stages_without_changing_bytes_or_frontmatter(self):
         before = self.output_bytes()
         markdown = {path: content for path, content in before.items() if path.suffix == ".md"}
-        self.assertEqual(len(markdown), 71)
+        self.assertEqual(len(markdown), 73)
         vendor = (REPO / "ai/mzizzi/skills/adversarial-review/references/adversarial-review.md").read_bytes()
         for path in VENDORED:
             self.assertEqual(before[path], vendor)
@@ -89,7 +89,7 @@ class MarkdownCheckTests(unittest.TestCase):
 
     def test_each_non_exempt_file_is_checked_with_only_a_python_file_selected(self):
         checked = sorted(path for path in self.output_bytes() if path.suffix == ".md" and path not in VENDORED)
-        self.assertEqual(len(checked), 69)
+        self.assertEqual(len(checked), 71)
         before = self.output_bytes()
         for path in checked:
             (self.repo / path).write_bytes(before[path] + b"\n\n\n")
@@ -103,7 +103,7 @@ class MarkdownCheckTests(unittest.TestCase):
             (self.repo / path).write_bytes(before[path] + b"\n## Coverage defect\n\n## Coverage defect\n")
         code, output = self.run_hook(MARKDOWNLINT)
         self.assertNotEqual(code, 0, output)
-        self.assertIn("Linting: 69 files", output)
+        self.assertIn("Linting: 71 files", output)
         for path in checked:
             self.assertIn(f"{path.as_posix()}:", output)
         self.assertIn("MD024", output)

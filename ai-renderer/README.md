@@ -19,7 +19,7 @@ Review the source and output diff and stage only intended paths. See `--help` fo
 ### Package sources
 
 - Skills: `ai/<namespace>/skills/<name>/SKILL.md.j2`, with supporting files beside it.
-- Agents: `ai/<namespace>/agents/<name>.md.j2`.
+- Agents: `ai/<namespace>/agents/<name>.md.j2`. Shared agent body fragments live in `ai/<namespace>/_templates/agents/`; the renderer does not emit that directory.
 - Claude plugin manifest: optional `ai/<namespace>/manifest.yaml`. Its `claude` block adds fields to the rendered `.claude-plugin/plugin.json`; `CLAUDE_MANIFEST_FIELDS` in `render_ai.py` defines supported fields. Pi `package.json` is derived from the rendered resources.
 - Skill-only template fragments: `_templates/` inside the skill directory. Jinja can include them; the renderer does not emit that directory.
 - Frontmatter: shared description plus explicit `claude` and `pi` blocks. `TARGET_FIELDS`, `AGENT_FIELDS`, and `AGENT_CHOICES` in `render_ai.py` define supported metadata.
