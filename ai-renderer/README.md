@@ -54,31 +54,22 @@ For migration, move skill files to the input and other maintained files outside 
 
 ## Commit and push checks
 
-Install both local hook types, including in existing clones:
+Follow the [hook setup](../README.md#markdown-formatting) to install both hook types. See the [hook configuration](../.pre-commit-config.yaml) for check order and pinned dependencies. The staged renderer check runs only at commit and stops later hooks on failure. No hook stages files or rewrites rendered output.
 
-```bash
-python -m pip install pre-commit
-python -m pre_commit install --install-hooks
-```
+To run the dotfiles-only staged renderer check directly, run `python ai-renderer/render_ai.py --check-staged`. Plain `--check` compares rendered output without consulting Git; use it for consumer projects.
 
-The [hook configuration](../.pre-commit-config.yaml) pins isolated Python and Node dependencies for rendering, formatting, and lint. Manual rendering uses [the renderer requirements](requirements.txt). Repeating installation is safe. Sandbox setup runs the same installation with the `pre-commit` executable.
+The staged check requires relevant tracked files to match the index before checking the rendered package trees. It rejects untracked files at relevant paths, including ignored resources, and unsupported `assume-unchanged` / `skip-worktree` flags on relevant tracked files. See `DOTFILES_STAGED_CHECK_PATHS` in `render_ai.py` for the exact scope. POSIX checks compare executable bits even with `core.filemode=false`; Windows retains the renderer's platform behavior. Unrelated local files are allowed.
 
-Commit order: format selected authored Markdown, check the AI candidate, check all output Markdown formatting, then lint all output Markdown. Push order: check the AI candidate against `HEAD`, check all output formatting and lint, then check selected authored Markdown. Candidate failure stops downstream hooks. No AI hook renders in write mode, stages files, or formats output in write mode.
-
-Both hooks use the renderer's dotfiles-only candidate mode. To check the visible commit candidate directly, run `python ai-renderer/render_ai.py --check-candidate commit`. Plain `--check` compares rendered output without consulting Git; use it for consumer projects.
-
-Candidate checks require relevant tracked files to match the index before checking the rendered package trees. They reject untracked files at all relevant paths, including ignored resources, and unsupported `assume-unchanged` / `skip-worktree` flags on relevant tracked files. See `DOTFILES_CANDIDATE_PATHS` in `render_ai.py` for the exact scope. POSIX checks compare executable bits even with `core.filemode=false`; Windows retains the renderer's platform behavior. Unrelated local files are allowed.
-
-Push checks additionally require relevant index files to match `HEAD`: staging repaired output does not repair a stale committed candidate. Installed hooks may hide unstaged tracked edits temporarily; they check the visible candidate, not every hidden local edit. Manual all-files runs do not hide those edits and report a stage-or-restore error:
+Installed hooks may temporarily hide unstaged tracked edits. When run manually, the staged check sees those edits and reports a stage-or-restore error. To run all checks for each hook stage:
 
 ```bash
 python -m pre_commit run --all-files
 python -m pre_commit run --all-files --hook-stage pre-push
 ```
 
-Use the [package commands above](#dotfiles-packages) to repair stale output. For output formatting/lint failures, fix authored templates/resources and render again. Never hand-edit output or run `prettier --write` on it. Commit the reviewed repair before retrying a push. Clear unsupported flags with `git update-index --no-assume-unchanged --no-skip-worktree -- <path>`. Stage intended new resources, including deliberately ignored resources, or remove unintended files from the source/output trees.
+Use the [package commands above](#dotfiles-packages) to repair stale output. For output formatting/lint failures, fix authored templates/resources and render again. Never hand-edit output or run `prettier --write` on it. Clear unsupported flags with `git update-index --no-assume-unchanged --no-skip-worktree -- <path>`. Stage intended new resources, including deliberately ignored resources, or remove unintended files from the source/output trees.
 
-These local hooks can be bypassed with `--no-verify`, `SKIP`, or missing installation. Push checks cover the normal checked-out-branch workflow only, not arbitrary other branches, all refs in a multi-ref push, or every intermediate commit. They are not server-side enforcement or CI.
+These local hooks can be bypassed with `--no-verify`, `SKIP`, or missing installation. Stale output can be pushed if the commit renderer check was bypassed. The hooks are not server-side enforcement or CI.
 
 ### Output Markdown policy
 

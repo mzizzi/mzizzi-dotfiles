@@ -35,20 +35,13 @@ To format authored Markdown by hand (after changing `.prettierrc`, say):
 
     python -m pre_commit run prettier --all-files
 
-The commit hook formats selected authored Markdown first, then checks the AI candidate and all rendered Markdown. The push hook checks the AI candidate, all rendered Markdown, and selected authored Markdown without writing files. Neither hook stages files or writes rendered output. For the full checks:
-
-    python -m pre_commit run --all-files
-    python -m pre_commit run --all-files --hook-stage pre-push
-
-Manual runs see unstaged relevant files and require you to stage or restore them. Installed hooks can temporarily hide unstaged tracked changes; they validate the candidate, not every local edit.
-
-These are bypassable local hooks, not server-side enforcement or CI. Clones without installation and `git commit --no-verify` / `git push --no-verify` bypass them; `SKIP=<hook-id>` skips individual checks. Push validation covers the checked-out branch's current committed candidate, not arbitrary other branches, every ref in a multi-ref push, or every intermediate commit.
+The commit hook checks staged AI output against its sources. The push hook checks Markdown only. See the [renderer hook workflow](ai-renderer/README.md#commit-and-push-checks) for manual checks and bypass behavior.
 
 ### Rendered AI packages
 
-`ai/` owns authored templates/resources, `ai-renderer/` owns rendering and candidate checks, and committed `ai-rendered/` owns complete Claude plugins and Pi packages. Do not edit output directly or run a formatter's write mode on it. The ignored `generated/` directory is a retired local cache; it is not removed automatically.
+`ai/` owns authored templates/resources, `ai-renderer/` owns rendering and staged checks, and committed `ai-rendered/` owns complete Claude plugins and Pi packages. Do not edit output directly or run a formatter's write mode on it. The ignored `generated/` directory is a retired local cache; it is not removed automatically.
 
-After changing a source, follow the [package render workflow](ai-renderer/README.md#dotfiles-packages). The [renderer documentation](ai-renderer/README.md) describes candidate checks and tool policy. Sandbox startup registers this checkout as the [mzizzi Pi package](config/pi/README.md#mzizzi-pi-package); production Claude plugins and marketplace loading remain unchanged.
+After changing a source, follow the [package render workflow](ai-renderer/README.md#dotfiles-packages). The [renderer documentation](ai-renderer/README.md) describes staged checks and tool policy. Sandbox startup registers this checkout as the [mzizzi Pi package](config/pi/README.md#mzizzi-pi-package); production Claude plugins and marketplace loading remain unchanged.
 
 Two things worth knowing when writing markdown here:
 

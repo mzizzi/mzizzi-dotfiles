@@ -9,18 +9,22 @@ from renderer_test_support import REPO, snapshot_files
 from render_ai import build
 
 
+PROTECTED_FILES = (
+    ".pre-commit-config.yaml", ".prettierrc", ".prettierignore",
+    ".markdownlint-cli2.yaml", ".gitattributes", ".gitignore",
+    "ai-renderer/render_ai.py", "ai-renderer/requirements.txt",
+)
+
+
 class GitFixture(unittest.TestCase):
     def setUp(self):
         temporary = tempfile.TemporaryDirectory(prefix="ai candidate with spaces ")
         self.addCleanup(temporary.cleanup)
         self.repo = Path(temporary.name) / "checkout"
         self.repo.mkdir()
-        for name in (".pre-commit-config.yaml", ".prettierrc", ".prettierignore",
-                     ".markdownlint-cli2.yaml", ".gitattributes", ".gitignore"):
-            shutil.copy2(REPO / name, self.repo / name)
         (self.repo / "ai-renderer").mkdir()
-        for name in ("render_ai.py", "requirements.txt"):
-            shutil.copy2(REPO / "ai-renderer" / name, self.repo / "ai-renderer" / name)
+        for name in PROTECTED_FILES:
+            shutil.copy2(REPO / name, self.repo / name)
         self.template = self.repo / "ai/example/skills/demo/SKILL.md.j2"
         self.template.parent.mkdir(parents=True)
         shutil.copy2(REPO / "ai/models.json", self.repo / "ai/models.json")

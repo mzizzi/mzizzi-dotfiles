@@ -15,23 +15,14 @@ repos:
         stages: [pre-commit]
         additional_dependencies: ["prettier@3.6.2"]
       - id: check-ai
-        name: check AI commit candidate
-        entry: python ai-renderer/render_ai.py --check-candidate commit
+        name: check staged AI output
+        entry: python ai-renderer/render_ai.py --check-staged
         language: python
         additional_dependencies: ["Jinja2==3.1.6", "PyYAML==6.0.3"]
         pass_filenames: false
         always_run: true
         fail_fast: true
         stages: [pre-commit]
-      - id: check-ai-push
-        name: check AI push candidate
-        entry: python ai-renderer/render_ai.py --check-candidate push
-        language: python
-        additional_dependencies: ["Jinja2==3.1.6", "PyYAML==6.0.3"]
-        pass_filenames: false
-        always_run: true
-        fail_fast: true
-        stages: [pre-push]
       - id: prettier-ai-rendered
         name: check rendered Markdown formatting (fix sources and render again)
         entry: prettier --check --config .prettierrc --ignore-path .prettierignore "ai-rendered/**/*.md"

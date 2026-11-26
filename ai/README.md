@@ -6,6 +6,6 @@ These are the authored sources for the mzizzi Claude plugin and Pi package. `ai-
 
 After edits, follow the [package render workflow](../ai-renderer/README.md#dotfiles-packages). Fix formatting and lint in the source, not the output. See the [output Markdown policy](../ai-renderer/README.md#output-markdown-policy) for what the hooks check.
 
-Hook installation needs Python >=3.11, Node >=22, and pre-commit. Run `python -m pre_commit install --install-hooks` in existing clones as well as new ones to install both hook types. Dependencies and repair/push-scope details are in the renderer documentation.
+Use the [hook setup](../README.md#markdown-formatting) in new and existing clones.
 
 See [the renderer documentation](../ai-renderer/README.md) for authoring, generation, and loader checks.
