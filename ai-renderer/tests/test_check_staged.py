@@ -144,6 +144,13 @@ class StagedCheckTests(GitFixture):
         self.output.chmod(0o755)
         self.assert_rejected("stage or restore")
 
+    def test_umask_dependent_mode_bits_are_ignored(self):
+        if sys.platform == "win32":
+            self.skipTest("Windows retains renderer platform mode behavior")
+        self.template.chmod(0o664)
+        self.output.chmod(0o640)
+        self.assert_current()
+
     def test_failed_git_commands_are_actionable(self):
         (self.repo / ".git/index").write_bytes(b"invalid index\n")
         result = self.cli("--check-staged")

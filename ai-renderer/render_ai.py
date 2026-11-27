@@ -392,7 +392,8 @@ def render_target(source, paths, bundles, resources, manifests, target, models, 
             if relative.parts[0] == "_templates":
                 continue
             try:
-                mode = stat.S_IMODE(mode)
+                # Git records only the executable bit; the rest depends on the checkout's umask.
+                mode = 0o755 if mode & stat.S_IXUSR else 0o644
                 if path.suffix == ".j2":
                     relative = relative.with_suffix("")
                     text = entry if path == resource.path else render_template(path)
@@ -477,7 +478,8 @@ def differences(destination, artifacts, actual):
         elif path not in actual:
             changes.append(f"missing: {full_path}")
         elif full_path.read_bytes() != artifacts[path].content or (
-            sys.platform != "win32" and stat.S_IMODE(full_path.stat().st_mode) != artifacts[path].mode
+            sys.platform != "win32"
+            and bool(full_path.stat().st_mode & stat.S_IXUSR) != bool(artifacts[path].mode & stat.S_IXUSR)
         ):
             changes.append(f"changed: {full_path}")
     return changes
