@@ -4,7 +4,7 @@
     "name": "mzizzi"
   },
   "description": "mzizzi's personal Claude Code plugin marketplace.",
-  "allowCrossMarketplaceDependenciesOn": ["openai-codex", "claude-plugins-official"],
+  "allowCrossMarketplaceDependenciesOn": ["openai-codex"],
   "plugins": [
     {
       "name": "mzizzi",

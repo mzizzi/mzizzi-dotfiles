@@ -37,7 +37,8 @@ RUN mkdir -p /home/agent/.claude /home/agent/.codex /home/agent/.pi/agent /home/
 
 # Keep Bash history, Claude, dcode and pi sessions on the host; see state-dir.sh.
 COPY shell/state-dir.sh /opt/agent-lab/state-dir.sh
-RUN printf '\n. /opt/agent-lab/state-dir.sh\n' >> /home/agent/.bashrc
+COPY shell/claude-alias.sh /opt/agent-lab/claude-alias.sh
+RUN printf '\n. /opt/agent-lab/state-dir.sh\n. /opt/agent-lab/claude-alias.sh\n' >> /home/agent/.bashrc
 
 # Runs from the image, not the workspace, so it does not depend on the checked-out ref.
 COPY shell/clone-simracing.sh /opt/agent-lab/clone-simracing.sh
