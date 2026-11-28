@@ -20,4 +20,9 @@ Use Pi TUI's `visibleWidth` and `truncateToWidth` so ANSI styles and wide charac
 
 ## Follow-ups
 
-- _None yet._
+### Quota-mode changes can overwrite other Pi settings
+
+- **What:** `/codex-usage-mode` rewrites the profile's `settings.json` without Pi's settings lock, so a setting saved by another session between the read and write can be lost.
+- **Where:** `sandbox/agent-lab/pi/settings.json:8` pins the extension; the write is in upstream `src/codex-usage/preferences.ts` (`saveUsageMode`).
+- **Why deferred:** The managed `used` default and footer do not invoke the command. The current change keeps the reviewed exact pin; fixing the command requires a separate dependency update.
+- **Suggested fix:** Pin a revision that holds Pi's settings lock across the full read–modify–write or stores the runtime override in an extension-owned file. Verify with a disposable profile that changing the mode preserves an intervening settings update.
