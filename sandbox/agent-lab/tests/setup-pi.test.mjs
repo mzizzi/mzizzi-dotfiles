@@ -330,23 +330,16 @@ test("replaces an outdated extension link", (t) => {
 
 test("installs shared packages, the delegator prompt, and the bundled style", (t) => {
   const home = temporaryHome(t);
-  const bin = join(home, "bin");
-  const subagentConfig = join(
-    home,
-    ".pi/agent/extensions/subagent/config.json",
-  );
+  const agentDir = join(home, ".pi/agent");
+  const subagentConfig = join(agentDir, "extensions/subagent/config.json");
   mkdirSync(dirname(subagentConfig), { recursive: true });
   writeFileSync(subagentConfig, '{"maxSubagentSpawnsPerRun":64}\n');
   const sharedSetup = join(repoRoot, "sandbox/agent-lab/pi/setup.sh");
-  execFileSync("bash", [sharedSetup], {
-    env: { ...process.env, HOME: home, PATH: `${bin}:${process.env.PATH}` },
-    stdio: "pipe",
-  });
+  setup(home, { script: sharedSetup });
 
   setup(home);
   setup(home);
 
-  const agentDir = join(home, ".pi/agent");
   const agent = readFileSync(join(repoRoot, "ai-rendered/pi/packages/mzizzi/agents/delegator.md"), "utf8");
   assert.equal(
     readFileSync(join(agentDir, "APPEND_SYSTEM.md"), "utf8"),
@@ -366,6 +359,16 @@ test("installs shared packages, the delegator prompt, and the bundled style", (t
   });
   assert.equal(installedSettings.defaultProvider, "openai-codex");
   assert.equal(installedSettings.defaultThinkingLevel, "high");
+  assert.ok(
+    installedSettings.packages.includes(
+      "git:github.com/calesennett/pi-codex-usage@0dedd7af2e9eed2cd7d2a942f0617f8a86751f0e",
+    ),
+  );
+  assert.equal(installedSettings["pi-codex-usage"].usageMode, "used");
+  assert.equal(
+    readlinkSync(join(agentDir, "extensions/codex-footer")),
+    extensionOf(home, "codex-footer"),
+  );
   assert.deepEqual(JSON.parse(readFileSync(subagentConfig, "utf8")), {
     globalConcurrencyLimit: 32,
     maxActiveAsyncRunsPerSession: 8,

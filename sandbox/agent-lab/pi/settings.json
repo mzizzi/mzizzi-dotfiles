@@ -4,6 +4,10 @@
   "defaultThinkingLevel": "high",
   "packages": [
     "git:github.com/nicobailon/pi-web-access@322e44fafc1aaa691779cdf2116584e67edd7645",
-    "git:github.com/nicobailon/pi-subagents@52e68e9ef0e563d5c97b28519f9999f1b5fbbbea"
-  ]
+    "git:github.com/nicobailon/pi-subagents@52e68e9ef0e563d5c97b28519f9999f1b5fbbbea",
+    "git:github.com/calesennett/pi-codex-usage@0dedd7af2e9eed2cd7d2a942f0617f8a86751f0e"
+  ],
+  "pi-codex-usage": {
+    "usageMode": "used"
+  }
 }
